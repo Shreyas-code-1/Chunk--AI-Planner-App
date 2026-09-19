@@ -18,6 +18,7 @@ import {
   Nunito_600SemiBold,
   Nunito_700Bold,
   Nunito_800ExtraBold,
+  Nunito_900Black,
 } from '@expo-google-fonts/nunito';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
@@ -42,6 +43,8 @@ export default function RootLayout() {
     Nunito_600SemiBold,
     Nunito_700Bold,
     Nunito_800ExtraBold,
+    // The board's heaviest labels are 900, which only Nunito has.
+    Nunito_900Black,
   });
 
   useEffect(() => {
