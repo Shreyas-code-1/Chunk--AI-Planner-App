@@ -13,6 +13,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../components/ui/Button';
+import { useSession } from '../features/auth/SessionProvider';
 import { Card } from '../components/ui/Card';
 import { Chip } from '../components/ui/Chip';
 import { SpeechBubble } from '../components/ui/SpeechBubble';
@@ -29,10 +30,14 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 }
 
 export default function Gallery() {
+  const { configError } = useSession();
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.heading}>Primitives</Text>
+        {configError ? <Text style={styles.configError}>{configError}</Text> : null}
+
         <Text style={styles.sub}>
           Board values, no approximations. Press anything — the face should sink onto its
           edge and the haptic should land at the same instant, not on release.
@@ -153,4 +158,13 @@ const styles = StyleSheet.create({
   body: { fontFamily: fonts.body.bold, fontSize: 14.5, color: colors.ink, lineHeight: 21 },
   caption: { fontFamily: fonts.body.black, fontSize: 12, color: colors.muted },
   flag: { fontFamily: fonts.body.semiBold, fontSize: 12, color: colors.orangeDeep, lineHeight: 17 },
+  configError: {
+    fontFamily: fonts.body.bold,
+    fontSize: 12,
+    color: colors.orangeDeep,
+    lineHeight: 18,
+    backgroundColor: colors.creamBorder,
+    borderRadius: radii.md,
+    padding: 12,
+  },
 });

@@ -19,7 +19,20 @@ function required(name: string, value: string | undefined): string {
   return value;
 }
 
+/** Present and non-empty. Never returns or logs the value itself. */
+function isSet(value: string | undefined): boolean {
+  return typeof value === 'string' && value.length > 0;
+}
+
 export const env = {
+  /**
+   * Whether the app has been configured at all. Callers use this to show a
+   * readable message rather than letting a throw take down the route tree.
+   */
+  isConfigured: () =>
+    isSet(process.env.EXPO_PUBLIC_SUPABASE_URL) &&
+    isSet(process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY),
+
   supabaseUrl: () => required('EXPO_PUBLIC_SUPABASE_URL', process.env.EXPO_PUBLIC_SUPABASE_URL),
   /**
    * The publishable key (sb_publishable_...), not the legacy anon JWT. It is a

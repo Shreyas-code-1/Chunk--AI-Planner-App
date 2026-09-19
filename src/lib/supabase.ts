@@ -1,13 +1,20 @@
 /**
  * The Supabase client.
  *
- * Sessions are persisted in the Keychain via expo-secure-store, never
- * AsyncStorage (brief §11a). SecureStore has a 2048-byte practical limit per
- * value, and a Supabase session with a large JWT can exceed it, so values are
- * split across numbered chunks transparently.
+ * Created lazily, on first use. That matters: creating it at module scope
+ * meant a missing environment variable threw while the module was being
+ * evaluated, which made the whole route tree fail to import and surfaced as
+ * `Cannot read property 'ErrorBoundary' of undefined` — a message that says
+ * nothing about the actual cause. Nothing that renders should depend on
+ * configuration it doesn't use.
  *
- * Nothing outside src/api should import this directly — screens talk to the
- * typed API layer, which talks to this.
+ * Sessions are persisted in the Keychain via expo-secure-store, never
+ * AsyncStorage (brief §11a). SecureStore has a practical ~2KB limit per value
+ * and a session JWT can exceed it, so values are split across numbered chunks
+ * transparently.
+ *
+ * Nothing outside src/api should import this — screens talk to the typed API
+ * layer, which talks to this.
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -59,12 +66,28 @@ const secureStorage = {
   },
 };
 
-export const supabase: SupabaseClient = createClient(env.supabaseUrl(), env.supabaseKey(), {
-  auth: {
-    storage: secureStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    // There is no browser redirect to parse in a native app.
-    detectSessionInUrl: false,
-  },
-});
+let client: SupabaseClient | null = null;
+
+/**
+ * The client, created on first call. Throws a message naming the missing
+ * variable if the app has not been configured — never the variable's value.
+ */
+export function getSupabase(): SupabaseClient {
+  if (!client) {
+    client = createClient(env.supabaseUrl(), env.supabaseKey(), {
+      auth: {
+        storage: secureStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        // There is no browser redirect to parse in a native app.
+        detectSessionInUrl: false,
+      },
+    });
+  }
+  return client;
+}
+
+/** True when both variables are present, without reading or logging either. */
+export function isSupabaseConfigured(): boolean {
+  return env.isConfigured();
+}
