@@ -1,14 +1,154 @@
 /**
- * Temporary dev entry point.
+ * 2.1 SPLASH.
  *
- * Screen 2.1 SPLASH belongs here. Until it is built, this route sends you
- * straight to the primitives gallery so the foundation can be checked on a
- * device. Both this redirect and src/app/gallery.tsx are deleted when the real
- * splash arrives.
+ * The orange gradient screen that holds while the stored session is read. It
+ * is a real screen, not the native splash: the native one is dismissed in the
+ * root layout as soon as the fonts are ready, and this takes over so the
+ * hand-off happens between two orange surfaces rather than through a flash of
+ * white.
+ *
+ * The logo is a stroked-text placeholder and renders nothing until artwork
+ * lands — see docs/stroked-elements.md, element 1.
  */
 
-import { Redirect } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-export default function Index() {
-  return <Redirect href="/gallery" />;
+import { StrokedText } from '../components/ui/StrokedText';
+import { mascot } from '../components/mascot';
+import { useSession } from '../features/auth/SessionProvider';
+import { colors } from '../theme/tokens';
+
+/**
+ * How long the splash is held even when there is nothing to wait for.
+ *
+ * A session read off the Keychain usually finishes in a few milliseconds, and
+ * without a floor the screen would appear and vanish as a flicker. Provisional
+ * — it is a feel value, to be judged on a device rather than argued about.
+ */
+const MIN_VISIBLE_MS = 1200;
+
+export default function Splash() {
+  const router = useRouter();
+  const { loading } = useSession();
+  const [held, setHeld] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setHeld(true), MIN_VISIBLE_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!held || loading) return;
+    // TODO(batch 4): a signed-in user belongs on 3.1 HOME, which does not
+    // exist yet. Until it does, everyone lands on 2.2 — deliberately, rather
+    // than routing to a screen that would crash.
+    router.replace('/welcome');
+  }, [held, loading, router]);
+
+  return (
+    <View style={styles.screen}>
+      <StatusBar style="light" />
+      <SplashGradient />
+
+      <View style={styles.logo}>
+        {/* Baloo 2 800, 104px, letter-spacing -.03em, line-height .95. */}
+        <StrokedText fontSize={104} letterSpacing={-0.03 * 104} lineHeight={104 * 0.95}>
+          chunk
+        </StrokedText>
+      </View>
+
+      <View style={styles.art}>
+        <Image source={mascot.splash} style={styles.mascot} resizeMode="contain" />
+      </View>
+
+      <View style={styles.indicatorRow}>
+        <View style={styles.indicator} />
+      </View>
+    </View>
+  );
 }
+
+/**
+ * The board's `linear-gradient(160deg, #F9A94E 0%, #F59332 45%, #DE7A17 100%)`.
+ *
+ * React Native has no gradient and expo-linear-gradient is not a dependency,
+ * so this is an SVG rect — which means the CSS angle has to be turned into two
+ * points by hand. CSS measures the angle clockwise from "to top", and sizes
+ * the gradient line so it covers the box exactly:
+ *
+ *     L = |W·sin A| + |H·cos A|
+ *
+ * with the line centred on the box. Computing it from the live dimensions
+ * rather than from the board's 390x844 keeps the angle honest on every device
+ * — hard-coding the fractions would shear the gradient on any other aspect
+ * ratio.
+ */
+function SplashGradient() {
+  const { width, height } = useWindowDimensions();
+
+  const radians = (160 * Math.PI) / 180;
+  const dx = Math.sin(radians);
+  const dy = -Math.cos(radians);
+  const length = Math.abs(width * dx) + Math.abs(height * dy);
+  const [cx, cy] = [width / 2, height / 2];
+
+  return (
+    <Svg style={StyleSheet.absoluteFill} width={width} height={height}>
+      <Defs>
+        <LinearGradient
+          id="splash"
+          gradientUnits="userSpaceOnUse"
+          x1={cx - (dx * length) / 2}
+          y1={cy - (dy * length) / 2}
+          x2={cx + (dx * length) / 2}
+          y2={cy + (dy * length) / 2}
+        >
+          <Stop offset="0" stopColor={colors.orangeGradient[0]} />
+          <Stop offset="0.45" stopColor={colors.orangeGradient[1]} />
+          <Stop offset="1" stopColor={colors.orangeGradient[2]} />
+        </LinearGradient>
+      </Defs>
+      <Rect x={0} y={0} width={width} height={height} fill="url(#splash)" />
+    </Svg>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    // Shows for the frame before the SVG paints, and behind it on any device
+    // where the gradient fails to render at all.
+    backgroundColor: colors.orange,
+  },
+  logo: {
+    paddingTop: 58,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+  },
+  art: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 26,
+  },
+  mascot: {
+    width: '100%',
+    maxWidth: 310,
+    height: '100%',
+  },
+  indicatorRow: {
+    paddingHorizontal: 40,
+    paddingBottom: 58,
+    alignItems: 'center',
+  },
+  indicator: {
+    width: 56,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+  },
+});

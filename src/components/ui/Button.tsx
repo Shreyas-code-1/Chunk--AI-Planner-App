@@ -20,7 +20,7 @@ import Animated, {
 import { haptic } from '../../lib/haptics';
 import { colors, fonts, press, radii, shadows } from '../../theme/tokens';
 
-type Variant = 'primary' | 'dark' | 'onOrange';
+type Variant = 'primary' | 'secondary' | 'dark' | 'onOrange';
 
 type Props = {
   label: string;
@@ -30,10 +30,33 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
+type Spec = {
+  background: string;
+  label: string;
+  edge: string;
+  depth: number;
+  /** Only `secondary` is outlined; the filled variants draw no border. */
+  border?: string;
+  /** The board's secondary sits a half-point smaller and a touch shorter. */
+  fontSize?: number;
+  paddingVertical?: number;
+};
+
 /** Each variant's exact board values: fill, label colour, edge colour, edge height. */
-const VARIANTS: Record<Variant, { background: string; label: string; edge: string; depth: number }> =
+const VARIANTS: Record<Variant, Spec> =
   {
     primary: { background: colors.orange, label: colors.white, edge: colors.edgeBrown, depth: 6 },
+    // 2.2's "I ALREADY HAVE AN ACCOUNT": white, cream-bordered, and it keeps
+    // the brown edge rather than taking one tinted to its own fill.
+    secondary: {
+      background: colors.card,
+      label: colors.orangeDeep,
+      edge: colors.edgeBrown,
+      depth: 5,
+      border: colors.cream,
+      fontSize: 14.5,
+      paddingVertical: 15,
+    },
     dark: { background: colors.ink, label: colors.white, edge: colors.edgeInk, depth: 5 },
     // On the orange focus screen the edge is a translucent black rather than
     // a brown, because there is no cream beneath it to tint.
@@ -81,12 +104,25 @@ export function Button({ label, onPress, variant = 'primary', disabled, style }:
         style={[
           styles.face,
           { backgroundColor: spec.background },
+          spec.paddingVertical != null && { paddingVertical: spec.paddingVertical },
+          spec.border != null && { borderWidth: 2, borderColor: spec.border },
           shadows.hardEdge(spec.depth, spec.edge),
           animated,
           disabled && styles.disabled,
         ]}
       >
-        <Text style={[styles.label, { color: spec.label }]}>{label}</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: spec.label },
+            spec.fontSize != null && {
+              fontSize: spec.fontSize,
+              letterSpacing: spec.fontSize * 0.08,
+            },
+          ]}
+        >
+          {label}
+        </Text>
       </Animated.View>
     </Pressable>
   );

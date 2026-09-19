@@ -16,5 +16,6 @@ export { PathNode, type PathNodeState } from './PathNode';
 export { ProgressRing } from './ProgressRing';
 export { Slider } from './Slider';
 export { SpeechBubble } from './SpeechBubble';
+export { StrokedText, HighlightChip } from './StrokedText';
 export { StatsStrip, type Stat, type StatKind } from './StatsStrip';
 export { Toggle } from './Toggle';
