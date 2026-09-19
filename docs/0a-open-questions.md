@@ -4,11 +4,10 @@ Per §4 of the implementation brief: every clarifying question, before any
 schema or code. Answers get written back into this file and committed, then
 carried into `decision-log.md` where they change an approach.
 
-Status: **awaiting answers.** Nothing below is blocked on anything except you.
-
-Questions 1–5 block Phase 0b/0c (schema and design foundation). Questions 6–19
-block specific screens and can be answered as we reach them, but earlier is
-cheaper.
+Status: **answered 2026-09-19 for 1–12 and 18** — see the Answers section at the
+bottom, which is authoritative where it differs from a question above.
+Questions 13–17, 19 and 20 remain open and are raised one at a time at the screen
+that needs each.
 
 ---
 
@@ -199,3 +198,77 @@ One-page summary and Something else.
 `main`, or a branch per batch with a PR? You are the only committer, so `main`
 is defensible — but batches are reviewed, and a branch makes "approved" a real
 gate rather than a convention.
+
+---
+
+# Answers — 2026-09-19
+
+Recorded here rather than left in conversation. Decisions that change an agreed
+approach are also in `decision-log.md`.
+
+**1. Expo Go vs Dev Client — approved as proposed.** Expo Go for Phase 0 and
+every batch before the paywall; first EAS dev build at 2.10. `usePro()` and the
+auth providers are stubbed behind the same seam as `appBlocking.ts`. **§2 of the
+brief is amended accordingly.**
+
+**2. `expo-av` → `expo-audio`.** Approved. Confirmed absent from SDK 57.
+
+**3. `jest` + `jest-expo`.** Approved — the algorithm's tests are in the spec and
+are to be real.
+
+**4. Board.** `CHUNK Board v3 (standalone).html` is the single source of truth,
+now at `design/board.html`. The other three copies are deleted. Mascot art is
+committed at `design/mascot/`. `origin/codex/functional-mobile-web` is dead: not
+merged, not deleted.
+
+**5. Icons.** Custom inline SVG, not SF Symbols. One `react-native-svg`
+component per icon in `src/components/icons/`, 24×24 viewBox, `fill="none"`,
+`stroke="currentColor"`, round caps, **stroke width preserved exactly** (the
+board ranges 2.4–3.4). No icon library.
+
+**6. Day boundary.** 03:00 local, not midnight — a student working at 12:30 AM
+is still on "today", for both the scheduler and the streak. Device timezone; no
+multi-timezone handling in v1.
+
+**7. `weekday_factors`.** Multipliers on `daily_target_minutes`:
+**busy 0.4 / normal 1.0 / light 1.3**. A guess, to be tuned against real
+completion data. Single source of truth: `WEEKDAY_FACTORS` in
+`src/planner/constants.ts`.
+
+**8. `start_style`.** Maps to how many days before the due date the spread
+begins: "as soon as I can" → all available days, "a few days before" → 3
+(default), "the day before" → 1. It narrows the window; it never overrides the
+rule that nothing is scheduled on the night a thing is due.
+
+**9. "Mixed" chunk length.** 30-minute target per the spec. "Mixed" means the
+difficulty adjustment has its widest effect (easy 34, hard 24) — *not* that
+chunk lengths vary randomly within an assignment.
+
+**10. Subject chips.** The four the board draws (Bio / Alg / Eng / His) are the
+palette. Deterministic keyword match from the class name — no hashing. An
+unrecognised class gets a neutral grey chip and its first three letters
+capitalised.
+
+**11. Chunk history.** An append-only completion log. Live `chunks` are
+rewritten by every re-plan and deleted with their assignment; `chunk_completions`
+never is, and Postgres enforces it (no UPDATE or DELETE policy). The lifetime
+counter and past streaks read from the log, so nothing can rewrite them.
+
+**12. Age gate.** Birth year joins screen 2.4 as a year picker beside grade.
+Under-13 signup is blocked with a plain message. Design to be supplied; the
+field is built and the visual flagged.
+
+**18. LLM provider.** Anthropic (Claude). The AI consent screen names Anthropic
+specifically.
+
+Anthropic's published position, cited rather than asserted: *"By default, we
+will not use your inputs or outputs from our commercial products (e.g. Claude
+for Work, Anthropic API, Claude Gov, etc.) to train our models."* —
+`https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training`,
+retrieved 2026-09-19. The documented exception is explicitly submitted feedback,
+so the Edge Function must never submit feedback, and the consent copy should say
+"by default" rather than an unqualified "never". Re-verify before submission.
+
+**13–17, 19, 20 — still open, by instruction raised one at a time at the screen
+that needs each, not batched.** This supersedes §9.1's "batch your questions"
+for these specific items.

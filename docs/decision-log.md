@@ -70,3 +70,69 @@ primitives, exactly as §4 specifies. No change of approach.
 
 **Rule adopted:** these three are transitive infrastructure for expo-router
 only. Anything importing them directly needs a decision recorded here first.
+
+---
+
+## 2026-09-19 — Phase 0a answers that change an agreed approach
+
+Full answers are in `0a-open-questions.md`. These are the ones that amend
+something already written down:
+
+**§2 of the brief is amended.** It fixed the stack on an Expo Dev Client build;
+§1 said testing happens in Expo Go. Both could not be the default. Agreed:
+**Expo Go for Phase 0 and every batch before the paywall; first EAS dev build at
+2.10.** `react-native-purchases` and `expo-apple-authentication` are therefore
+*not installed yet* — importing either inside Expo Go crashes the app. They
+arrive with the 2.10 build, behind the `usePro()` and auth stub seams.
+
+**`expo-av` → `expo-audio`.** §5a named `expo-av` for voice recording. It is
+absent from SDK 57 (checked against `docs.expo.dev/versions/v57.0.0/`), so this
+is not a preference.
+
+**Icons are custom SVG, not SF Symbols.** `react-native-svg` is added to the §2
+stack for this. One component per icon, stroke widths preserved exactly.
+
+**`jest` + `jest-expo` added to the stack** so the specs' test lists are real.
+
+**Day boundary is 03:00 local, not midnight.** Applies to both the scheduler and
+the streak. Stored as `plan_date` at completion rather than derived per query,
+so the two cannot disagree.
+
+**Weekday load factors: busy 0.4 / normal 1.0 / light 1.3.**
+*Supersedes an earlier 0.5 / 1.0 / 1.5*, which appeared in a question option and
+in the first draft of the plan. The superseded pair is named here so it cannot
+drift back in. The values are a guess, to be tuned against real completion data;
+they live in exactly one place, `WEEKDAY_FACTORS` in
+`src/planner/constants.ts`, which the schema default mirrors.
+
+**Birth year is added to screen 2.4**, beside grade, to satisfy the §12 under-13
+block. The field is built; the visual is flagged as needing a design.
+
+**LLM provider is Anthropic**, named explicitly on the AI consent screen as
+§13a requires. Their published position is cited, not asserted, in
+`0a-open-questions.md`; the documented exception is explicitly submitted
+feedback, so our Edge Function must never submit feedback.
+
+**Open questions are no longer batched.** §9.1 says to batch questions at the
+end of a plan. For the remaining items (13–17, 19, 20) the instruction is the
+opposite: bring each one back at the screen that needs it.
+
+---
+
+## 2026-09-19 — Board consolidated to one file
+
+Four copies of the "final" board existed and all four differed.
+`CHUNK Board v3 (standalone).html` is now the single source of truth at
+`design/board.html`: it is the only copy that is self-contained, carrying 21
+PNGs and 9 woff2 fonts inlined in a bundler manifest. The other three are
+deleted. Mascot art moved from git-ignored `reference/` to `design/mascot/` and
+committed.
+
+`scripts/extract-board.mjs` unpacks the export into `design/extracted/`
+(gitignored, regenerable). `design/assets/` is reserved for assets supplied by
+hand — the two directories are kept apart so a regeneration cannot clobber them.
+
+**No stroked element gets built.** `-webkit-text-stroke` and `paint-order` have
+no React Native equivalent and the approximations look wrong at the board's
+sizes. `docs/stroked-elements.md` is the hand-off list. Two of the six contain
+runtime values and so cannot be static assets at all; that is an open decision.
