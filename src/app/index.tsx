@@ -73,7 +73,7 @@ export default function Splash() {
 }
 
 /**
- * The board's `linear-gradient(160deg, #F9A94E 0%, #F59332 45%, #DE7A17 100%)`.
+ * The board's `linear-gradient(160deg, #FC9633 0%, #FA7814 45%, #E56C08 100%)`.
  *
  * React Native has no gradient and expo-linear-gradient is not a dependency,
  * so this is an SVG rect — which means the CSS angle has to be turned into two
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
   mascot: {
     width: '100%',
-    maxWidth: 310,
+    maxWidth: 312,
     height: '100%',
   },
   indicatorRow: {

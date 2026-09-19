@@ -30,6 +30,7 @@ import {
   type DockTab,
 } from '../components/ui';
 import { useSession } from '../features/auth/SessionProvider';
+import { mascot } from '../components/mascot';
 import { colors, fonts, radii, shadows } from '../theme/tokens';
 
 function Section({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
@@ -80,7 +81,7 @@ export default function Gallery() {
           </Text>
         </Section>
 
-        <Section title="Input" note="2px #F59332, radius 20 · large adds the hard edge">
+        <Section title="Input" note="2px #FA7814, radius 20 · large adds the hard edge">
           <Input label="YOUR NAME" size="large" defaultValue="Maya Chen" />
           <Input defaultValue="Maya Chen" />
           <Text style={styles.flag}>
@@ -98,7 +99,7 @@ export default function Gallery() {
           </Text>
         </Section>
 
-        <Section title="Toggle" note="52×30 · on #F59332 · off #EFE1D2">
+        <Section title="Toggle" note="52×30 · on #FA7814 · off #EFE1D2">
           <View style={styles.row}>
             <Toggle value={remindersOn} onChange={setRemindersOn} accessibilityLabel="Reminders" />
             <Toggle value={soundOn} onChange={setSoundOn} accessibilityLabel="Sound" />
@@ -170,7 +171,7 @@ export default function Gallery() {
           <SpeechBubble
             mascot={
               <Image
-                source={require('../../design/mascot/00-mascot-waving.png')}
+                source={mascot.waving}
                 style={styles.mascot}
                 contentFit="contain"
               />

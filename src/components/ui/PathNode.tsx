@@ -6,7 +6,7 @@
  * one thing on the screen the student is meant to look at.
  *
  *  done   60x60, #2FB37A, edge 0 6px 0 #1E8659, check at 26px / 3.4
- *  now    66x66, #F59332, edge 0 6px 0 #6E4A28, 4px white ring, play at 28 / 2.6
+ *  now    66x66, #FA7814, edge 0 6px 0 #6E4A28, 4px white ring, play at 28 / 2.6
  *  locked 60x60, #EFE4D8, edge 0 6px 0 #6E4A28, lock at 24px / 2.4 in #B4A498
  */
 

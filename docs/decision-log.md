@@ -362,3 +362,96 @@ backing without any screen changing.
 `supabase gen types` needs either a CLI access token, a database password or a
 local Docker stack, and this machine has none of the three. The migration being
 applied removed one blocker but not this one.
+
+---
+
+## 2026-09-19 — The wrong board was used for batch 1; replaced
+
+Batch 1 was built from `CHUNK Board v3 (standalone).html` (9.5 MB, 12 Sep),
+which had been named canonical in the 0a answers. **That is not the current
+design.** The current one is `CHUNK Board.html` (15.6 MB, 19 Sep), which is now
+`design/board.html`. The superseded file is still in git history at
+`44a03e5..92ee035` if it is ever needed; nothing else references it.
+
+This is the failure the 0a question about "four conflicting board files"
+predicted, arriving from the one direction that question did not cover: not a
+stale copy sitting beside the canonical one, but a **newer export** that landed
+after the canonical one was chosen and was never promoted.
+
+### The oranges all changed
+
+Every orange in `src/theme/tokens.ts` appears **zero times** in the new board:
+
+| token | was | now |
+|---|---|---|
+| `orange` | `#F59332` | `#FA7814` |
+| `orangeChip` | `#F5931F` | `#FA7814` |
+| `orangeDeep` | `#C96A12` | `#C65E06` |
+| `orangeGradient` | `#F9A94E → #F59332 → #DE7A17` | `#FC9633 → #FA7814 → #E56C08` |
+| `gold` | `#FFC93C` | `#FCCC36` |
+| `goldEdge` | `#C99508` | `#CD9C05` |
+
+Everything else verified identical — the inks, creams, muted greys, greens and
+subject chips all still match. So this was a recolour, not a redesign, which is
+why the first five screens' layout survived it untouched.
+
+**The two oranges have collapsed into one.** The old board used `#F59332` for
+surfaces and `#F5931F` for the highlight chip; the new board uses `#FA7814` for
+both. `orangeChip` is kept as a name — it is the only place the two ever
+diverged — but it is not a second colour today.
+
+Because every primitive reads tokens rather than literals, fixing
+`tokens.ts` fixed all of them. The only other changes were stale hex values in
+*comments*, which were corrected: a wrong comment in the stroked-text
+hand-off would have produced wrong artwork.
+
+### Onboarding grew from 10 screens to 17
+
+The brief still uses the old numbering and **the two no longer agree.** The
+board is the authority for what exists; the brief is the authority for
+behaviour. Mapping:
+
+| brief | board | note |
+|---|---|---|
+| 2.1 SPLASH | 2.1 SPLASH | |
+| 2.2 WELCOME | 2.2 WELCOME | |
+| 2.3 GOALS | 2.3 GOALS | |
+| 2.4 NAME + GRADE | 2.4 NAME + GRADE | |
+| 2.5 CLASSES | 2.5 CLASSES | |
+| 2.6 STUDY STYLE | 2.6 STUDY STYLE | |
+| 2.6b YOUR WEEK | 2.7 YOUR WEEK | was a sub-letter, now a screen |
+| 2.6c WHEN YOU START | 2.8 WHEN YOU START | was a sub-letter, now a screen |
+| — | **2.9 WHAT GOES WRONG** | new |
+| — | **2.10 DAILY PACE** | new |
+| — | **2.11 WITH CHUNK VS ALONE** | new |
+| — | **2.12 YOUR PROGRESS CURVE** | new |
+| 2.7 ADD YOUR FIRST WORK | 2.13 IMPORT WORK | renamed |
+| 2.8 BUILDING YOUR PLAN | 2.14 BUILDING YOUR PLAN | |
+| 2.9 YOUR FIRST PLAN | 2.15 YOUR FIRST PLAN | |
+| 2.10 PAYWALL | 2.16 PAYWALL | |
+| — | **2.17 LOG IN** | new |
+
+Five screens are new and one is renamed. `2.6b`/`2.6c` no longer exist as
+sub-letters — the guesses made about them in the first batch plan are moot.
+
+### Two earlier decisions this supersedes
+
+**Sign-in is designed after all.** The decision recorded earlier today — defer
+sign-in and AI consent to batch 3, do not derive them from the board, "I'll
+design them properly" — was made on the understanding that **the board had no
+sign-in frame.** The new board has **2.17 LOG IN**. The deferral to batch 3
+stands; the reason for it does not, for sign-in. AI consent still has no frame
+anywhere on the board and remains genuinely undesigned.
+
+**The 5-screen batch plan is void.** It was built around a 10-screen
+onboarding. Seventeen screens need a new plan, which is the next thing to
+agree, not something to assume.
+
+### Mascot extraction is now scripted
+
+The board's asset UUIDs are not stable across exports, so `design/mascot/` had
+to be rebuilt from scratch. `scripts/copy-mascot.mjs` now does it and
+regenerates the README mapping, making a future board swap one command instead
+of a manual copy — which is what let the wrong art get committed once before.
+The four poses batch 1 uses were verified by MD5 against the board's own
+referenced assets, not matched by eye.

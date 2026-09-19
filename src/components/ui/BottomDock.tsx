@@ -5,7 +5,7 @@
  * bottom edge `0 6px 0 #6E4A28`. Four destinations either side of a raised
  * add button:
  *
- *   active tab    46x46 amber square at radius 16, icon 21px in #C96A12
+ *   active tab    46x46 amber square at radius 16, icon 21px in #C65E06
  *   inactive tab  bare 21px icon in #C3B4A8, no container
  *   add           46x46 orange circle, edge 0 4px 0, plus in white at 3.0
  *

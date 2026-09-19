@@ -6,7 +6,7 @@
  *
  *   276x276 circle, background:
  *     conic-gradient(#fff 0 78%, rgba(255,255,255,.32) 78% 100%)
- *   232x232 inner circle in #F59332 holding the countdown
+ *   232x232 inner circle in #FA7814 holding the countdown
  *
  * It is drawn here as an SVG circle with `strokeDasharray`. That is a faithful
  * reproduction rather than an approximation, because the CSS uses **hard

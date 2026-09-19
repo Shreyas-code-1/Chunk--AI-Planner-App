@@ -1,7 +1,7 @@
 /**
  * Toggle.
  *
- * 52x30 pill, 3px inset, 24x24 white knob. On is `#F59332`, off is `#EFE1D2`.
+ * 52x30 pill, 3px inset, 24x24 white knob. On is `#FA7814`, off is `#EFE1D2`.
  * The board draws both states, so nothing here is invented.
  */
 

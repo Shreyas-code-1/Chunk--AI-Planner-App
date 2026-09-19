@@ -56,7 +56,7 @@ export function StrokedText({
 type HighlightChipProps = {
   children: string;
   fontSize: number;
-  /** `#F5931F` everywhere except the paywall's gold. */
+  /** `#FA7814` everywhere except the paywall's gold. */
   background?: string;
   /** The paywall's chip is the one with no hard edge beneath it. */
   edge?: boolean;

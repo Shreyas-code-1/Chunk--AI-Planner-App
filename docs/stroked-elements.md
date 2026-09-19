@@ -1,6 +1,10 @@
 # Stroked elements — asset hand-off
 
 Every element in the board that uses `-webkit-text-stroke` / `paint-order`.
+
+**Screen numbers here are the board's.** The brief still uses the older,
+shorter onboarding numbering (2.1-2.10 with 2.6b/2.6c); the mapping between
+the two is in `docs/decision-log.md`.
 Neither property exists in React Native, and the usual approximations (layered
 duplicate text, shadow rings) look wrong at these sizes — so **none of these is
 being built**. Each is a placeholder that renders nothing until assets land in
@@ -24,7 +28,7 @@ The only one that is not the highlight-chip pattern.
 | fill | `#FFF6E6` |
 | stroke | **11px** `#211710` |
 | drop shadow | `text-shadow: 0 10px 0 #211710` (hard, no blur) |
-| sits on | orange gradient `#F9A94E → #F59332 45% → #DE7A17` |
+| sits on | orange gradient `#FC9633 → #FA7814 45% → #E56C08` |
 
 Needs a transparent-background PNG at @1x/@2x/@3x, or an SVG with the stroke
 already outlined to paths. The hard drop shadow can be baked in or left to me —
@@ -44,19 +48,20 @@ border-radius 16px.
 
 | # | screen | rendered text | size | chip bg | chip shadow |
 |---|---|---|---|---|---|
-| 2 | 2.2 WELCOME | `chunk` | 40px | `#F5931F` | `0 5px 0 #3A2A20` |
-| 3 | 2.5 CLASSES | `chunking` | 34px | `#F5931F` | `0 5px 0 #3A2A20` |
-| 4 | 2.9 YOUR FIRST PLAN | `21 chunks` | 38px | `#F5931F` | `0 5px 0 #3A2A20` |
-| 5 | 2.10 PAYWALL | `7 days free` | 31px | `#FFC93C` | none |
-| 6 | 3.7 THE CHUNKING MOMENT | `5 chunks` | 38px | `#F5931F` | `0 5px 0 #3A2A20` |
+| 2 | 2.2 WELCOME | `chunk` | 40px | `#FA7814` | `0 5px 0 #3A2A20` |
+| 3 | 2.5 CLASSES | `chunking` | 34px | `#FA7814` | `0 5px 0 #3A2A20` |
+| 4 | 2.15 YOUR FIRST PLAN | `21 chunks` | 38px | `#FA7814` | `0 5px 0 #3A2A20` |
+| 5 | 2.16 PAYWALL | `7 days free` | 31px | `#FCCC36` | none |
+| 6 | 3.7 THE CHUNKING MOMENT | `5 chunks` | 38px | `#FA7814` | `0 5px 0 #3A2A20` |
 
 ---
 
 ## The problem with 4 and 6 — they are not static text
 
-`21 chunks` and `5 chunks` are **runtime values**. 2.9 renders the real number
+`21 chunks` and `5 chunks` are **runtime values**. 2.15 renders the real number
 from the generated plan, and the brief is explicit that these numbers must not
-be faked (§5, 2.9: "Do not fake larger numbers"). 3.7 is the same — "2 hours
+be faked (§5, which numbers this screen 2.9: "Do not fake larger
+numbers"). 3.7 is the same — "2 hours
 became 5 chunks" changes with every assignment.
 
 A static PNG or SVG cannot render a number we don't know until the plan runs. So
@@ -69,7 +74,7 @@ The full line is `<N> hours became` / **`<N> chunks`**, where only the chip is
 stroked. The surrounding "10 hours became" is ordinary unstroked Baloo 2 at
 38px and needs nothing from you.
 
-| | screen 2.9 | screen 3.7 |
+| | screen 2.15 | screen 3.7 |
 |---|---|---|
 | chip text | `21 chunks` on the board | `5 chunks` on the board |
 | what the number is | total chunks across everything added in 2.7 | chunks in the one assignment just added |
@@ -84,14 +89,14 @@ both screens.
 `src/planner/constants.ts` caps a single assignment at 12 chunks, so 3.7 has
 exactly **12 possible strings**: "1 chunk" through "12 chunks".
 
-**2.9 is bounded in practice but not in principle.** It sums the assignments
+**2.15 is bounded in practice but not in principle.** It sums the assignments
 added during 2.7, and the brief requires *at least* one. One assignment is the
 expected case and stays within the same 12 strings; a student who adds three
 could reach the thirties.
 
 This opens a third option you may prefer to either of the ones below: **a set
-of 12 assets** ("1 chunk" ... "12 chunks") covers 3.7 completely and 2.9 in the
-normal case, with a fallback needed only when 2.9 exceeds 12. No runtime
+of 12 assets** ("1 chunk" ... "12 chunks") covers 3.7 completely and 2.15 in the
+normal case, with a fallback needed only when 2.15 exceeds 12. No runtime
 stroking, no design change, and every number renders exactly as drawn.
 
 The options, then:
@@ -107,7 +112,7 @@ The options, then:
 - **c. Change the design** so the dynamic number sits outside the chip and the
   chip holds fixed text.
 - **d. Twelve assets.** "1 chunk" through "12 chunks", as described above. The
-  open question is only what 2.9 does above 12 — cap the phrasing, or fall
+  open question is only what 2.15 does above 12 — cap the phrasing, or fall
   back to unstroked for that case.
 
 I am not picking. Tell me which, and whether option (a) is worth the device

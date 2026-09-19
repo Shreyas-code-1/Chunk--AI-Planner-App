@@ -15,11 +15,20 @@ export const colors = {
   /** The darker ink used at display sizes, e.g. the splash logo stroke. */
   inkDeep: '#211710',
 
-  /** Primary. Two near-identical oranges both appear on the board. */
-  orange: '#F59332',
-  orangeChip: '#F5931F',
-  orangeDeep: '#C96A12',
-  orangeGradient: ['#F9A94E', '#F59332', '#DE7A17'] as const,
+  /**
+   * Primary.
+   *
+   * The earlier board carried two near-identical oranges (`#F59332` for
+   * surfaces, `#F5931F` for the highlight chip). This board has collapsed them
+   * into one: the chip and the buttons are both `#FA7814`. `orangeChip` is
+   * kept as a distinct name rather than deleted, because the chip is the one
+   * place the two ever diverged and a future board may split them again — but
+   * it is not a second colour today.
+   */
+  orange: '#FA7814',
+  orangeChip: '#FA7814',
+  orangeDeep: '#C65E06',
+  orangeGradient: ['#FC9633', '#FA7814', '#E56C08'] as const,
 
   /** The hard bottom edge under a pressable. Not a blur — see shadows. */
   edgeBrown: '#6E4A28',
@@ -52,8 +61,8 @@ export const colors = {
   successSoft: '#E6F7EE',
 
   /** Pro / paywall gold. */
-  gold: '#FFC93C',
-  goldEdge: '#C99508',
+  gold: '#FCCC36',
+  goldEdge: '#CD9C05',
 
   /** Display type on the orange splash. */
   onOrange: '#FFF6E6',
