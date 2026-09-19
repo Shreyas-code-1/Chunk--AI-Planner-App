@@ -61,7 +61,40 @@ became 5 chunks" changes with every assignment.
 
 A static PNG or SVG cannot render a number we don't know until the plan runs. So
 1, 2, 3 and 5 can be assets and are unblocked the moment you send them, but 4
-and 6 need a decision:
+and 6 need a decision.
+
+### Exactly what varies
+
+The full line is `<N> hours became` / **`<N> chunks`**, where only the chip is
+stroked. The surrounding "10 hours became" is ordinary unstroked Baloo 2 at
+38px and needs nothing from you.
+
+| | screen 2.9 | screen 3.7 |
+|---|---|---|
+| chip text | `21 chunks` on the board | `5 chunks` on the board |
+| what the number is | total chunks across everything added in 2.7 | chunks in the one assignment just added |
+| range | 1 and up (see below) | **1-12** |
+| singular at 1 | `1 chunk` | `1 chunk` |
+
+The chip text is always the same shape: an integer, a space, then `chunk` or
+`chunks`. Nothing else about it changes — same fill, same stroke, same size on
+both screens.
+
+**3.7 is strictly bounded at 12.** `MAX_CHUNKS_PER_ASSIGNMENT` in
+`src/planner/constants.ts` caps a single assignment at 12 chunks, so 3.7 has
+exactly **12 possible strings**: "1 chunk" through "12 chunks".
+
+**2.9 is bounded in practice but not in principle.** It sums the assignments
+added during 2.7, and the brief requires *at least* one. One assignment is the
+expected case and stays within the same 12 strings; a student who adds three
+could reach the thirties.
+
+This opens a third option you may prefer to either of the ones below: **a set
+of 12 assets** ("1 chunk" ... "12 chunks") covers 3.7 completely and 2.9 in the
+normal case, with a fallback needed only when 2.9 exceeds 12. No runtime
+stroking, no design change, and every number renders exactly as drawn.
+
+The options, then:
 
 - **a. Stroke the text at runtime.** We already have `react-native-svg`, and SVG
   text takes `stroke`/`strokeWidth`. I have not verified it matches: the
@@ -73,6 +106,9 @@ and 6 need a decision:
   legible without it. It breaks consistency with 2, 3 and 5.
 - **c. Change the design** so the dynamic number sits outside the chip and the
   chip holds fixed text.
+- **d. Twelve assets.** "1 chunk" through "12 chunks", as described above. The
+  open question is only what 2.9 does above 12 — cap the phrasing, or fall
+  back to unstroked for that case.
 
 I am not picking. Tell me which, and whether option (a) is worth the device
 check first.
