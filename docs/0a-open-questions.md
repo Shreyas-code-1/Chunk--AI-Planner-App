@@ -57,17 +57,37 @@ There is also no test runner in the stack. Both specs specify test cases, and
 the algorithm is pure functions that are worth testing properly. May I add
 `jest` + `jest-expo`? That is a §2 addition, so I am asking.
 
-**4. The design board — which file is canonical?**
-`reference/` has three board exports. Only **`CHUNK Board v3.dc.html`** contains
-the full labelled set 2.1–5.4; v2 stops at 4.5 plus a `5.9`, and v1 has a
-different row 4 (4.6, 4.7) that no longer exists in the brief. I intend to treat
-**v3 as the single source of truth** and ignore v1 and v2 entirely. Confirm.
+**4. The design board — which file is canonical? There are now four.**
+`reference/` (git-ignored) holds three exports: v1, v2 and v3. Of those, only
+**v3** has the full labelled set 2.1–5.4 — v2 stops at 4.5 plus a `5.9`, and v1
+has a different row 4 (4.6, 4.7) that no longer exists in the brief. So within
+`reference/`, v3 wins.
 
-Also: `reference/` is **git-ignored** (per the README). Given the rule about not
-losing things twice, do you want the board and mascot art committed to the repo?
-They are ~2 MB. I would say yes — the design is final and the code is
-meaningless without it — but that is your call, and it is the same failure mode
-we just fixed.
+But four commits pushed to `origin/main` (`82fea0e`…`bd70139`) have since added
+three more board files at the repo root:
+
+| file | size | screens |
+|---|---|---|
+| `CHUNK Board v3.dc.html` (root) | 167,840 B | 2.1–5.4 |
+| `reference/CHUNK Board v3.dc.html` | 164,725 B | 2.1–5.4 |
+| `CHUNK Design1.html` | 167,849 B | 2.1–5.4 |
+| `CHUNK Board v3 (standalone).html` | 9.5 MB | 2.1–5.4 |
+
+All four cover the same screen set and **all four differ in content** — the two
+files both called "v3" are not the same file, and `CHUNK Design1.html` is a
+near-identical sibling of the root one. The 9.5 MB standalone is presumably the
+same board with assets inlined.
+
+I will not guess which of these is the final design. Tell me the one file that
+is authoritative, and I will delete or archive the rest — four copies of a
+"final" design is exactly how a visual decision silently drifts. Also: was that
+upload yours, and is `origin/codex/functional-mobile-web` (a branch that also
+appeared on the remote) relevant to us, or dead?
+
+Once you name the canonical file, I would like it committed at a fixed path —
+`design/board.html` — rather than left in git-ignored `reference/`. The design
+is final and the code is meaningless without it; losing it is the same failure
+mode we just fixed twice.
 
 **5. Icons.**
 Does the board draw its own icons in the hand-drawn style, or is it using a
