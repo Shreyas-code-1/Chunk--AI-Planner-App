@@ -32,6 +32,14 @@ export const colors = {
   creamBorder: '#F0E4D6',
   /** Progress-bar and slider tracks. */
   track: '#F2E7DA',
+  /** The pale border on the path-node and stats-strip containers. */
+  creamPale: '#F5EADF',
+  /** Fill of a locked path node. */
+  locked: '#EFE4D8',
+  /** The brown marker in the stats strip. Appears nowhere else. */
+  statBrown: '#6B3F1E',
+  /** Pale amber. The Bio chip's fill, reused for the all-time stat marker. */
+  amber: '#FBE3C4',
 
   /** Secondary text, in three steps. */
   muted: '#8A7A6E',
@@ -61,7 +69,7 @@ export const colors = {
  * draws it on the "Che" chip, which is what an unrecognised class gets.
  */
 export const subjectChips = {
-  bio: { background: '#FBE3C4', text: '#C96A12' },
+  bio: { background: colors.amber, text: colors.orangeDeep },
   alg: { background: '#E4EDFF', text: '#33509E' },
   eng: { background: '#E6F7EE', text: '#1E8659' },
   his: { background: '#FDE7E3', text: '#C33B29' },

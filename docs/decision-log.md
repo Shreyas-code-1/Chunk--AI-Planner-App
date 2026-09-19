@@ -136,3 +136,52 @@ hand — the two directories are kept apart so a regeneration cannot clobber the
 no React Native equivalent and the approximations look wrong at the board's
 sizes. `docs/stroked-elements.md` is the hand-off list. Two of the six contain
 runtime values and so cannot be static assets at all; that is an open decision.
+
+---
+
+## 2026-09-19 — Primitives and icons: what the board actually contains
+
+**There are 20 icons, not 66.** The board holds 65 `<svg>` elements but only
+**20 distinct** ones — it reuses them heavily. Each is its own component in
+`src/components/icons/`, traced from the board, no icon library. Stroke width
+is a per-icon prop rather than a constant because the board genuinely varies
+it: the check mark alone appears at 3.2, 3.4 and 3.6 depending on the size it
+is drawn at, and normalising those would be a visual change.
+
+One of the 20 is not an icon: `PathConnector` is the dotted serpentine line on
+3.2, on its own 350x520 viewBox with a 20px stroke and `dasharray 2 26`.
+
+**The board has a COMPONENTS row**, and it is the authority for the primitives
+— it draws PATH NODE (done/now/locked), TOP STATS STRIP, INPUT/SLIDER/TOGGLE,
+BOTTOM DOCK and the assignment card with exact values. Everything in
+`src/components/ui/` comes from there rather than from inference off a screen.
+
+### Substitution made — the progress ring
+
+3.3 FOCUS draws its countdown ring with a CSS `conic-gradient`, which React
+Native has no equivalent for. It is built as an SVG circle with
+`strokeDasharray`, rotated -90 degrees so the sweep starts at twelve o'clock.
+
+This is a faithful reproduction rather than an approximation: the CSS uses
+**hard stops** (`#fff 0 78%, rgba(255,255,255,.32) 78% 100%`), so there is no
+actual gradient — just two flat arcs — and the SVG produces the same two arcs
+at the same 22px thickness, derived from the board's 276px outer and 232px
+inner circles.
+
+### Gaps flagged, not invented
+
+- **No disabled state** anywhere on the board: Button, Toggle and Input all
+  carry a placeholder opacity marked `TODO(design)`.
+- **No error state for a text field**, which 2.4 needs for an empty name.
+- **2.6 BEST TIME OF DAY is a two-thumb range slider**, but the COMPONENTS row
+  only draws a single-thumb slider. The range variant is not built.
+- **`ChunkBar` and `ChunkDock3` are `dc-import` references** and their markup
+  is *not* inlined in the standalone export. The dock was built from the
+  COMPONENTS row's inlined BOTTOM DOCK instead; the iOS status bar (`ChunkBar`)
+  has no source in our board file at all.
+
+### Colours the COMPONENTS row introduced
+
+`#F5EADF` (pale container border), `#EFE4D8` (locked node fill), `#6B3F1E`
+(the brown stats marker, which appears nowhere else) and `#FBE3C4` promoted to
+a named token, since the Bio chip fill is reused for the all-time stat marker.

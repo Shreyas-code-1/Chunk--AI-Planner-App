@@ -22,6 +22,7 @@ import {
 } from '@expo-google-fonts/nunito';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
@@ -56,12 +57,16 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <SessionProvider>
-          <Stack screenOptions={{ headerShown: false }} />
-        </SessionProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    // GestureHandlerRootView must wrap everything that uses a gesture, and
+    // the Slider does.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <SessionProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </SessionProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }

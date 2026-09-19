@@ -8,6 +8,13 @@
  */
 
 export { Button } from './Button';
+export { BottomDock, type DockTab } from './BottomDock';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { Input } from './Input';
+export { PathNode, type PathNodeState } from './PathNode';
+export { ProgressRing } from './ProgressRing';
+export { Slider } from './Slider';
 export { SpeechBubble } from './SpeechBubble';
+export { StatsStrip, type Stat, type StatKind } from './StatsStrip';
+export { Toggle } from './Toggle';
