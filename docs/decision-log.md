@@ -207,3 +207,94 @@ is the first beaver on the board and the one on 2.2 WELCOME.
 
 Rule: mascot art comes from the board and nowhere else. When a screen is built,
 use the pose the board pairs with that screen rather than a general-purpose one.
+
+---
+
+## 2026-09-19 — Phase 1 kickoff: two decisions
+
+### The migration is applied by hand, from the dashboard
+
+`supabase/migrations/0001_init.sql` cannot be applied from this machine: there
+is no Docker, no Supabase CLI session (`~/.supabase` holds telemetry only, no
+access token), and the database password is not in `.env` — nor would it
+belong there.
+
+**Decision: it is pasted into the hosted project's SQL Editor and run there.**
+The file stays the source of truth and stays committed; the dashboard is only
+the delivery mechanism for this first one. Rejected for now: linking the CLI
+(needs the DB password shared into the session) and a local Docker stack
+(large download, and there is no second environment to justify it yet).
+
+Consequence: until it has been run, anything writing to `profiles`,
+`preferences` or `classes` compiles and is correct against the schema but
+fails at runtime. That is the accepted state — it is **not** a reason to add
+mock data, which §9.1 forbids.
+
+### Sign-in and AI consent are deferred to batch 3
+
+The board has frames for 2.1 through 2.10 and for the COMPONENTS row. It has
+**no frame for a sign-in screen and none for AI consent.** The first plan
+treated both as batch 1 blockers, on the grounds that 2.2's "I already have an
+account" is otherwise a dead button.
+
+**Decision: both screens are deferred to batch 3**, where the original batch
+table already placed them. They are not derived from the board, and batch 1
+does not wait on them. This supersedes the earlier answer in this same session
+to compose them from the existing token and primitive vocabulary — that
+approach is dropped, not merely postponed.
+
+**Batch 1 is therefore 2.1, 2.2, 2.3, 2.4 and 2.5, and nothing else.**
+
+Consequence, accepted knowingly: 2.2's "I already have an account" has no
+destination until batch 3. It is built in its board-drawn position and styling
+but wired to nothing, so the screen matches the board and the gap is one route,
+not a missing control. This is the App Completeness risk the brief warns about,
+and it is only a real risk at submission — batch 3 closes it well before then.
+
+---
+
+## 2026-09-19 — Three board/schema conflicts found reading 2.1–2.5
+
+Caught while reading the board markup for batch 1, before any screen was
+written and before the migration had been run.
+
+### 1. Grade 9 was excluded by the schema — fixed in the migration
+
+The board's 2.4 draws **four** grade tiles: 9, 10, 11 and 12. The migration
+constrained `profiles.grade` to `between 10 and 12`, so a ninth grader would
+have passed the UI and been rejected by Postgres.
+
+`0001_init.sql` now reads `check (grade between 9 and 12)`. Caught at the only
+free moment — the migration had not been applied, so this is an edit to a file
+rather than an `alter table` against live data.
+
+The enum `goal` and the four board tiles stay as drawn. Rule reaffirmed: where
+the board and an earlier inference disagree, the board wins.
+
+### 2. 2.4's "Riverside High · From your school account" row is not buildable
+
+The board draws an avatar row on 2.4 reading "Riverside High / From your school
+account / CHANGE". There is no school field on `profiles`, and no school-account
+sign-in anywhere in the stack — the only providers planned are email, Apple and
+Google.
+
+**Decision: the row is omitted from 2.4.** Building it would mean inventing
+either a column or an integration, and filling it with "Riverside High" would
+be exactly the mock data §9.1 forbids. Flagged for a design answer: either it
+is cut, or it needs a school-account provider that is currently in no plan.
+
+### 3. 2.5's five pre-filled classes are sample data, not an empty state
+
+The board draws 2.5 with Biology, Algebra II, English Lit, World History and
+Chemistry already listed, each with a period and a teacher — the same implied
+school-account import as conflict 2.
+
+**Decision: 2.5 ships as the board's empty state** — the dashed "Add a class"
+row alone — and fills as the user adds classes. `classes` already carries
+`period` and `teacher` as nullable columns, so a class added by hand can hold
+everything the board's rows display; the chip abbreviation and colour derive
+from the name through `src/theme/subjects.ts`, exactly as the board's "Che"
+neutral chip does.
+
+The board frame is a populated-state mockup. Treating it as the launch state
+would hard-code five fictional classes into the app.

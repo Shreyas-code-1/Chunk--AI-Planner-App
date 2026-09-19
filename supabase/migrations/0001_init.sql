@@ -29,7 +29,9 @@ create table profiles (
   -- Null until screen 2.4. The trigger below creates the row at signup, before
   -- a name has been chosen; 2.4 enforces non-empty on the way in.
   display_name text        check (display_name is null or length(btrim(display_name)) > 0),
-  grade        smallint    check (grade between 10 and 12),
+  -- The board's 2.4 draws four grade tiles: 9, 10, 11, 12. The board is the
+  -- authority, so the constraint spans all four.
+  grade        smallint    check (grade between 9 and 12),
   -- Age gate (§12): under-13 signup is blocked. Grade alone cannot prove age.
   birth_year   smallint    check (birth_year between 1900 and 2100),
   -- IANA zone, captured at signup. v1 is single-timezone per the agreed scope.
