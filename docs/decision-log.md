@@ -298,3 +298,67 @@ neutral chip does.
 
 The board frame is a populated-state mockup. Treating it as the launch state
 would hard-code five fictional classes into the app.
+
+---
+
+## 2026-09-19 — Migration applied; batch 1 answers
+
+The migration is applied to the hosted project. `src/api/types.ts` is now
+hand-written types standing in for generated ones — see the note at the end of
+this entry.
+
+### Q13 — chunking fails (2.8)
+
+An inline error **on 2.8 itself**, with a retry, plus an "add it manually"
+escape that falls through to 3.6. It never returns to the start of onboarding.
+
+The reason this is worth writing down: the failure happens on the one screen
+whose entire job is to wait, so the temptation is to treat a failed wait as a
+dead end and restart the flow. Everything the user typed on 2.3 through 2.7 is
+still valid when chunking fails — only the chunking step failed — so throwing
+it away would be punishing them for our outage.
+
+### Q14 — starting chunks out of order
+
+**Allowed.** A locked path node on 3.2 is guidance, not enforcement: it shows
+the suggested order, and tapping one that is not "next" starts it anyway.
+
+This decides something in the planner's favour that could have gone either way:
+the schedule is advice about sequence, not a gate. Anything later that wants to
+*prevent* a start needs its own decision recorded here.
+
+### Q16 — the urgent threshold
+
+Home switches to its 5.4 urgent state when something is **due within 6 hours
+and still has chunks remaining**. Both halves are required — a due time alone
+is not urgent if the work is done.
+
+6 hours is a starting value to be tuned against real data, so it lives as a
+named constant beside the other tunables rather than as a literal at the call
+site.
+
+### Consequence of deferring auth: onboarding has no session
+
+Sign-in and AI consent are in batch 3, so there is **no authenticated user
+while 2.3, 2.4 and 2.5 are on screen.** Those three screens write to
+`profiles`, `preferences` and `classes`, every one of which is RLS-scoped to
+`auth.uid()`. Writing as we go is therefore impossible, not merely awkward.
+
+**Decision: onboarding answers accumulate in an in-memory draft store
+(zustand) and are flushed to Supabase in one transaction once a session
+exists** — which happens in batch 3, when sign-up is built.
+
+This is real user input held locally, not mock data, so §9.1 is satisfied. It
+is also the right shape regardless of the auth ordering: a user who abandons
+onboarding at 2.5 should not leave a half-populated profile row behind.
+
+Accepted limitation: the draft is not persisted, so killing the app mid-
+onboarding loses the answers and restarts the flow. For a flow of this length
+that is acceptable for v1; if it proves annoying, the store gains a SecureStore
+backing without any screen changing.
+
+### Types are still hand-written — blocked on a CLI login
+
+`supabase gen types` needs either a CLI access token, a database password or a
+local Docker stack, and this machine has none of the three. The migration being
+applied removed one blocker but not this one.
