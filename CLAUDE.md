@@ -22,6 +22,11 @@ the only self-contained copy. Regenerate the readable form with
 (git-ignored). `design/assets/` is for hand-supplied assets and is never
 touched by that script.
 
+`design/mascot/` holds the board's own 21 mascot poses, extracted from
+`design/board.html`. The board uses **a different pose per screen** — the
+mascot is not one image, and `design/mascot/README.md` maps each file to the
+screen it appears on. Do not take mascot art from anywhere else.
+
 - The design is final. We are **translating** it, not reimplementing it. Do not
   change spacing, colour, type size, weight, radius or shadow. The scale is
   uneven on purpose (12, 11.5, 14.5, 13.5 all appear); do not harmonise it.

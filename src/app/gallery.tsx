@@ -163,11 +163,14 @@ export default function Gallery() {
           </Card>
         </Section>
 
-        <Section title="SpeechBubble" note="Nunito 700 at 14.5px, line-height 1.45">
+        <Section
+          title="SpeechBubble"
+          note="Nunito 700 at 14.5px · the board pairs a different mascot pose per screen"
+        >
           <SpeechBubble
             mascot={
               <Image
-                source={require('../../design/mascot/mascot-head.png')}
+                source={require('../../design/mascot/00-mascot-waving.png')}
                 style={styles.mascot}
                 contentFit="contain"
               />

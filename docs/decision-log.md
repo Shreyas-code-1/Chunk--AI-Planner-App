@@ -185,3 +185,25 @@ inner circles.
 `#F5EADF` (pale container border), `#EFE4D8` (locked node fill), `#6B3F1E`
 (the brown stats marker, which appears nowhere else) and `#FBE3C4` promoted to
 a named token, since the Bio chip fill is reused for the all-time stat marker.
+
+---
+
+## 2026-09-19 — Mascot art came from the wrong source
+
+The mascot art committed at `design/mascot/` was taken from the git-ignored
+`reference/` folder (`mascot-head.png` and friends). That was wrong: it is
+**different art** — a head-only crop — and not what the board draws. It had
+the same failure mode as the four drifting board files: a second copy of a
+final asset, from a source that is not the source of truth.
+
+`design/mascot/` now holds the board's own art, extracted from the 21 PNGs
+inlined in `design/board.html`, with `design/mascot/README.md` mapping each
+file to its alt text and the screen it appears on.
+
+**The mascot is not one image.** The board pairs a different pose with each
+screen — waving on 2.2, pointing at a plan card on 2.9, cheering on a
+completion, studying, waiting. `00-mascot-waving.png` is the mascot proper: it
+is the first beaver on the board and the one on 2.2 WELCOME.
+
+Rule: mascot art comes from the board and nowhere else. When a screen is built,
+use the pose the board pairs with that screen rather than a general-purpose one.
