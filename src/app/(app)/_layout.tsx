@@ -16,6 +16,9 @@ export default function AppLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        // See the onboarding layout: a cross-fade rather than a slide.
+        animation: 'fade',
+        animationDuration: 180,
         contentStyle: { backgroundColor: colors.page },
       }}
     />

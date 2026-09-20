@@ -13,8 +13,10 @@
  * TODO(design): the board draws no paused state, only PAUSE as a label.
  * TODO(batch 7): the music card does nothing. `expo-audio` is installed but
  * there is no track, no picker and no answer about where audio comes from.
- * TODO: finishing does not record anything — `chunk_completions` is not
- * written until the API layer for it exists.
+ * Finishing records a completion against the chunk's key, which is what makes
+ * 3.1's counters, 3.2's path and 3.5's progress move. That write is
+ * append-only and idempotent for the same reason the `chunk_completions`
+ * policy is: the lifetime count depends on it.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -24,6 +26,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OrangeGradient, ProgressRing } from '../../components/ui';
+import { useWork } from '../../features/work/store';
 import { Close, MoreVertical, MusicNote } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { haptic } from '../../lib/haptics';
@@ -42,12 +45,15 @@ function clock(totalSeconds: number): string {
 export default function Focus() {
   const router = useRouter();
   const params = useLocalSearchParams<{
+    chunk?: string;
+    assignment?: string;
     title?: string;
     className?: string;
     minutes?: string;
     index?: string;
     total?: string;
   }>();
+  const completeChunk = useWork((state) => state.completeChunk);
 
   const minutes = Number(params.minutes ?? 0);
   const totalSeconds = Math.max(0, Math.round(minutes * 60));
@@ -183,10 +189,20 @@ export default function Focus() {
               accessibilityRole="button"
               onPress={() => {
                 haptic('press');
+                const focused = Math.max(1, Math.round((totalSeconds - remaining) / 60));
+
+                if (params.chunk && params.assignment) {
+                  completeChunk({
+                    chunkKey: params.chunk,
+                    assignmentId: params.assignment,
+                    minutes: focused,
+                  });
+                }
+
                 router.replace({
                   pathname: '/chunk-complete',
                   params: {
-                    minutes: String(Math.round((totalSeconds - remaining) / 60)),
+                    minutes: String(focused),
                     index: params.index ?? '',
                     total: params.total ?? '',
                   },

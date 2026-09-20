@@ -62,6 +62,8 @@ export const mascot = {
   focus: require('../../design/mascot/16-chunk-studying.png'),
   /** 3.4 CHUNK COMPLETE. */
   complete: require('../../design/mascot/17-chunk-cheering.png'),
+  /** 3.7 THE CHUNKING MOMENT — the bust beside the speech bubble. */
+  chunked: require('../../design/mascot/19-chunk.png'),
 } as const;
 
 // 2.10 DAILY PACE, 2.11 WITH CHUNK VS ALONE, 2.12 YOUR PROGRESS CURVE and

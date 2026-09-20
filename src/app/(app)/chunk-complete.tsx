@@ -13,9 +13,10 @@
  * only 4.x can produce, and 4.3-4.5 are not built.
  *
  * TODO(batch 7): both of those return with the AI features.
- * TODO: nothing is written to `chunk_completions` yet, so the streak and the
- * lifetime count stay at zero rather than incrementing a number we are not
- * storing.
+ *
+ * The completion itself is written by 3.3 before it navigates here, so every
+ * count below is read back from the store rather than passed along. One place
+ * owns whether a chunk is finished, and it is not this screen.
  */
 
 import { Image, StyleSheet, Text, View } from 'react-native';
@@ -25,18 +26,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../../components/ui';
 import { mascot } from '../../components/mascot';
+import { usePlan } from '../../features/work/usePlan';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 export default function ChunkComplete() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ minutes?: string; index?: string; total?: string }>();
+  const params = useLocalSearchParams<{ minutes?: string; index?: string }>();
 
   const minutes = Number(params.minutes ?? 0);
   const index = Number(params.index ?? 0);
-  const total = Number(params.total ?? 0);
 
-  // TODO(batch 5): both come from `chunk_completions`, which is not written.
-  const streak = 0;
+  const { doneToday, plannedToday, allTimeChunks, upNext } = usePlan();
+
+  // TODO(batch 6): a real streak spans days, which the memory store cannot.
+  const streak = allTimeChunks > 0 ? 1 : 0;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -57,18 +60,18 @@ export default function ChunkComplete() {
             <View style={styles.statRow}>
               <Stat value={`${minutes}`} label="MIN FOCUSED" />
               <View style={styles.divider} />
-              <Stat value={total > 0 ? `${index}/${total}` : '0/0'} label="TODAY" />
+              <Stat value={`${doneToday}/${plannedToday}`} label="TODAY" />
               <View style={styles.divider} />
               <Stat value={`${streak}`} label="DAY STREAK" accent />
             </View>
 
             <View style={styles.segments}>
-              {Array.from({ length: Math.max(total, 5) }, (_, position) => (
+              {Array.from({ length: Math.max(plannedToday, 5) }, (_, position) => (
                 <View
                   key={position}
                   style={[
                     styles.segment,
-                    position < index ? styles.segmentDone : styles.segmentTodo,
+                    position < doneToday ? styles.segmentDone : styles.segmentTodo,
                   ]}
                 />
               ))}
@@ -82,9 +85,24 @@ export default function ChunkComplete() {
             onPress={() => router.replace('/home')}
           />
           <Button
-            label={total > 0 && index < total ? `STRAIGHT INTO CHUNK ${index + 1}` : 'BACK TO TODAY'}
+            label={upNext ? 'STRAIGHT INTO THE NEXT ONE' : 'BACK TO TODAY'}
             variant="secondary"
-            onPress={() => router.replace('/today')}
+            onPress={() =>
+              upNext
+                ? router.replace({
+                    pathname: '/focus',
+                    params: {
+                      chunk: upNext.key,
+                      assignment: upNext.assignmentId,
+                      title: upNext.title,
+                      className: upNext.classId ?? '',
+                      minutes: String(upNext.plannedMinutes),
+                      index: String(doneToday + 1),
+                      total: String(plannedToday),
+                    },
+                  })
+                : router.replace('/today')
+            }
           />
         </View>
       </View>

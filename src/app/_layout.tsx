@@ -63,7 +63,15 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
-            <Stack screenOptions={{ headerShown: false }} />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                // The groups set their own; this covers the splash handing
+                // over to whichever group comes next.
+                animation: 'fade',
+                animationDuration: 180,
+              }}
+            />
           </SessionProvider>
         </QueryClientProvider>
       </ErrorBoundary>

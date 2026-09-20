@@ -17,6 +17,13 @@ export default function OnboardingLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        // Not the platform push. The board is a sequence of full-bleed cards,
+        // and sliding one over the next reads like a slide deck rather than an
+        // app — every screen announces that it came from the right. A short
+        // cross-fade lets the content change without implying a direction,
+        // which is how the lesson flows this is modelled on behave.
+        animation: 'fade',
+        animationDuration: 180,
         // 2.2 is white and 2.3-2.5 are the warm page cream. The cream is the
         // safer default for the gap between screens during a transition.
         contentStyle: { backgroundColor: colors.page },

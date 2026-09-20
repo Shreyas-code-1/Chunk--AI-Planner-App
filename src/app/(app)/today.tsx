@@ -25,19 +25,12 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomDock, PathNode } from '../../components/ui';
+import { usePlan } from '../../features/work/usePlan';
 import { planDateOf, fromDateKey, addDays } from '../../lib/planDate';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 /** The board's row of seven, Monday first. */
 const WEEKDAY_INITIALS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-type Chunk = {
-  id: string;
-  title: string;
-  className: string;
-  minutes: number;
-  state: 'done' | 'now' | 'locked';
-};
 
 export default function Today() {
   const router = useRouter();
@@ -48,9 +41,7 @@ export default function Today() {
   const mondayOffset = (today.getDay() + 6) % 7;
   const weekStart = addDays(todayKey, -mondayOffset);
 
-  // TODO(batch 5): the plan is empty until 3.6 ADD ASSIGNMENT exists.
-  const chunks: Chunk[] = [];
-  const done = chunks.filter((chunk) => chunk.state === 'done').length;
+  const { today: chunks, doneToday: done, upNext } = usePlan();
   const left = chunks.length - done;
 
   return (
@@ -106,38 +97,56 @@ export default function Today() {
           </View>
         ) : (
           <View style={styles.path}>
-            {chunks.map((chunk) => (
-              <View key={chunk.id} style={styles.pathRow}>
-                <PathNode
-                  state={chunk.state}
-                  onPress={
-                    chunk.state === 'now'
-                      ? () => router.push({ pathname: '/focus', params: { chunk: chunk.id } })
-                      : undefined
-                  }
-                />
-                <View
-                  style={[
-                    styles.card,
-                    chunk.state === 'now' ? styles.cardNow : styles.cardPlain,
-                    shadows.hardEdge(chunk.state === 'now' ? 5 : 4),
-                  ]}
-                >
-                  <Text style={[styles.cardTitle, chunk.state === 'locked' && styles.dim]}>
-                    {chunk.title}
-                  </Text>
-                  <Text
+            {chunks.map((chunk, position) => {
+              // The board's three states, derived rather than stored: finished,
+              // the first unfinished one, and everything behind it.
+              const state = chunk.done ? 'done' : upNext?.key === chunk.key ? 'now' : 'locked';
+
+              return (
+                <View key={chunk.key} style={styles.pathRow}>
+                  <PathNode
+                    state={state}
+                    onPress={
+                      state === 'now'
+                        ? () =>
+                            router.push({
+                              pathname: '/focus',
+                              params: {
+                                chunk: chunk.key,
+                                assignment: chunk.assignmentId,
+                                title: chunk.title,
+                                className: chunk.classId ?? '',
+                                minutes: String(chunk.plannedMinutes),
+                                index: String(position + 1),
+                                total: String(chunks.length),
+                              },
+                            })
+                        : undefined
+                    }
+                  />
+                  <View
                     style={[
-                      styles.cardMeta,
-                      chunk.state === 'now' && styles.cardMetaNow,
-                      chunk.state === 'locked' && styles.dimmer,
+                      styles.card,
+                      state === 'now' ? styles.cardNow : styles.cardPlain,
+                      shadows.hardEdge(state === 'now' ? 5 : 4),
                     ]}
                   >
-                    {`${chunk.className} · ${chunk.minutes} min`}
-                  </Text>
+                    <Text style={[styles.cardTitle, state === 'locked' && styles.dim]}>
+                      {chunk.title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.cardMeta,
+                        state === 'now' && styles.cardMetaNow,
+                        state === 'locked' && styles.dimmer,
+                      ]}
+                    >
+                      {`${chunk.classId ?? 'No class'} · ${chunk.plannedMinutes} min`}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -146,11 +155,10 @@ export default function Today() {
         active="week"
         style={styles.dock}
         onSelect={(tab) => {
-          if (tab === 'home') router.push('/home');
+          if (tab === 'home') router.replace('/home');
+          if (tab === 'focus') router.replace('/all-work');
         }}
-        onAdd={() => {
-          // TODO(batch 5): 3.6 ADD ASSIGNMENT is not built.
-        }}
+        onAdd={() => router.push('/add')}
       />
     </SafeAreaView>
   );

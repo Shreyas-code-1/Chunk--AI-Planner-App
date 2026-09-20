@@ -691,3 +691,72 @@ only thing in the app that can produce a chunk, and nothing currently calls it.
 
 `src/app/index.tsx` now sends a stored session to 3.1 instead of always landing
 on 2.2. That branch does not fire yet, because 2.19 creates no session.
+
+---
+
+## 2026-09-20 — Section 3 works end to end, and the transition changed
+
+### The slide is gone
+
+Every stack now uses `animation: 'fade'` at 180ms instead of the platform
+push. The reason is the one reported: the board is a sequence of full-bleed
+cards, and sliding one over the next reads like a slide deck — every screen
+announces that it arrived from the right. A short cross-fade changes the
+content without implying a direction, which is how the lesson flows this is
+modelled on behave. Set in all three layouts: root, `(onboarding)` and `(app)`.
+
+### Work is real now
+
+The planner has been built and tested since the start and nothing called it.
+Two new files close that gap:
+
+- **`src/features/work/store.ts`** — the assignments the student has added and
+  the chunks they have finished. Completions are append-only and idempotent,
+  matching the `chunk_completions` policy, because the lifetime count depends
+  on it.
+- **`src/features/work/usePlan.ts`** — the single place the pure planner meets
+  the stores. Screens read a derived view; no screen calls `plan()` and no
+  screen decides what "today" means.
+
+**This is a memory store, and that is a deliberate, temporary trade.** `src/api`
+is the only thing allowed to touch Supabase and nothing is signed in — 2.19
+accepts any code without creating a session — so work lives in memory until
+auth is real. Reloading the bundler loses it. It is the same shape and the same
+bargain as the onboarding draft, and it moves to `assignments` and
+`chunk_completions` through TanStack Query in batch 6.
+
+One mapping worth naming: 2.7 stores a load per weekday starting **Monday**,
+and the planner indexes by `Date#getDay`, which starts **Sunday**. `prefsFrom`
+rotates between them. Getting that wrong plans Sunday's work onto Monday,
+silently.
+
+### 3.5, 3.6 and 3.7
+
+3.6 ADD ASSIGNMENT is the screen that makes the others stop being empty: name,
+class, due day, length, difficulty, notes, then the real `plan()` runs and 3.7
+shows what came out. 3.5 ALL WORK groups by the day the next chunk falls on,
+and "done" is derived from completions rather than stored as a flag — an
+assignment has no done column, and giving it one would let the two disagree.
+
+**Two controls the board does not draw.** 3.6's DUE ("Thu, May 15") and HOW
+LONG ("2 hours") are plain filled boxes on the board with no picker anywhere in
+the design — the same gap 2.4's birth year hit. Both are built as chip rows,
+which is the control the board uses everywhere else it offers a small set of
+choices (2.6, 2.8), rather than a wheel or calendar that appears nowhere.
+
+### What is now live
+
+Add an assignment → it is split and scheduled by the real algorithm → 3.7 shows
+the chunks → 3.2 draws them as a path → 3.3 runs a real countdown → finishing
+writes a completion → 3.1, 3.2, 3.4 and 3.5 all move. Every number on every one
+of those screens is derived. Nothing is mock data.
+
+### Still not real
+
+- **The streak.** It spans days and the store does not outlive the process, so
+  it reports 1 once anything is finished rather than a count that would be a
+  lie. Batch 6.
+- **3.2's S-curve**, unchanged from the note above: nodes stack rather than
+  follow the board's four-point cubic.
+- **3.4's two AI elements** and 3.3's music card, all batch 7.
+- **5.2 PROFILE** has no screen, so the dock's fourth tab holds.

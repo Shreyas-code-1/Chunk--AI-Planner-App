@@ -1,22 +1,17 @@
 /**
  * 3.1 HOME.
  *
- * The board draws this frame full: "Hi Maya", 3 chunks left, 2/5 today, 55m
- * focused, 148 all time, an UP NEXT card and two classes at 60% and 35%.
- * **None of that is drawn here.** §5 forbids faking numbers, the planner has
- * nothing in it, and there is no assignment to chunk yet — so every count is
- * the real one, which today is zero.
- *
- * The name and the classes come from the onboarding draft, which is the only
- * real data the app currently holds. The draft is not persisted, so a cold
- * start shows the signed-out shape of this screen rather than stale answers.
+ * Every count is the planner's. The name and classes come from the onboarding
+ * draft; the chunks, the progress and the minutes come from `usePlan`, which
+ * runs the real algorithm over the work actually added. Nothing is drawn from
+ * a fixed value, so an empty app shows zeros rather than the board's figures.
  *
  * TODO(design): the board draws no empty state for the UP NEXT card or the
  * classes list. 5.3 EMPTY STATE exists on the board and is not built yet, so
  * the gaps here render a plain line rather than an invented treatment.
  */
 
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,8 +19,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomDock, Chip } from '../../components/ui';
 import { Bell } from '../../components/icons';
 import { useDraft } from '../../features/onboarding/draft';
+import { usePlan } from '../../features/work/usePlan';
+import { haptic } from '../../lib/haptics';
 import { planDateOf, fromDateKey } from '../../lib/planDate';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
+
+const TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
 
 /** The board's "Wednesday, May 14". */
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
@@ -42,13 +41,18 @@ export default function Home() {
   // The 03:00 boundary owns what "today" is; this only formats it.
   const today = fromDateKey(planDateOf(new Date()));
 
-  // TODO(batch 5): every one of these comes from a plan that does not exist.
-  const chunksLeft = 0;
-  const doneToday = 0;
-  const plannedToday = 0;
-  const focusedMinutes = 0;
-  const allTimeChunks = 0;
-  const streak = 0;
+  const {
+    upNext,
+    doneToday,
+    plannedToday,
+    focusedToday,
+    allTimeChunks,
+    classes: progress,
+  } = usePlan();
+  const chunksLeft = plannedToday - doneToday;
+
+  // TODO(batch 6): a real streak needs completions that outlive the process.
+  const streak = allTimeChunks > 0 ? 1 : 0;
 
   const initials = displayName
     .split(' ')
@@ -107,20 +111,68 @@ export default function Home() {
 
         <View style={styles.stats}>
           <Stat value={`${doneToday}/${plannedToday}`} label="today" />
-          <Stat value={`${focusedMinutes}m`} label="focused" />
+          <Stat value={`${focusedToday}m`} label="focused" />
           <Stat value={`${allTimeChunks}`} label="all time" />
         </View>
 
-        <Text style={styles.sectionLabel}>UP NEXT</Text>
-        <View style={styles.empty}>
-          <Text style={styles.emptyLine}>
-            Nothing to start yet — add some work and Chunk will cut it up.
-          </Text>
-        </View>
+        <Text style={styles.sectionLabel}>
+          {upNext
+            ? `UP NEXT · ${upNext.scheduledStart.toLocaleTimeString(undefined, TIME_FORMAT)}`
+            : 'UP NEXT'}
+        </Text>
+
+        {upNext ? (
+          <View style={[styles.upNext, shadows.hardEdge(6)]}>
+            <View style={styles.upNextRow}>
+              <Chip className={upNext.classId ?? 'Other'} size={48} />
+              <View style={styles.upNextText}>
+                <Text style={styles.upNextLabel}>
+                  {`CHUNK ${upNext.index + 1} OF ${plannedToday}`}
+                </Text>
+                <Text style={styles.upNextTitle}>{upNext.title}</Text>
+                <Text style={styles.upNextMeta}>
+                  {`${upNext.classId ?? 'No class'} · ${upNext.plannedMinutes} min`}
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                haptic('press');
+                router.push({
+                  pathname: '/focus',
+                  params: {
+                    chunk: upNext.key,
+                    assignment: upNext.assignmentId,
+                    title: upNext.title,
+                    className: upNext.classId ?? '',
+                    minutes: String(upNext.plannedMinutes),
+                    index: String(upNext.index + 1),
+                    total: String(plannedToday),
+                  },
+                });
+              }}
+              style={[styles.start, shadows.hardEdge(5)]}
+            >
+              <Text style={styles.startLabel}>START THIS CHUNK</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.empty}>
+            <Text style={styles.emptyLine}>
+              Nothing to start yet — add some work and Chunk will cut it up.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.sectionRow}>
           <Text style={styles.sectionLabel}>YOUR CLASSES</Text>
-          {classes.length > 0 ? <Text style={styles.seeAll}>SEE ALL</Text> : null}
+          {classes.length > 0 ? (
+            <Pressable accessibilityRole="button" onPress={() => router.push('/all-work')}>
+              <Text style={styles.seeAll}>SEE ALL</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {classes.length === 0 ? (
@@ -129,19 +181,22 @@ export default function Home() {
           </View>
         ) : (
           <View style={styles.classList}>
-            {classes.map((entry, index) => (
-              <View key={`${entry.name}-${index}`} style={[styles.classRow, shadows.hardEdge(5)]}>
-                <Chip className={entry.name} />
-                <View style={styles.classText}>
-                  <Text style={styles.className}>{entry.name}</Text>
-                  {/* 0% until chunks exist to complete. */}
-                  <View style={styles.track}>
-                    <View style={[styles.trackFill, { width: '0%' }]} />
+            {classes.map((entry, index) => {
+              const row = progress.find((item) => item.className === entry.name);
+              const percent = row?.percent ?? 0;
+              return (
+                <View key={`${entry.name}-${index}`} style={[styles.classRow, shadows.hardEdge(5)]}>
+                  <Chip className={entry.name} />
+                  <View style={styles.classText}>
+                    <Text style={styles.className}>{entry.name}</Text>
+                    <View style={styles.track}>
+                      <View style={[styles.trackFill, { width: `${percent}%` }]} />
+                    </View>
                   </View>
+                  <Text style={styles.percent}>{`${percent}%`}</Text>
                 </View>
-                <Text style={styles.percent}>0%</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -150,13 +205,11 @@ export default function Home() {
         active="home"
         style={styles.dock}
         onSelect={(tab) => {
-          // TODO(batch 5): only 3.2 exists. 3.3 is reached from a chunk, and
-          // 5.2 PROFILE is not built.
-          if (tab === 'week') router.push('/today');
+          // TODO(batch 6): 5.2 PROFILE is not built, so that tab holds.
+          if (tab === 'week') router.replace('/today');
+          if (tab === 'focus') router.replace('/all-work');
         }}
-        onAdd={() => {
-          // TODO(batch 5): 3.6 ADD ASSIGNMENT is not built.
-        }}
+        onAdd={() => router.push('/add')}
       />
     </SafeAreaView>
   );
@@ -316,6 +369,43 @@ const styles = StyleSheet.create({
   },
   trackFill: { height: '100%', backgroundColor: colors.orange },
   percent: { fontFamily: fonts.display.extraBold, fontSize: 20, color: colors.orange },
+
+  upNext: {
+    marginTop: 10,
+    backgroundColor: colors.card,
+    borderWidth: 2,
+    borderColor: colors.orange,
+    borderRadius: radii.chip - 2,
+    padding: 18,
+  },
+  upNextRow: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  upNextText: { flex: 1 },
+  upNextLabel: {
+    fontFamily: fonts.body.black,
+    fontSize: 11.5,
+    letterSpacing: 11.5 * 0.1,
+    color: colors.orangeDeep,
+  },
+  upNextTitle: { marginTop: 2, fontFamily: fonts.body.extraBold, fontSize: 17, color: colors.ink },
+  upNextMeta: {
+    marginTop: 1,
+    fontFamily: fonts.body.semiBold,
+    fontSize: 12.5,
+    color: colors.muted,
+  },
+  start: {
+    marginTop: 14,
+    backgroundColor: colors.orange,
+    borderRadius: 18,
+    padding: 15,
+    alignItems: 'center',
+  },
+  startLabel: {
+    fontFamily: fonts.body.black,
+    fontSize: 14.5,
+    letterSpacing: 14.5 * 0.08,
+    color: colors.white,
+  },
 
   dock: { marginHorizontal: 20, marginBottom: 10 },
 });
