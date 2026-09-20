@@ -79,10 +79,9 @@ const styles = StyleSheet.create({
   },
   headlineRow: {
     flexDirection: 'row',
-    // The board draws the chip as an inline-block inside the sentence, so it
-    // sits on the text's baseline. Centring it against the line instead lifts
-    // it visibly, because the chip is taller than the text it sits beside.
-    alignItems: 'baseline',
+    // Not 'baseline': in Yoga a plain View's baseline is its bottom edge, so
+    // baseline alignment shoves the chip up by its own height.
+    alignItems: 'center',
     justifyContent: 'center',
   },
   headline: {

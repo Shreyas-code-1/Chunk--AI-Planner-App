@@ -62,7 +62,16 @@ export function StrokedText({
       style={[
         styles.reserved,
         !DRAFT_FILL && styles.hidden,
-        { fontSize, letterSpacing, lineHeight: lineHeight ?? fontSize },
+        {
+          fontSize,
+          letterSpacing,
+          // The board's line-heights go below 1 (the splash is .95). CSS lets
+          // the glyph overflow its line box; RN clips it. While the draft fill
+          // is on screen, floor it so nothing is cut off.
+          lineHeight: DRAFT_FILL
+            ? Math.max(lineHeight ?? fontSize, fontSize * 1.2)
+            : (lineHeight ?? fontSize),
+        },
         style,
       ]}
     >

@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   heading: { marginTop: 22 },
-  // As on 2.2, the chip is inline-block on the board and sits on the baseline.
-  headlineRow: { flexDirection: 'row', alignItems: 'baseline' },
+  // See 2.2: 'baseline' misplaces a View child, so these stay centred.
+  headlineRow: { flexDirection: 'row', alignItems: 'center' },
   headline: {
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
