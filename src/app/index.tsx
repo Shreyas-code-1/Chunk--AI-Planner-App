@@ -33,7 +33,7 @@ const MIN_VISIBLE_MS = 1200;
 
 export default function Splash() {
   const router = useRouter();
-  const { loading } = useSession();
+  const { loading, session } = useSession();
   const [held, setHeld] = useState(false);
 
   useEffect(() => {
@@ -43,11 +43,12 @@ export default function Splash() {
 
   useEffect(() => {
     if (!held || loading) return;
-    // TODO(batch 4): a signed-in user belongs on 3.1 HOME, which does not
-    // exist yet. Until it does, everyone lands on 2.2 — deliberately, rather
-    // than routing to a screen that would crash.
-    router.replace('/welcome');
-  }, [held, loading, router]);
+    // 3.1 HOME exists now, so a stored session goes straight there and only a
+    // new arrival walks onboarding. Nothing signs in yet — 2.19 accepts any
+    // code without creating a session — so this is the branch that will start
+    // firing the moment the email flow is real, not dead code.
+    router.replace(session ? '/home' : '/welcome');
+  }, [held, loading, session, router]);
 
   return (
     <View style={styles.screen}>

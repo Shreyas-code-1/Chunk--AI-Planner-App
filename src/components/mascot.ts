@@ -47,6 +47,21 @@ export const mascot = {
    * UUIDs, and so the numbers, will move.
    */
   email: require('../../design/mascot/14-chunk.png'),
+  /**
+   * 2.19 LOG IN — VERIFY: the winking pose behind the magnifying glass.
+   *
+   * The README maps this file to 4.1 SCAN TO CHUNK for the same reason
+   * `email` above is mapped to 3.1 — 2.19 postdates the export.
+   */
+  verify: require('../../design/mascot/20-chunk.png'),
+  /** 3.1 HOME — the pose inside the orange CHUNK SAYS card. */
+  home: require('../../design/mascot/14-chunk.png'),
+  /** 3.2 TODAY — PATH: the climber at the foot of the path. */
+  today: require('../../design/mascot/15-chunk.png'),
+  /** 3.3 FOCUS — RUNNING. */
+  focus: require('../../design/mascot/16-chunk-studying.png'),
+  /** 3.4 CHUNK COMPLETE. */
+  complete: require('../../design/mascot/17-chunk-cheering.png'),
 } as const;
 
 // 2.10 DAILY PACE, 2.11 WITH CHUNK VS ALONE, 2.12 YOUR PROGRESS CURVE and

@@ -32,6 +32,14 @@ export const colors = {
 
   /** The hard bottom edge under a pressable. Not a blur — see shadows. */
   edgeBrown: '#6E4A28',
+  /**
+   * The pale edge under a focused field, on 2.18 and 2.19.
+   *
+   * TODO(design): **sampled from a screenshot, not extracted.** Those two
+   * frames are not in the 19 Sep export, so this is the one colour here that
+   * the board has not confirmed. Reconcile when 2.18/2.19 land in an export.
+   */
+  edgeOrangeSoft: '#FBDCBC',
 
   /** Surfaces. */
   page: '#FFFBF5',

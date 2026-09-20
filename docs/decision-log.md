@@ -641,3 +641,53 @@ treatment 2.17 already uses for a failed sign-in — still `TODO(design)`, since
 the board draws no error state for a field.
 
 Supersedes the note in `login.tsx` that email sign-in had no frame.
+
+---
+
+## 2026-09-20 — 2.19 VERIFY, and 3.1 through 3.4
+
+The flow now runs 2.17 → 2.18 → 2.19 → 3.1, and 3.1 → 3.2 → 3.3 → 3.4.
+
+**2.19 LOG IN — VERIFY** is built from `CHUNK Board verify.png`, a screenshot,
+for the same reason 2.18 was: the 19 Sep export ends at 2.17. **Any six digits
+are accepted** — nothing is sent and nothing is checked — by request, so the
+app is walkable end to end before the auth work lands. The six boxes are
+rendered from one hidden field rather than six inputs, because six inputs means
+six focus handlers and a backspace problem for no gain.
+
+One colour had to be supplied rather than extracted: `edgeOrangeSoft`
+(`#FBDCBC`), the pale edge under a focused field on 2.18 and 2.19. It is
+sampled from the screenshots and is the only value in `tokens.ts` the board has
+not confirmed. It is marked as such there.
+
+### The thing to know about 3.1–3.4
+
+**They are built, and they are empty.** The board draws these frames full — "Hi
+Maya", 3 chunks left, 2/5 today, 55m focused, 148 all time, four nodes on a
+path, 18:42 of 24 min, a 12-day streak. §5 forbids faking those, `CLAUDE.md`
+forbids mock data in committed code, and there is no assignment in the system,
+so every count is the real one and the real one is zero.
+
+What is real: the name and classes on 3.1 come from the onboarding draft; the
+date and the week strip come from `planDate` and its 03:00 boundary; 3.3's
+timer counts actual seconds and its ring is actual elapsed time; 3.4's minutes
+and position arrive from the session that just ran.
+
+**The way to see these screens populated is 3.6 ADD ASSIGNMENT plus the
+planner**, which is batch 5. The planner itself is built and tested — it is the
+only thing in the app that can produce a chunk, and nothing currently calls it.
+
+### Two translation gaps worth naming
+
+- **3.2's path.** The board authors one SVG cubic through four fixed points
+  with the nodes placed absolutely on it. A real day holds one to twelve
+  chunks, and nothing says what the curve does at any other count, so the nodes
+  stack in order with the S-curve flagged rather than drawn at the wrong count.
+- **3.4's two AI elements.** The encouraging line ("That was the dense part of
+  the chapter") is written about the specific chunk, so it is model output, and
+  §6 puts every model call behind an Edge Function that does not exist. The
+  flashcards offer names a count only 4.x can produce. Both are replaced with
+  fixed copy rather than fabricated.
+
+`src/app/index.tsx` now sends a stored session to 3.1 instead of always landing
+on 2.2. That branch does not fire yet, because 2.19 creates no session.

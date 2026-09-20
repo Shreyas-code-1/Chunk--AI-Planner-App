@@ -9,10 +9,9 @@
  * the token that the analogous element uses elsewhere rather than extracted
  * from the board. Promote the next export and reconcile — see the decision log.
  *
- * TODO: **nothing is sent and nothing is verified.** The field's helper line
- * promises a six-digit code, and the screen that takes that code is not drawn.
- * CONTINUE therefore validates the address and stops, by request. Wiring it to
- * `signInWithOtp` is a one-line change here once the code screen exists.
+ * TODO: **nothing is sent.** CONTINUE checks the address for shape and hands
+ * it to 2.19, which accepts any six digits. `signInWithOtp` replaces the body
+ * of `onContinue` when the send side is wired up.
  */
 
 import { useState } from 'react';
@@ -44,9 +43,8 @@ export default function EmailSignIn() {
       setProblem('That does not look like an email address.');
       return;
     }
-    // TODO: send the code and go to the screen that takes it. Neither exists,
-    // so this reports the gap rather than pretending a code is on its way.
-    setProblem('The six-digit code screen is not drawn yet, so nothing was sent.');
+    // TODO: send the code. 2.19 accepts any six digits until it is sent.
+    router.push({ pathname: '/verify', params: { email: address } });
   };
 
   return (
