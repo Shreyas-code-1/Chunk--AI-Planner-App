@@ -173,7 +173,12 @@ const styles = StyleSheet.create({
   grade: {
     borderWidth: 2,
     borderRadius: radii.xl,
-    paddingVertical: 18,
+    // The board's `padding: 18px 0` around a 30px line, plus its 2px border,
+    // is 18 + 30 + 18 + 4 = 70. Expressed as a height rather than as padding
+    // so the digit is centred in the box optically. Pinned by padding instead,
+    // the glyph sits high: Baloo 2 has a deep descender that digits never use,
+    // so a line box the size of the font leaves the number riding above centre.
+    height: 70,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -188,7 +193,9 @@ const styles = StyleSheet.create({
   gradeText: {
     fontFamily: fonts.display.extraBold,
     fontSize: 30,
-    lineHeight: 30,
+    textAlign: 'center',
+    // Android adds its own font padding on top of the line box; iOS does not.
+    includeFontPadding: false,
     color: colors.mutedLine,
   },
   gradeTextOn: {

@@ -56,7 +56,12 @@ export default function Splash() {
 
       <View style={styles.logo}>
         {/* Baloo 2 800, 104px, letter-spacing -.03em, line-height .95. */}
-        <StrokedText fontSize={104} letterSpacing={-0.03 * 104} lineHeight={104 * 0.95}>
+        <StrokedText
+          fontSize={104}
+          letterSpacing={-0.03 * 104}
+          lineHeight={104 * 0.95}
+          style={{ color: colors.onOrange }}
+        >
           chunk
         </StrokedText>
       </View>

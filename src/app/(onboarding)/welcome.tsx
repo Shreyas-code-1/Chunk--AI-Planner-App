@@ -79,7 +79,10 @@ const styles = StyleSheet.create({
   },
   headlineRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // The board draws the chip as an inline-block inside the sentence, so it
+    // sits on the text's baseline. Centring it against the line instead lifts
+    // it visibly, because the chip is taller than the text it sits beside.
+    alignItems: 'baseline',
     justifyContent: 'center',
   },
   headline: {

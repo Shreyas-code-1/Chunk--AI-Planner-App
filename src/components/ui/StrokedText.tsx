@@ -8,16 +8,33 @@
  * See docs/stroked-elements.md for the six real occurrences and their values.
  *
  * What they do render is *space*. Each lays out a copy of its own text at the
- * real face, size and letter spacing with zero opacity, so the gap left behind
- * is the exact width and height the finished asset will occupy. That is what
- * lets the artwork drop in later without a single layout value changing — the
+ * real face, size and letter spacing, so the gap left behind is the exact
+ * width and height the finished asset will occupy. That is what lets the
+ * artwork drop in later without a single layout value changing — the
  * alternative, rendering nothing at all, would collapse the line and make
  * every surrounding measurement a lie that has to be redone twice.
+ *
+ * DRAFT_FILL below decides whether that reserved space is *visible*. With it
+ * on, the words are drawn in plain fill with no stroke: wrong, but legible,
+ * so the screen can be reviewed on a device. With it off they are invisible,
+ * which is the honest state but makes a splash screen look broken and a
+ * highlight chip look empty. It is one constant because it flips to `false`
+ * the day the artwork lands, and nothing else changes.
  */
 
 import { StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { colors, fonts, radii, shadows } from '../../theme/tokens';
+
+/**
+ * Draw the placeholder words in plain fill instead of leaving them invisible.
+ *
+ * `true` while the stroked artwork is outstanding — this is NOT the board's
+ * treatment and must not be mistaken for it: there is no stroke, no paint
+ * order and no hard drop shadow. Set to `false` (or delete the branch) once
+ * design/assets/ is populated. See docs/stroked-elements.md.
+ */
+const DRAFT_FILL = true;
 
 type StrokedTextProps = {
   /** The words the asset will show. Used for spacing and for screen readers. */
@@ -44,6 +61,7 @@ export function StrokedText({
       accessibilityLabel={children}
       style={[
         styles.reserved,
+        !DRAFT_FILL && styles.hidden,
         { fontSize, letterSpacing, lineHeight: lineHeight ?? fontSize },
         style,
       ]}
@@ -98,10 +116,12 @@ export function HighlightChip({
 const styles = StyleSheet.create({
   reserved: {
     fontFamily: fonts.display.extraBold,
-    // Not `display: none` and not zero width: the text must still be measured
-    // and laid out, it must simply not be seen.
-    opacity: 0,
     color: colors.white,
+  },
+  // Not `display: none` and not zero width: the text must still be measured
+  // and laid out, it must simply not be seen.
+  hidden: {
+    opacity: 0,
   },
   chip: {
     // The board's `padding: 0 15px 2px`.
