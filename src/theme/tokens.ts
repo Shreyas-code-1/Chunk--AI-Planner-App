@@ -49,6 +49,9 @@ export const colors = {
   statBrown: '#6B3F1E',
   /** Pale amber. The Bio chip's fill, reused for the all-time stat marker. */
   amber: '#FBE3C4',
+  /** 2.13's "Type it in" well — the one teal on the board. */
+  teal: '#E0EFEC',
+  tealDeep: '#1E6F63',
   /** Unselected bar fill on 2.6 BEST TIME OF DAY and 2.7 YOUR WEEK. */
   barTrack: '#F7EEE4',
   /** The small tick inside a 2.7 day bar: light and normal. Busy uses white. */
@@ -65,6 +68,12 @@ export const colors = {
   successDeep: '#1E8659',
   successSoft: '#E6F7EE',
 
+  /** 2.16 PAYWALL's own page background — the one cream that is not page. */
+  paywallPage: '#FCF6DC',
+  /** The softer edge under the paywall's unselected plan card. */
+  edgeSand: '#EADBC8',
+  /** Struck-through price on the paywall. */
+  strike: '#B5A79A',
   /** Pro / paywall gold. */
   gold: '#FCCC36',
   goldEdge: '#CD9C05',

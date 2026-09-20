@@ -12,6 +12,7 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../../components/ui';
@@ -21,6 +22,8 @@ import { colors, fonts, shadows } from '../../theme/tokens';
 const PLOT_HEIGHT = 250;
 
 export default function VsAlone() {
+  const router = useRouter();
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
@@ -60,8 +63,7 @@ export default function VsAlone() {
 
         <View style={styles.spacer} />
 
-        {/* TODO(next): 2.12 YOUR PROGRESS CURVE is the following screen. */}
-        <Button label="CONTINUE" />
+        <Button label="CONTINUE" onPress={() => router.push('/progress-curve')} />
       </View>
     </SafeAreaView>
   );

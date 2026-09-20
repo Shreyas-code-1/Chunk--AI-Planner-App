@@ -12,6 +12,7 @@ export { BottomDock, type DockTab } from './BottomDock';
 export { Card } from './Card';
 export { Chip } from './Chip';
 export { Input } from './Input';
+export { OrangeGradient } from './OrangeGradient';
 export { PathNode, type PathNodeState } from './PathNode';
 export { ProgressRing } from './ProgressRing';
 export { Slider } from './Slider';

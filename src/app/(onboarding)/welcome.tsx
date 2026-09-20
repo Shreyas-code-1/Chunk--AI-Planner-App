@@ -4,10 +4,9 @@
  * The first screen with a decision on it. Two buttons: GET STARTED begins
  * onboarding, and "I ALREADY HAVE AN ACCOUNT" goes to sign-in.
  *
- * Sign-in is batch 3, so that second button is drawn exactly as the board
- * draws it and is inert — it has no `onPress` rather than a handler that
- * pretends. This is the App Completeness gap recorded in docs/decision-log.md
- * and it closes in batch 3, well before submission.
+ * Both buttons work. "I ALREADY HAVE AN ACCOUNT" was inert while sign-in had
+ * no design; the current board draws it as 2.17, so the App Completeness gap
+ * recorded in docs/decision-log.md is closed.
  */
 
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -51,7 +50,11 @@ export default function Welcome() {
 
       <View style={styles.footer}>
         <Button label="GET STARTED" onPress={() => router.push('/goals')} />
-        <Button label="I ALREADY HAVE AN ACCOUNT" variant="secondary" />
+        <Button
+          label="I ALREADY HAVE AN ACCOUNT"
+          variant="secondary"
+          onPress={() => router.push('/login')}
+        />
       </View>
     </SafeAreaView>
   );

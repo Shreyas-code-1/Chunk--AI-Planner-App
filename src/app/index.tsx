@@ -12,11 +12,11 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { OrangeGradient } from '../components/ui';
 import { StrokedText } from '../components/ui/StrokedText';
 import { mascot } from '../components/mascot';
 import { useSession } from '../features/auth/SessionProvider';
@@ -52,7 +52,7 @@ export default function Splash() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <SplashGradient />
+      <OrangeGradient />
 
       <View style={styles.logo}>
         {/* Baloo 2 800, 104px, letter-spacing -.03em, line-height .95. */}
@@ -77,50 +77,6 @@ export default function Splash() {
   );
 }
 
-/**
- * The board's `linear-gradient(160deg, #FC9633 0%, #FA7814 45%, #E56C08 100%)`.
- *
- * React Native has no gradient and expo-linear-gradient is not a dependency,
- * so this is an SVG rect — which means the CSS angle has to be turned into two
- * points by hand. CSS measures the angle clockwise from "to top", and sizes
- * the gradient line so it covers the box exactly:
- *
- *     L = |W·sin A| + |H·cos A|
- *
- * with the line centred on the box. Computing it from the live dimensions
- * rather than from the board's 390x844 keeps the angle honest on every device
- * — hard-coding the fractions would shear the gradient on any other aspect
- * ratio.
- */
-function SplashGradient() {
-  const { width, height } = useWindowDimensions();
-
-  const radians = (160 * Math.PI) / 180;
-  const dx = Math.sin(radians);
-  const dy = -Math.cos(radians);
-  const length = Math.abs(width * dx) + Math.abs(height * dy);
-  const [cx, cy] = [width / 2, height / 2];
-
-  return (
-    <Svg style={StyleSheet.absoluteFill} width={width} height={height}>
-      <Defs>
-        <LinearGradient
-          id="splash"
-          gradientUnits="userSpaceOnUse"
-          x1={cx - (dx * length) / 2}
-          y1={cy - (dy * length) / 2}
-          x2={cx + (dx * length) / 2}
-          y2={cy + (dy * length) / 2}
-        >
-          <Stop offset="0" stopColor={colors.orangeGradient[0]} />
-          <Stop offset="0.45" stopColor={colors.orangeGradient[1]} />
-          <Stop offset="1" stopColor={colors.orangeGradient[2]} />
-        </LinearGradient>
-      </Defs>
-      <Rect x={0} y={0} width={width} height={height} fill="url(#splash)" />
-    </Svg>
-  );
-}
 
 const styles = StyleSheet.create({
   screen: {

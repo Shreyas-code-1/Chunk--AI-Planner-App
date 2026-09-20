@@ -455,3 +455,73 @@ regenerates the README mapping, making a future board swap one command instead
 of a manual copy — which is what let the wrong art get committed once before.
 The four poses batch 1 uses were verified by MD5 against the board's own
 referenced assets, not matched by eye.
+
+---
+
+## 2026-09-19 — Onboarding finished: 2.6 through 2.17
+
+All seventeen onboarding screens are now built. What follows is what the board
+left open or contradicted, decided the cheap way where the answer was obvious
+and flagged in the screen where it was not.
+
+### The progress bar contradicted itself
+
+The board draws the fill at 20/40/60/80 on 2.3-2.6, then 62/74/86 on 2.7-2.9,
+then 62/70/78/100 on 2.10-2.13 — three series from three editing passes.
+Followed literally the bar runs **backwards** twice, at 2.6 to 2.7 and again at
+2.9 to 2.10.
+
+It is computed instead from position across the eleven header-bearing screens
+(2.3 to 2.13). That is monotonic and agrees with the board at its one
+unambiguous point: 2.13 is 100%.
+
+### Four things with no home, flagged in place
+
+- **2.9 WHAT GOES WRONG has no column.** `profiles.goals` holds 2.3's
+  multi-select; nothing stores a single "what usually goes wrong". It is kept
+  in the draft so the answer is not silently dropped, but it will not survive
+  the flush until a column exists.
+- **2.10 DAILY PACE sets the value 2.6 already set.** Both write
+  `daily_target_minutes`, four screens apart, with different controls and
+  nothing saying which wins. They now share bounds (`DAILY_MIN`/`DAILY_MAX`)
+  and the later screen wins. One of the two is probably meant to go.
+- **2.6's BEST TIME OF DAY is one time; `preferences` stores a window.** The
+  chosen index is held in the draft and the mapping to
+  `available_start`/`available_end` is deferred to the flush rather than
+  inventing a window width.
+- **2.15's subject chips disagree with 2.5's.** 2.15 draws Alg as
+  `#DEEBE8`/`#1F6F66` and Eng as `#F1E4EC`/`#8A3A72`; 2.5 draws the palette in
+  `tokens.ts`. The newer pair is used more often across the board, but the
+  tokens are left alone until this is settled, so 2.15 will not match its own
+  frame.
+
+### Numbers that are real rather than drawn
+
+2.14 and 2.15 are the two screens whose frames are full of plan data — "14
+assignments found", "21 chunks", "10 hours became", three example rows. §5
+forbids faking these. Both screens compute from the plan that actually exists,
+which is currently empty, so they show zero and 2.15 shows an empty state that
+the board does not draw.
+
+### 2.2's dead button is closed
+
+The board now has **2.17 LOG IN**, so "I ALREADY HAVE AN ACCOUNT" leads
+somewhere and the App Completeness risk recorded earlier is resolved. Apple and
+Google keep their Expo Go stubs, which report why they cannot run rather than
+failing silently. **Email sign-in has no form on the board** and reports that
+gap instead of opening an invented screen.
+
+### Not reproducible in React Native
+
+2.16 fades its artwork with a CSS `mask-image` gradient. There is no mask in
+RN, so the image is drawn whole and the fade is absent — not approximated with
+an overlay, which would band against the paywall's cream.
+
+### Still open
+
+- **AI consent remains the only undesigned screen**, and it is an App Store
+  blocker.
+- Nothing charges anyone on 2.16; `react-native-purchases` stays uninstalled
+  until the first EAS build.
+- The draft still does not flush. 2.17 gives onboarding a session, so writing
+  that flush is the next piece of real work.
