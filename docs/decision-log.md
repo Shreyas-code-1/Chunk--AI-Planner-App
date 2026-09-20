@@ -554,3 +554,31 @@ on the headlines that sit beside a chip (2.2, 2.5, 2.16), so both sides of
 
 This is a rendering correction, not a design change: size, face, weight, fill,
 border, radius and the hard edge are all untouched.
+
+---
+
+## 2026-09-20 — 2.16's plan cards are a real choice
+
+Reported on device: the paywall would not let you pick a plan. It was drawn,
+not wired — both cards were plain `View`s and the green check was hard-coded on
+the 12-month one, so the screen showed a selection the user could not make or
+change.
+
+They are now a radio group. `plan` (`'yearly' | 'monthly'`, defaulting to
+yearly as the board draws it) decides which card carries the selected look, and
+it is the value the RevenueCat call will be handed in batch 8.
+
+**Where the unselected look came from.** The board draws one state only, so
+rather than invent a second one, the two looks it already draws were read as
+selected and unselected: gold 3px border, `0 7px 0` gold edge and the green
+check for the chosen card; 2px cream border, `0 5px 0` sand edge and no check
+for the other. Two things deliberately do not move with the selection — MOST
+POPULAR stays pinned to the 12-month card, because it labels the offer and not
+the choice, and each card keeps its own type and price layout, because those
+distinguish the products rather than their state.
+
+`PlanId` lives in `src/features/billing/usePro.ts`, not in the screen: the
+screen only picks one, and what a pick means belongs with billing.
+
+Still true, and unchanged by this: **nothing here charges anyone.** The CTA
+goes to 2.17 exactly as before.

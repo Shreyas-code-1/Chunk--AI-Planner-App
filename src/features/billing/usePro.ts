@@ -13,6 +13,13 @@
  * inventing product.
  */
 
+/**
+ * The two products on 2.16. Named here rather than in the screen because the
+ * screen only picks one; what a pick means is billing's to define, and this is
+ * the type the RevenueCat call will take.
+ */
+export type PlanId = 'yearly' | 'monthly';
+
 export type ProState = {
   isPro: boolean;
   /** True while the entitlement is being fetched; always false in the stub. */

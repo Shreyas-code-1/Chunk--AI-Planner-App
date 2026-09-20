@@ -5,6 +5,14 @@
  * deliberately not installed — importing a native module crashes Expo Go — so
  * this is the screen only. Both buttons currently move on; the real purchase
  * arrives with the first EAS build, through src/features/billing/usePro.ts.
+ * The chosen plan is what that call will be handed.
+ *
+ * The board draws one state only — 12 months chosen, 1 month not — so the
+ * selected look is read off the frame rather than invented: gold 3px border,
+ * the `0 7px 0` gold edge, the green check. Unselected is the other card's:
+ * 2px cream border, the `0 5px 0` sand edge, no check. MOST POPULAR stays on
+ * the yearly card in both states — it labels the offer, not the selection —
+ * and each card keeps its own type and price layout throughout.
  *
  * TODO(design): the board fades the artwork out with a CSS `mask-image`
  * gradient. React Native has no mask, so the image is drawn whole and the fade
@@ -12,6 +20,7 @@
  * against the cream.
  */
 
+import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -21,6 +30,7 @@ import { HighlightChip } from '../../components/ui/StrokedText';
 import { Check, ChevronLeft } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { haptic } from '../../lib/haptics';
+import type { PlanId } from '../../features/billing/usePro';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 /**
@@ -47,6 +57,15 @@ const BENEFITS = [
 export default function Paywall() {
   const router = useRouter();
   const onwards = () => router.replace('/login');
+
+  const [plan, setPlan] = useState<PlanId>('yearly');
+  const choose = (next: PlanId) => {
+    haptic('select');
+    setPlan(next);
+  };
+
+  const cardEdge = (selected: boolean) =>
+    selected ? shadows.hardEdge(7, colors.goldEdge) : shadows.hardEdge(5, colors.edgeSand);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -85,14 +104,26 @@ export default function Paywall() {
           <Text style={styles.headline}>of Chunk Pro</Text>
         </View>
 
-        <View style={styles.plans}>
-          <View style={[styles.planFeatured, shadows.hardEdge(7, colors.goldEdge)]}>
+        <View style={styles.plans} accessibilityRole="radiogroup">
+          <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ checked: plan === 'yearly' }}
+            accessibilityLabel={`12 months, ${PRICING.yearlyMonthly} a month, ${PRICING.yearlyTotal} billed yearly, save ${PRICING.yearlySaving}`}
+            onPress={() => choose('yearly')}
+            style={[
+              styles.planFeatured,
+              plan === 'yearly' ? styles.planSelected : styles.planUnselected,
+              cardEdge(plan === 'yearly'),
+            ]}
+          >
             <View style={styles.popular}>
               <Text style={styles.popularLabel}>MOST POPULAR</Text>
             </View>
-            <View style={[styles.chosen, shadows.hardEdge(3, colors.successDeep)]}>
-              <Check size={15} color={colors.white} strokeWidth={3.6} />
-            </View>
+            {plan === 'yearly' && (
+              <View style={[styles.chosen, shadows.hardEdge(3, colors.successDeep)]}>
+                <Check size={15} color={colors.white} strokeWidth={3.6} />
+              </View>
+            )}
 
             <View style={styles.planRow}>
               <View style={styles.planText}>
@@ -106,15 +137,31 @@ export default function Paywall() {
                 <Text style={styles.planStrike}>{PRICING.monthly}</Text>
               </View>
             </View>
-          </View>
+          </Pressable>
 
-          <View style={[styles.planPlain, shadows.hardEdge(5, colors.edgeSand)]}>
+          <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ checked: plan === 'monthly' }}
+            accessibilityLabel={`1 month, ${PRICING.monthly} a month, billed monthly, cancel anytime`}
+            onPress={() => choose('monthly')}
+            style={[
+              styles.planPlain,
+              plan === 'monthly' ? styles.planSelected : styles.planUnselected,
+              cardEdge(plan === 'monthly'),
+            ]}
+          >
+            {plan === 'monthly' && (
+              <View style={[styles.chosen, shadows.hardEdge(3, colors.successDeep)]}>
+                <Check size={15} color={colors.white} strokeWidth={3.6} />
+              </View>
+            )}
+
             <View style={styles.planText}>
               <Text style={styles.planNamePlain}>1 month</Text>
               <Text style={styles.planDetail}>Billed monthly · cancel anytime</Text>
             </View>
             <Text style={styles.planPricePlain}>{`${PRICING.monthly} / MO`}</Text>
-          </View>
+          </Pressable>
         </View>
 
         <View style={styles.benefits}>
@@ -136,6 +183,7 @@ export default function Paywall() {
           accessibilityRole="button"
           onPress={() => {
             haptic('press');
+            // TODO(batch 8): `plan` is the product RevenueCat gets asked for here.
             onwards();
           }}
           style={[styles.cta, shadows.hardEdge(6)]}
@@ -197,13 +245,15 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   plans: { marginTop: 20, paddingHorizontal: 24, gap: 14 },
+  // Each card keeps the padding and radius the board gives it. Only the
+  // border and the hard edge beneath it follow the selection.
   planFeatured: {
     backgroundColor: colors.card,
-    borderWidth: 3,
-    borderColor: colors.gold,
     borderRadius: radii.xxl,
     padding: 18,
   },
+  planSelected: { borderWidth: 3, borderColor: colors.gold },
+  planUnselected: { borderWidth: 2, borderColor: colors.cream },
   popular: {
     position: 'absolute',
     top: -13,
@@ -270,8 +320,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.cream,
     borderRadius: radii.xxl,
     paddingVertical: 16,
     paddingHorizontal: 18,
