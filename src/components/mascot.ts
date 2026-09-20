@@ -22,6 +22,25 @@ export const mascot = {
   goals: require('../../design/mascot/04-chunk.png'),
   /** 2.4 NAME + GRADE. */
   name: require('../../design/mascot/05-chunk.png'),
+  /** 2.6 STUDY STYLE. */
+  studyStyle: require('../../design/mascot/06-chunk.png'),
+  /** 2.7 YOUR WEEK. */
+  week: require('../../design/mascot/07-chunk.png'),
+  /** 2.8 WHEN YOU START. */
+  whenYouStart: require('../../design/mascot/08-chunk.png'),
+  /** 2.9 WHAT GOES WRONG. */
+  whatGoesWrong: require('../../design/mascot/09-chunk.png'),
+  /** 2.14 BUILDING YOUR PLAN. */
+  building: require('../../design/mascot/10-chunk-working.png'),
+  /** 2.15 YOUR FIRST PLAN. */
+  firstPlan: require('../../design/mascot/11-chunk.png'),
+  /** 2.16 PAYWALL. */
+  paywall: require('../../design/mascot/12-chunk-waving-with-checklist-calendar-and-star.png'),
+  /** 2.17 LOG IN. */
+  login: require('../../design/mascot/13-chunk-mascot.png'),
 } as const;
+
+// 2.10 DAILY PACE, 2.11 WITH CHUNK VS ALONE, 2.12 YOUR PROGRESS CURVE and
+// 2.13 IMPORT WORK draw no mascot at all.
 
 export type MascotPose = keyof typeof mascot;

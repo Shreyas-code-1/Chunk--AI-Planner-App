@@ -49,6 +49,11 @@ export const colors = {
   statBrown: '#6B3F1E',
   /** Pale amber. The Bio chip's fill, reused for the all-time stat marker. */
   amber: '#FBE3C4',
+  /** Unselected bar fill on 2.6 BEST TIME OF DAY and 2.7 YOUR WEEK. */
+  barTrack: '#F7EEE4',
+  /** The small tick inside a 2.7 day bar: light and normal. Busy uses white. */
+  tickLight: '#E4D6C6',
+  tickNormal: '#F0B877',
 
   /** Secondary text, in three steps. */
   muted: '#8A7A6E',

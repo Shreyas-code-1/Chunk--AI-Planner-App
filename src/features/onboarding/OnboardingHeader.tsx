@@ -2,12 +2,17 @@
  * The header every onboarding question screen shares: a back button and a
  * progress bar, side by side.
  *
- * The board draws it identically on 2.3, 2.4, 2.5 and 2.6 and advances the
- * fill by twenty points each time — 20%, 40%, 60%, 80%. That is five steps,
- * not four, so `step` is out of `TOTAL_STEPS` rather than out of the number of
- * screens built so far; 2.6 keeps its 80% when batch 2 arrives.
- *
  * 2.1 and 2.2 have no header at all, which is why this is not in the layout.
+ *
+ * TODO(design): **the board's own fill percentages contradict each other** and
+ * are not used here. It draws 2.3-2.6 at 20/40/60/80, then 2.7-2.9 at
+ * 62/74/86, then 2.10-2.13 at 62/70/78/100 — three series from three editing
+ * passes. Followed literally the bar would run backwards twice, at 2.6 -> 2.7
+ * and again at 2.9 -> 2.10, which reads as lost progress.
+ *
+ * So the fill is computed from the screen's position among the eleven
+ * header-bearing screens (2.3 through 2.13) instead. That keeps it monotonic
+ * and agrees with the board at its one unambiguous point: 2.13 is 100%.
  */
 
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -17,8 +22,8 @@ import { ChevronLeft } from '../../components/icons';
 import { haptic } from '../../lib/haptics';
 import { colors, radii } from '../../theme/tokens';
 
-/** 2.3 through 2.7. The bar is at step/TOTAL of the way across. */
-const TOTAL_STEPS = 5;
+/** 2.3 through 2.13 carry the header. The bar is at step/TOTAL across. */
+const TOTAL_STEPS = 11;
 
 export function OnboardingHeader({ step }: { step: number }) {
   const router = useRouter();

@@ -14,6 +14,10 @@ export type { IconProps } from './types';
 
 export { ArrowRight } from './ArrowRight';
 export { Bell } from './Bell';
+export { BellQuiet } from './BellQuiet';
+export { Blocks } from './Blocks';
+export { Clock } from './Clock';
+export { Waves } from './Waves';
 export { Calendar } from './Calendar';
 export { Camera } from './Camera';
 export { Check } from './Check';
