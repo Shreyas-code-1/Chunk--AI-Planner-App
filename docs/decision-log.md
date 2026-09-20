@@ -587,3 +587,24 @@ goes to 2.17 exactly as before.
 request. Selection now reads from the gold border and gold edge alone; MOST
 POPULAR and the per-card layouts are unaffected. The check on the board's
 2.16 frame is therefore deliberately not built.
+
+---
+
+## 2026-09-20 — RevenueCat brief reviewed, nothing built
+
+The integration brief for 2.16 (the brief calls it 2.10) is reviewed in
+`docs/revenuecat-integration-review.md`. Nothing installed, nothing built,
+awaiting answers.
+
+The headline findings: §13c requires Restore Purchases, Terms of Use, Privacy
+Policy and an auto-renewal disclosure **on the paywall, and the board's 2.16
+frame draws none of the four**; the runtime trial length collides with the
+stroked `7 days free` chip, which is element 5 of the artwork hand-off and
+cannot render a runtime value as a static asset; the purchase happens at 2.16,
+one screen before the user has an account at 2.17, so RevenueCat has to be
+identified in `SessionProvider` for the entitlement to survive a second device;
+and installing the SDK ends Expo Go for the whole app, not just this screen,
+which inverts the ordering principle `batch-plan.md` is built on.
+
+Open questions are listed at the end of that file. Only the bundle identifier
+blocks step 1.
