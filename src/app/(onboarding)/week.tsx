@@ -21,7 +21,7 @@ import { mascot } from '../../components/mascot';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { useDraft, type DayLoad } from '../../features/onboarding/draft';
 import { haptic } from '../../lib/haptics';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 /** Stored index (0 = Sunday) in the order the board draws them. */
 const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
-    lineHeight: 34 * 1.15,
+    lineHeight: displayLine(34, 1.15),
     color: colors.ink,
   },
   sub: {

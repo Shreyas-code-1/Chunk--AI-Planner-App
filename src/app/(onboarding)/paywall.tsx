@@ -21,7 +21,7 @@ import { HighlightChip } from '../../components/ui/StrokedText';
 import { Check, ChevronLeft } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { haptic } from '../../lib/haptics';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 /**
  * Prices, as the board draws them.
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   headline: {
     fontFamily: fonts.display.extraBold,
     fontSize: 31,
-    lineHeight: 31 * 1.15,
+    lineHeight: displayLine(31, 1.15),
     color: colors.ink,
     textAlign: 'center',
   },
@@ -235,13 +235,13 @@ const styles = StyleSheet.create({
   planName: {
     fontFamily: fonts.display.extraBold,
     fontSize: 24,
-    lineHeight: 24 * 1.15,
+    lineHeight: displayLine(24, 1.15),
     color: colors.ink,
   },
   planNamePlain: {
     fontFamily: fonts.display.bold,
     fontSize: 22,
-    lineHeight: 22 * 1.15,
+    lineHeight: displayLine(22, 1.15),
     color: colors.ink,
   },
   planDetail: {

@@ -15,7 +15,7 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-nativ
 
 import { Button } from '../../components/ui';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
-import { colors, fonts, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, shadows } from '../../theme/tokens';
 
 /** The board's own 300x170 drawing, unchanged. */
 const CURVE = 'M10 130 C 70 126, 100 118, 130 100 C 165 78, 210 40, 285 22';
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
-    lineHeight: 34 * 1.15,
+    lineHeight: displayLine(34, 1.15),
     color: colors.ink,
   },
   card: {

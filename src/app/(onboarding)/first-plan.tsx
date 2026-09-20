@@ -29,7 +29,7 @@ import { Button, Chip, SpeechBubble } from '../../components/ui';
 import { HighlightChip } from '../../components/ui/StrokedText';
 import { mascot } from '../../components/mascot';
 import { BEST_TIMES, useDraft } from '../../features/onboarding/draft';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 /** A chunk as this screen needs it. Empty until the pipeline exists. */
 type PlannedChunk = {
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   headline: {
     fontFamily: fonts.display.extraBold,
     fontSize: 38,
-    lineHeight: 38 * 1.12,
+    lineHeight: displayLine(38, 1.12),
     color: colors.ink,
   },
   label: {

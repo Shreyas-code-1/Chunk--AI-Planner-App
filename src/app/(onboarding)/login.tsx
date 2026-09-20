@@ -26,7 +26,7 @@ import { AppleMark, ChevronLeft, GoogleMark, Mail } from '../../components/icons
 import { mascot } from '../../components/mascot';
 import { useSession } from '../../features/auth/SessionProvider';
 import { haptic } from '../../lib/haptics';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 export default function Login() {
   const router = useRouter();
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   headline: {
     fontFamily: fonts.display.extraBold,
     fontSize: 38,
-    lineHeight: 38 * 1.16,
+    lineHeight: displayLine(38, 1.16),
     color: colors.ink,
     textAlign: 'center',
   },

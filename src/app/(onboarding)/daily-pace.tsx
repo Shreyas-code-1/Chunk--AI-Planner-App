@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Slider } from '../../components/ui';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { DAILY_MAX, DAILY_MIN, DAILY_STEP, useDraft } from '../../features/onboarding/draft';
-import { colors, fonts } from '../../theme/tokens';
+import { colors, displayLine, fonts } from '../../theme/tokens';
 
 function formatMinutes(total: number): string {
   const hours = Math.floor(total / 60);
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
-    lineHeight: 34 * 1.15,
+    lineHeight: displayLine(34, 1.15),
     color: colors.ink,
   },
   readout: { marginTop: 44, alignItems: 'center' },
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: fonts.display.extraBold,
     fontSize: 46,
-    lineHeight: 46 * 1.1,
+    lineHeight: displayLine(46, 1.1),
     color: colors.ink,
   },
   bands: {

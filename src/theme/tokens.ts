@@ -181,3 +181,29 @@ export const press = {
   inMs: 100,
   outMs: 150,
 } as const;
+
+/**
+ * Line height for Baloo 2 display text.
+ *
+ * The board's headings carry line-heights of roughly 1.1 to 1.16. CSS lets a
+ * glyph overflow its line box harmlessly, so those look right on the board.
+ * React Native does not reflow around an overflowing glyph — it simply draws
+ * over whatever is next to it. Baloo 2 needs about 1.5em of ascent plus
+ * descent, so a 1.15em box leaks roughly a fifth of the glyph out of each end.
+ * On 2.10 that put "1 hr 30" straight through the label above it, and pushed
+ * the three-line heading into itself.
+ *
+ * The board's ratio is kept wherever it is already safe and floored where it
+ * is not. This is a rendering correction, not a design change: the type size,
+ * face and weight are untouched.
+ */
+/**
+ * Baloo 2 needs roughly 1.35em of ascent plus descent. 1.4 clears that with a
+ * little room, which is why the floor sits there rather than at the board's
+ * ratios. One number — raise it if anything still collides on a device.
+ */
+export const DISPLAY_LINE_FLOOR = 1.4;
+
+export function displayLine(fontSize: number, boardRatio: number): number {
+  return fontSize * Math.max(boardRatio, DISPLAY_LINE_FLOOR);
+}

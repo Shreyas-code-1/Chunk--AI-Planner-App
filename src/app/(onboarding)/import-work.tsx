@@ -20,7 +20,7 @@ import type { ReactNode } from 'react';
 import { Button } from '../../components/ui';
 import { Camera, ListLines, Mic } from '../../components/icons';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 type Route = {
   title: string;
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
-    lineHeight: 34 * 1.15,
+    lineHeight: displayLine(34, 1.15),
     color: colors.ink,
   },
   sub: {
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   routeTitle: {
     fontFamily: fonts.display.bold,
     fontSize: 23,
-    lineHeight: 23 * 1.15,
+    lineHeight: displayLine(23, 1.15),
     color: colors.ink,
   },
   routeDetail: {

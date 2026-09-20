@@ -29,7 +29,7 @@ import { Check } from '../../components/icons';
 import { OrangeGradient } from '../../components/ui';
 import { mascot } from '../../components/mascot';
 import { useDraft } from '../../features/onboarding/draft';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 const STEPS = [
   'Reading your schedule',
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.display.extraBold,
     fontSize: 36,
-    lineHeight: 36 * 1.1,
+    lineHeight: displayLine(36, 1.1),
     color: colors.white,
     textAlign: 'center',
   },

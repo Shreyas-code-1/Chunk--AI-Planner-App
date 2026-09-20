@@ -21,7 +21,7 @@ import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { useDraft } from '../../features/onboarding/draft';
 import type { StartStyle } from '../../api/types';
 import { haptic } from '../../lib/haptics';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 const OPTIONS: readonly (readonly [StartStyle, string, string])[] = [
   ['asap', 'As soon as I can', 'Start Monday, finish early'],
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
-    lineHeight: 34 * 1.15,
+    lineHeight: displayLine(34, 1.15),
     color: colors.ink,
   },
   options: { paddingTop: 20, paddingBottom: 20, gap: 12 },

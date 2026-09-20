@@ -29,7 +29,7 @@ import {
 } from '../../features/onboarding/draft';
 import type { ChunkLengthPref } from '../../api/types';
 import { haptic } from '../../lib/haptics';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 /** The board's three tiles: the headline number, then the word beneath it. */
 const LENGTHS: readonly (readonly [ChunkLengthPref, string, string])[] = [
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
-    lineHeight: 34 * 1.15,
+    lineHeight: displayLine(34, 1.15),
     color: colors.ink,
   },
   label: {

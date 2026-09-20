@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/ui';
 import { HighlightChip } from '../../components/ui/StrokedText';
 import { mascot } from '../../components/mascot';
-import { colors, fonts } from '../../theme/tokens';
+import { colors, displayLine, fonts } from '../../theme/tokens';
 
 export default function Welcome() {
   const router = useRouter();
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   headline: {
     fontFamily: fonts.display.extraBold,
     fontSize: 40,
-    lineHeight: 40 * 1.16,
+    lineHeight: displayLine(40, 1.16),
     color: colors.ink,
     textAlign: 'center',
   },

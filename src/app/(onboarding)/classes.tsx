@@ -27,7 +27,7 @@ import { Check, Plus } from '../../components/icons';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { useDraft } from '../../features/onboarding/draft';
 import { haptic } from '../../lib/haptics';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 export default function Classes() {
   const router = useRouter();
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   headline: {
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
-    lineHeight: 34 * 1.15,
+    lineHeight: displayLine(34, 1.15),
     color: colors.ink,
   },
   list: {

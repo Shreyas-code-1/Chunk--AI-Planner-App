@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../../components/ui';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
-import { colors, fonts, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, shadows } from '../../theme/tokens';
 
 const PLOT_HEIGHT = 250;
 
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     fontFamily: fonts.display.extraBold,
     fontSize: 34,
-    lineHeight: 34 * 1.15,
+    lineHeight: displayLine(34, 1.15),
     color: colors.ink,
   },
   card: {
