@@ -18,6 +18,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Chip, Input } from '../../components/ui';
@@ -29,6 +30,7 @@ import { haptic } from '../../lib/haptics';
 import { colors, fonts, radii, shadows } from '../../theme/tokens';
 
 export default function Classes() {
+  const router = useRouter();
   const classes = useDraft((s) => s.classes);
   const addClass = useDraft((s) => s.addClass);
   const removeClass = useDraft((s) => s.removeClass);
@@ -132,9 +134,7 @@ export default function Classes() {
           )}
         </ScrollView>
 
-        {/* TODO(batch 2): 2.6 STUDY STYLE is the next screen and is not built,
-            so this is inert rather than routed somewhere that would crash. */}
-        <Button label="CONTINUE" />
+        <Button label="CONTINUE" onPress={() => router.push('/study-style')} />
       </View>
     </SafeAreaView>
   );
