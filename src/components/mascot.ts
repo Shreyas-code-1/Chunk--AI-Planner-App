@@ -38,6 +38,15 @@ export const mascot = {
   paywall: require('../../design/mascot/12-chunk-waving-with-checklist-calendar-and-star.png'),
   /** 2.17 LOG IN. */
   login: require('../../design/mascot/13-chunk-mascot.png'),
+  /**
+   * 2.18 LOG IN — EMAIL: the pointing pose with the blue arrow.
+   *
+   * The README maps this file to 3.1 HOME, because 2.18 is not in the 19 Sep
+   * export the README was generated from. The newer board uses the same pose
+   * on both. Re-run `scripts/copy-mascot.mjs` when that export lands — the
+   * UUIDs, and so the numbers, will move.
+   */
+  email: require('../../design/mascot/14-chunk.png'),
 } as const;
 
 // 2.10 DAILY PACE, 2.11 WITH CHUNK VS ALONE, 2.12 YOUR PROGRESS CURVE and

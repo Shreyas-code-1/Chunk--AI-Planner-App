@@ -608,3 +608,36 @@ which inverts the ordering principle `batch-plan.md` is built on.
 
 Open questions are listed at the end of that file. Only the bundle identifier
 blocks step 1.
+
+---
+
+## 2026-09-20 — 2.18 LOG IN — EMAIL built from a screenshot
+
+2.17's CONTINUE WITH EMAIL now opens a real screen. The address is collected,
+validated for shape, and **nothing is sent and nothing is verified** — by
+request, and because the six-digit code screen the field's helper line promises
+is not drawn anywhere.
+
+**The frame is not in the board.** `design/board.html` is the 19 Sep export and
+its onboarding ends at 2.17; 2.18 arrived as `CHUNK Board Email Screen.png`, a
+screenshot. Every element on it already existed as a primitive — the 42px back
+button, the large `Input` with its label and orange caret, the primary
+`Button` — so the screen is assembled from tokens rather than measured off the
+image. The three values with no primitive to inherit from are the headline size
+(34, matching 2.5, the other two-line display headline beside content), the
+helper line (14), and the mascot box (124x128). **Those three are read off a
+screenshot and are the ones to reconcile when 2.18 lands in a real export.**
+
+The mascot is `14-chunk.png`, the pointing pose with the blue arrow, which
+`design/mascot/README.md` maps to 3.1 HOME because 2.18 did not exist when it
+was generated. The newer board uses the pose on both. Asset numbers move with
+every export, so `scripts/copy-mascot.mjs` gets re-run rather than the file
+being copied by hand.
+
+The CTA is drawn at full strength on a frame showing a half-typed address
+(`maya.chen@`), so CONTINUE is **not** disabled until the address parses.
+It validates on press instead, and reports a bad address in the same plain
+treatment 2.17 already uses for a failed sign-in — still `TODO(design)`, since
+the board draws no error state for a field.
+
+Supersedes the note in `login.tsx` that email sign-in had no frame.

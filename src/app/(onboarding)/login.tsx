@@ -8,9 +8,8 @@
  * SessionProvider's stubs throw a message saying exactly that rather than
  * failing silently — see the decision log. Email works today.
  *
- * TODO(design): **the board draws no email form.** "Continue with email" has
- * to lead to an address-and-password screen and there is no frame for one, so
- * the button reports the gap instead of opening an invented screen.
+ * "Continue with email" leads to 2.18, which is a frame now. It collects the
+ * address only — nothing is sent and nothing is verified yet.
  *
  * TODO: the Terms and Privacy Policy line is not yet a link — neither document
  * exists, and both are required before submission.
@@ -98,9 +97,10 @@ export default function Login() {
 
         <Pressable
           accessibilityRole="button"
-          onPress={() =>
-            setProblem('Email sign-in needs a screen that the design board does not draw yet.')
-          }
+          onPress={() => {
+            haptic('select');
+            router.push('/email');
+          }}
           style={[styles.provider, styles.providerEmail, shadows.hardEdge(5)]}
         >
           <Mail size={22} color={colors.white} strokeWidth={2.4} />
