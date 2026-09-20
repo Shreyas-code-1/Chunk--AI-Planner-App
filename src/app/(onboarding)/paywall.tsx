@@ -8,9 +8,10 @@
  * The chosen plan is what that call will be handed.
  *
  * The board draws one state only — 12 months chosen, 1 month not — so the
- * selected look is read off the frame rather than invented: gold 3px border,
- * the `0 7px 0` gold edge, the green check. Unselected is the other card's:
- * 2px cream border, the `0 5px 0` sand edge, no check. MOST POPULAR stays on
+ * selected look is read off the frame rather than invented: gold 3px border
+ * and the `0 7px 0` gold edge. Unselected is the other card's: 2px cream
+ * border and the `0 5px 0` sand edge. The board's green check badge is not
+ * drawn on either — removed by request. MOST POPULAR stays on
  * the yearly card in both states — it labels the offer, not the selection —
  * and each card keeps its own type and price layout throughout.
  *
@@ -119,12 +120,6 @@ export default function Paywall() {
             <View style={styles.popular}>
               <Text style={styles.popularLabel}>MOST POPULAR</Text>
             </View>
-            {plan === 'yearly' && (
-              <View style={[styles.chosen, shadows.hardEdge(3, colors.successDeep)]}>
-                <Check size={15} color={colors.white} strokeWidth={3.6} />
-              </View>
-            )}
-
             <View style={styles.planRow}>
               <View style={styles.planText}>
                 <Text style={styles.planName}>12 months</Text>
@@ -150,12 +145,6 @@ export default function Paywall() {
               cardEdge(plan === 'monthly'),
             ]}
           >
-            {plan === 'monthly' && (
-              <View style={[styles.chosen, shadows.hardEdge(3, colors.successDeep)]}>
-                <Check size={15} color={colors.white} strokeWidth={3.6} />
-              </View>
-            )}
-
             <View style={styles.planText}>
               <Text style={styles.planNamePlain}>1 month</Text>
               <Text style={styles.planDetail}>Billed monthly · cancel anytime</Text>
@@ -270,17 +259,6 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     letterSpacing: 10.5 * 0.1,
     color: colors.ink,
-  },
-  chosen: {
-    position: 'absolute',
-    top: -13,
-    right: 16,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.success,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   planRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 14 },
   planText: { flex: 1 },

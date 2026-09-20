@@ -582,3 +582,8 @@ screen only picks one, and what a pick means belongs with billing.
 
 Still true, and unchanged by this: **nothing here charges anyone.** The CTA
 goes to 2.17 exactly as before.
+
+**Amended same day:** the green check badge is removed from both plan cards by
+request. Selection now reads from the gold border and gold edge alone; MOST
+POPULAR and the per-card layouts are unaffected. The check on the board's
+2.16 frame is therefore deliberately not built.
