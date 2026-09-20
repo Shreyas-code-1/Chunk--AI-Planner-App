@@ -93,6 +93,9 @@ const styles = StyleSheet.create({
     lineHeight: displayLine(40, 1.16),
     color: colors.ink,
     textAlign: 'center',
+    // Matches the chip's own text: both sides of the line have to measure the
+    // same way, or "Let's" and "chunk" stop sitting on one baseline.
+    includeFontPadding: false,
   },
   sub: {
     fontFamily: fonts.body.bold,

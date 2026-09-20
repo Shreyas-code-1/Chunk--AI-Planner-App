@@ -193,6 +193,8 @@ const styles = StyleSheet.create({
     lineHeight: displayLine(31, 1.15),
     color: colors.ink,
     textAlign: 'center',
+    // Matches the chip's own text — see welcome.tsx.
+    includeFontPadding: false,
   },
   plans: { marginTop: 20, paddingHorizontal: 24, gap: 14 },
   planFeatured: {

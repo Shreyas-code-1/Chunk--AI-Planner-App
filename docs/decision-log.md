@@ -525,3 +525,32 @@ an overlay, which would band against the paywall's cream.
   until the first EAS build.
 - The draft still does not flush. 2.17 gives onboarding a session, so writing
   that flush is the next piece of real work.
+
+---
+
+## 2026-09-20 — The highlight chip sits on its line properly
+
+Reported on device: the `chunk` chip "is not centered properly and it doesn't
+look good". Two causes, both in `HighlightChip` (`src/components/ui/StrokedText.tsx`),
+and both from copying CSS values into a layout engine that measures text
+differently.
+
+**The word rode high in the box.** The board's `padding: 0 15px 2px` puts all
+the vertical padding under the word, which is right in CSS, where half-leading
+is spread around the baseline. React Native instead centres the font's whole
+ascent+descent box inside `lineHeight`, and Baloo 2's ascent (1.078em) is more
+than twice its descent (0.524em), so the same padding leaves a gap beneath the
+word and none above it. The chip now splits the board's 2px by
+`cap + descent - ascent` = **0.048em** — about 2px at the welcome screen's 40px.
+The total padding and the chip's height are unchanged; only where the 2px sits
+has moved. The three metrics are read from the shipped TTF and named as
+constants rather than scattered as literals.
+
+**Android measured the two halves of the line differently.** `includeFontPadding`
+defaults on, and it pads from the font's bounding box, which Baloo 2 reports as
+2.295em tall — an extra em above the word. It is now off on the chip's text and
+on the headlines that sit beside a chip (2.2, 2.5, 2.16), so both sides of
+"Let's chunk" measure the same way.
+
+This is a rendering correction, not a design change: size, face, weight, fill,
+border, radius and the hard edge are all untouched.

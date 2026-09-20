@@ -36,6 +36,28 @@ import { colors, fonts, radii, shadows } from '../../theme/tokens';
  */
 const DRAFT_FILL = true;
 
+/**
+ * Baloo 2 ExtraBold vertical metrics, in ems, read from the shipped TTF:
+ * hhea ascent 1078, descent -524, OS/2 capHeight 602, all against a 1000 upem.
+ */
+const ASCENT = 1.078;
+const DESCENT = 0.524;
+const CAP_HEIGHT = 0.602;
+
+/**
+ * How far the word has to move down to sit optically centred in the chip.
+ *
+ * CSS spreads half-leading around the baseline; React Native instead centres
+ * the whole ascent+descent box inside `lineHeight`. Baloo 2's ascent is more
+ * than twice its descent, so the two disagree, and copying the board's
+ * `padding: 0 15px 2px` straight across left the word riding high in the box
+ * with a gap under it. This is the difference: cap + descent - ascent.
+ */
+const OPTICAL_SHIFT = CAP_HEIGHT + DESCENT - ASCENT;
+
+/** The board's `padding: 0 15px 2px`, kept as a total so the chip keeps its height. */
+const CHIP_PAD_Y = 2;
+
 type StrokedTextProps = {
   /** The words the asset will show. Used for spacing and for screen readers. */
   children: string;
@@ -106,11 +128,15 @@ export function HighlightChip({
   edge = true,
   style,
 }: HighlightChipProps) {
+  // Spend the board's 2px of vertical padding where the optics need it rather
+  // than all of it under the word. Total is unchanged, so is the chip's height.
+  const paddingTop = Math.min(CHIP_PAD_Y, Math.max(0, (CHIP_PAD_Y + fontSize * OPTICAL_SHIFT) / 2));
+
   return (
     <View
       style={[
         styles.chip,
-        { backgroundColor: background },
+        { backgroundColor: background, paddingTop, paddingBottom: CHIP_PAD_Y - paddingTop },
         edge && shadows.hardEdge(5, colors.ink),
         style,
       ]}
@@ -126,6 +152,11 @@ const styles = StyleSheet.create({
   reserved: {
     fontFamily: fonts.display.extraBold,
     color: colors.white,
+    textAlign: 'center',
+    // Android otherwise pads the line from the font's bounding box, and Baloo
+    // 2's is 2.295em tall — a whole extra em above the word, which shoves it
+    // down inside the chip and off the line it is meant to sit on.
+    includeFontPadding: false,
   },
   // Not `display: none` and not zero width: the text must still be measured
   // and laid out, it must simply not be seen.
@@ -133,9 +164,9 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   chip: {
-    // The board's `padding: 0 15px 2px`.
+    // The board's `padding: 0 15px 2px`. The vertical half is applied per
+    // instance above, because how it splits depends on the font size.
     paddingHorizontal: 15,
-    paddingBottom: 2,
     borderWidth: 3,
     borderColor: colors.ink,
     borderRadius: radii.lg,

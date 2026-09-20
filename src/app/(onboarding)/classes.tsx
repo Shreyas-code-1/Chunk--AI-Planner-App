@@ -156,6 +156,8 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: displayLine(34, 1.15),
     color: colors.ink,
+    // Matches the chip's own text — see welcome.tsx.
+    includeFontPadding: false,
   },
   list: {
     paddingTop: 20,
