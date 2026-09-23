@@ -1,11 +1,8 @@
 /**
  * 2.16 PAYWALL.
  *
- * TODO(batch 8): **nothing here charges anyone.** `react-native-purchases` is
- * deliberately not installed — importing a native module crashes Expo Go — so
- * this is the screen only. Both buttons currently move on; the real purchase
- * arrives with the first EAS build, through src/features/billing/usePro.ts.
- * The chosen plan is what that call will be handed.
+ * Store prices come from the billing layer. Nothing here charges anyone:
+ * CONTINUE and NO THANKS move to login; purchasing is a later step.
  *
  * The board draws one state only — 12 months chosen, 1 month not — so the
  * selected look is read off the frame rather than invented: gold 3px border
@@ -22,7 +19,7 @@
  */
 
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,22 +29,9 @@ import { Check, ChevronLeft } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { haptic } from '../../lib/haptics';
 import type { PlanId } from '../../features/billing/usePro';
+import { useOffering } from '../../features/billing/useOffering';
+import { getPaywallPlans } from '../../features/billing/paywallPlans';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
-
-/**
- * Prices, as the board draws them.
- *
- * Provisional, and in one place on purpose: the App Store is the real source
- * of these and they must eventually be read from the product, not typed here.
- * Until then, changing a price is a change to this block and nowhere else.
- */
-const PRICING = {
-  yearlyMonthly: '$7.99',
-  yearlyTotal: '$95.88',
-  yearlySaving: '27%',
-  monthly: '$10.99',
-  trialDays: 7,
-} as const;
 
 const BENEFITS = [
   'Unlimited chunking and re-plans',
@@ -60,6 +44,9 @@ export default function Paywall() {
   const onwards = () => router.replace('/login');
 
   const [plan, setPlan] = useState<PlanId>('yearly');
+  const { data, isPending, isError, isFetching, refetch } = useOffering();
+  const plans = isError ? null : getPaywallPlans(data);
+  const selectedPackage = plans?.[plan].package;
   const choose = (next: PlanId) => {
     haptic('select');
     setPlan(next);
@@ -96,20 +83,34 @@ export default function Paywall() {
 
         <View style={styles.headlineBlock}>
           <View style={styles.headlineRow}>
-            <Text style={styles.headline}>Try </Text>
+            <Text style={styles.headline}>Meet </Text>
             {/* The one highlight chip on the board with no hard edge under it. */}
             <HighlightChip fontSize={31} background={colors.gold} edge={false}>
-              {`${PRICING.trialDays} days free`}
+              Chunk Pro
             </HighlightChip>
           </View>
-          <Text style={styles.headline}>of Chunk Pro</Text>
         </View>
 
+        {isPending ? (
+          <View style={styles.plans} accessibilityLiveRegion="polite">
+            <ActivityIndicator color={colors.orangeDeep} />
+            <Text style={styles.footnote}>Loading plans…</Text>
+          </View>
+        ) : !plans ? (
+          <View style={styles.plans} accessibilityLiveRegion="polite">
+            <Text style={styles.footnote}>Plans are unavailable right now. Please try again.</Text>
+            <Pressable accessibilityRole="button" disabled={isFetching}
+              accessibilityState={{ disabled: isFetching }}
+              onPress={() => { void refetch(); }} style={styles.decline}>
+              <Text style={styles.declineLabel}>{isFetching ? 'RETRYING…' : 'TRY AGAIN'}</Text>
+            </Pressable>
+          </View>
+        ) : (
         <View style={styles.plans} accessibilityRole="radiogroup">
           <Pressable
             accessibilityRole="radio"
             accessibilityState={{ checked: plan === 'yearly' }}
-            accessibilityLabel={`12 months, ${PRICING.yearlyMonthly} a month, ${PRICING.yearlyTotal} billed yearly, save ${PRICING.yearlySaving}`}
+            accessibilityLabel={plans.yearly.accessibilityLabel}
             onPress={() => choose('yearly')}
             style={[
               styles.planFeatured,
@@ -124,12 +125,11 @@ export default function Paywall() {
               <View style={styles.planText}>
                 <Text style={styles.planName}>12 months</Text>
                 <Text style={styles.planDetail}>
-                  {`${PRICING.yearlyTotal} billed yearly · save ${PRICING.yearlySaving}`}
+                  {plans.yearly.detail}
                 </Text>
               </View>
               <View style={styles.planPriceBlock}>
-                <Text style={styles.planPrice}>{`${PRICING.yearlyMonthly} / MO`}</Text>
-                <Text style={styles.planStrike}>{PRICING.monthly}</Text>
+                <Text style={styles.planPrice}>{plans.yearly.priceLabel}</Text>
               </View>
             </View>
           </Pressable>
@@ -137,7 +137,7 @@ export default function Paywall() {
           <Pressable
             accessibilityRole="radio"
             accessibilityState={{ checked: plan === 'monthly' }}
-            accessibilityLabel={`1 month, ${PRICING.monthly} a month, billed monthly, cancel anytime`}
+            accessibilityLabel={plans.monthly.accessibilityLabel}
             onPress={() => choose('monthly')}
             style={[
               styles.planPlain,
@@ -147,11 +147,12 @@ export default function Paywall() {
           >
             <View style={styles.planText}>
               <Text style={styles.planNamePlain}>1 month</Text>
-              <Text style={styles.planDetail}>Billed monthly · cancel anytime</Text>
+              <Text style={styles.planDetail}>{plans.monthly.detail}</Text>
             </View>
-            <Text style={styles.planPricePlain}>{`${PRICING.monthly} / MO`}</Text>
+            <Text style={styles.planPricePlain}>{plans.monthly.priceLabel}</Text>
           </Pressable>
         </View>
+        )}
 
         <View style={styles.benefits}>
           {BENEFITS.map((benefit) => (
@@ -166,18 +167,21 @@ export default function Paywall() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Text style={styles.footnote}>Cancel anytime in the App Store</Text>
+        <Text style={styles.footnote}>Continuing will not charge you.</Text>
 
         <Pressable
           accessibilityRole="button"
+          disabled={!selectedPackage || isPending}
+          accessibilityState={{ disabled: !selectedPackage || isPending }}
           onPress={() => {
+            if (!selectedPackage || isPending) return;
             haptic('press');
-            // TODO(batch 8): `plan` is the product RevenueCat gets asked for here.
+            // selectedPackage is the actual SDK package; no purchase is made yet.
             onwards();
           }}
-          style={[styles.cta, shadows.hardEdge(6)]}
+          style={[styles.cta, shadows.hardEdge(6), !selectedPackage && { opacity: 0.5 }]}
         >
-          <Text style={styles.ctaLabel}>START MY FREE WEEK</Text>
+          <Text style={styles.ctaLabel}>CONTINUE</Text>
         </Pressable>
 
         <Pressable accessibilityRole="button" onPress={onwards} style={styles.decline}>
