@@ -19,7 +19,9 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomDock, Chip } from '../../components/ui';
+import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { usePlan } from '../../features/work/usePlan';
+import { EmptyWork } from '../../features/work/EmptyWork';
 import { useWork } from '../../features/work/store';
 import { addDays, planDateOf } from '../../lib/planDate';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
@@ -30,6 +32,7 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = { weekday: 'short' };
 
 export default function AllWork() {
   const router = useRouter();
+  const dock = useDockNavigation('home');
   const assignments = useWork((state) => state.assignments);
   const { all } = usePlan();
 
@@ -87,12 +90,19 @@ export default function AllWork() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <StatusBar style="dark" />
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.body, assignments.length === 0 && styles.bodyEmpty]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerRow}>
           <Text style={styles.title}>All work</Text>
-          <Text style={styles.remaining}>
-            {hoursLeft === 0 ? 'NOTHING LEFT' : `${Math.round((hoursLeft / 60) * 10) / 10} HR LEFT`}
-          </Text>
+          {assignments.length > 0 ? (
+            <Text style={styles.remaining}>
+              {hoursLeft === 0
+                ? 'NOTHING LEFT'
+                : `${Math.round((hoursLeft / 60) * 10) / 10} HR LEFT`}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.filters}>
@@ -108,7 +118,9 @@ export default function AllWork() {
           />
         </View>
 
-        {groups.length === 0 ? (
+        {assignments.length === 0 ? (
+          <EmptyWork />
+        ) : groups.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyLine}>
               {filter === 'done'
@@ -165,15 +177,7 @@ export default function AllWork() {
         )}
       </ScrollView>
 
-      <BottomDock
-        active="focus"
-        style={styles.dock}
-        onSelect={(tab) => {
-          if (tab === 'home') router.replace('/home');
-          if (tab === 'week') router.replace('/today');
-        }}
-        onAdd={() => router.push('/add')}
-      />
+      <BottomDock active="home" style={styles.dock} {...dock} />
     </SafeAreaView>
   );
 }
@@ -267,5 +271,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
 
+  bodyEmpty: { flexGrow: 1 },
   dock: { marginHorizontal: 20, marginBottom: 10 },
 });

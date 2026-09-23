@@ -25,6 +25,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomDock, PathNode } from '../../components/ui';
+import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { usePlan } from '../../features/work/usePlan';
 import { planDateOf, fromDateKey, addDays } from '../../lib/planDate';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
@@ -34,6 +35,7 @@ const WEEKDAY_INITIALS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function Today() {
   const router = useRouter();
+  const dock = useDockNavigation('week');
 
   const todayKey = planDateOf(new Date());
   const today = fromDateKey(todayKey);
@@ -151,15 +153,7 @@ export default function Today() {
         )}
       </ScrollView>
 
-      <BottomDock
-        active="week"
-        style={styles.dock}
-        onSelect={(tab) => {
-          if (tab === 'home') router.replace('/home');
-          if (tab === 'focus') router.replace('/all-work');
-        }}
-        onAdd={() => router.push('/add')}
-      />
+      <BottomDock active="week" style={styles.dock} {...dock} />
     </SafeAreaView>
   );
 }
@@ -219,7 +213,13 @@ const styles = StyleSheet.create({
 
   path: { marginTop: 16, gap: 14 },
   pathRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  card: { flex: 1, backgroundColor: colors.card, borderRadius: 18, paddingVertical: 10, paddingHorizontal: 13 },
+  card: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 13,
+  },
   cardPlain: { borderWidth: 2, borderColor: colors.cream },
   cardNow: { borderWidth: 2, borderColor: colors.orange },
   cardTitle: { fontFamily: fonts.body.extraBold, fontSize: 13.5, color: colors.ink },

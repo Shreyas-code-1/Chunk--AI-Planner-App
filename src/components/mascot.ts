@@ -64,6 +64,24 @@ export const mascot = {
   complete: require('../../design/mascot/17-chunk-cheering.png'),
   /** 3.7 THE CHUNKING MOMENT — the bust beside the speech bubble. */
   chunked: require('../../design/mascot/19-chunk.png'),
+  /** 4.1 SCAN TO CHUNK. */
+  scan: require('../../design/mascot/20-chunk.png'),
+  /** 4.2 ASK CHUNK — three poses on the one frame. */
+  ask: require('../../design/mascot/21-chunk.png'),
+  askReply: require('../../design/mascot/22-chunk.png'),
+  askThinking: require('../../design/mascot/23-chunk.png'),
+  /** 4.3 STUDY MODES. */
+  studyModes: require('../../design/mascot/24-chunk.png'),
+  /** 4.4 QUIZ. */
+  quiz: require('../../design/mascot/25-chunk.png'),
+  /** 4.5 QUIZ RESULT. */
+  quizResult: require('../../design/mascot/26-chunk-cheering.png'),
+  /** 5.1 PROGRESS — inside the orange THIS WEEK card. */
+  progress: require('../../design/mascot/27-chunk.png'),
+  /** 5.3 EMPTY STATE. */
+  waiting: require('../../design/mascot/28-chunk-waiting.png'),
+  /** 5.4 URGENT DEADLINE — inside the AFTER THAT card. */
+  urgent: require('../../design/mascot/29-chunk.png'),
 } as const;
 
 // 2.10 DAILY PACE, 2.11 WITH CHUNK VS ALONE, 2.12 YOUR PROGRESS CURVE and

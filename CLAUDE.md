@@ -99,12 +99,14 @@ writing it.
 
 ## Process
 
-- Plan first. One batch at a time; do not build ahead.
-- Before a batch, list the files it will touch. After it, say what was built,
-  what is stubbed, and where the RN result may differ from the board.
-- Commit after each approved batch. No mock data in committed code.
-- Open questions are raised **one at a time, at the screen that needs them** —
-  not batched (this supersedes §9.1 of the brief for questions 13–17, 19, 20).
+- **Build everything the board draws without asking** (22 Sep). Stop and ask
+  only about what the board doesn't cover, batched into one list in
+  `docs/v2-and-remaining-screens-questions.md`, and keep working meanwhile.
+  This supersedes the earlier "one batch at a time" and "questions one at a
+  time" rules.
+- After a batch, say what was built, what is stubbed, and where the RN result
+  may differ from the board. Commit after each batch. No mock data in
+  committed code.
 
 ## Commands
 

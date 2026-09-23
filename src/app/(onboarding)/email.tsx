@@ -24,6 +24,7 @@ import { Button, Input } from '../../components/ui';
 import { ChevronLeft } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { haptic } from '../../lib/haptics';
+import { isOnline } from '../../lib/network';
 import { colors, displayLine, fonts, radii } from '../../theme/tokens';
 
 /**
@@ -37,10 +38,15 @@ export default function EmailSignIn() {
   const [email, setEmail] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
 
-  const onContinue = () => {
+  const onContinue = async () => {
     const address = email.trim();
     if (!LOOKS_LIKE_EMAIL.test(address)) {
       setProblem('That does not look like an email address.');
+      return;
+    }
+    // Sending a code needs the network, so 5.5 comes first.
+    if (!(await isOnline())) {
+      router.push('/offline');
       return;
     }
     // TODO: send the code. 2.19 accepts any six digits until it is sent.
@@ -94,9 +100,7 @@ export default function EmailSignIn() {
           onSubmitEditing={onContinue}
         />
 
-        <Text style={styles.helper}>
-          {"We'll send a six-digit code. No password to remember."}
-        </Text>
+        <Text style={styles.helper}>{"We'll send a six-digit code. No password to remember."}</Text>
 
         {problem ? (
           // TODO(design): no error treatment exists on the board for a field.

@@ -72,6 +72,18 @@ export const colors = {
   mutedLight: '#B4A498',
   mutedLine: '#C3B4A8',
 
+  /** 5.4 URGENT DEADLINE's red card, its edge, and the DO IT NOW label. */
+  urgent: '#E2503C',
+  urgentEdge: '#B33526',
+  urgentDeep: '#C33B29',
+  /** 5.6's SOMETHING WENT WRONG pill. */
+  urgentSoft: '#FDE7E2',
+  urgentBorder: '#F3C6BC',
+  /** A locked badge on 5.2. */
+  lockedSoft: '#F7F0E8',
+  /** 5.1's dark TIME PER DAY card. */
+  darkCard: '#3A2A20',
+
   success: '#2FB37A',
   successDeep: '#1E8659',
   successSoft: '#E6F7EE',

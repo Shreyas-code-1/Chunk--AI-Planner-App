@@ -47,6 +47,9 @@ export type Completion = {
 type WorkState = {
   assignments: WorkAssignment[];
   completions: Completion[];
+  /** Chunk keys whose 5.4 urgent card the student chose to keep at its planned time. */
+  keptForLater: string[];
+  keepForLater(chunkKey: string): void;
   addAssignment(input: Omit<WorkAssignment, 'id' | 'addedAt'>): WorkAssignment;
   removeAssignment(id: string): void;
   setMode(id: string, mode: Mode): void;
@@ -61,6 +64,11 @@ const newId = () => `a${Date.now().toString(36)}${Math.random().toString(36).sli
 export const useWork = create<WorkState>((set) => ({
   assignments: [],
   completions: [],
+  keptForLater: [],
+
+  keepForLater(chunkKey) {
+    set((state) => ({ keptForLater: [...state.keptForLater, chunkKey] }));
+  },
 
   addAssignment(input) {
     const assignment: WorkAssignment = {
@@ -103,7 +111,7 @@ export const useWork = create<WorkState>((set) => ({
   },
 
   reset() {
-    set({ assignments: [], completions: [] });
+    set({ assignments: [], completions: [], keptForLater: [] });
   },
 }));
 

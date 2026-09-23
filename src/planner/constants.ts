@@ -119,3 +119,6 @@ export const NEW_USER_PADDING = 1.5;
  * schedule that rearranges itself constantly is one nobody trusts.
  */
 export const REPLAN_MIN_SHIFT_MINUTES = 15;
+
+/** Home turns into 5.4 URGENT when unfinished work is due within this (Q16). */
+export const URGENT_WITHIN_HOURS = 6;

@@ -823,3 +823,31 @@ line. None of these has a frame: they are drawn with existing styles and marked
 **Fixed:** 3.6's DUE row clipped the chosen chip's hard edge and the last chip
 at the screen margin. The row now bleeds to the screen edges and leaves room
 below for the edge.
+
+## 2026-09-22 — Section 5 built; standing rule on asking
+
+**Process rule (supersedes "one batch at a time" and "questions one at a time"
+in CLAUDE.md):** build everything the board draws without per-screen approval.
+Batch the off-board questions in `docs/v2-and-remaining-screens-questions.md`
+and keep working meanwhile.
+
+Built from the board:
+- 5.1 PROGRESS at `/progress`
+- 5.2 PROFILE at `/you`, because `/profile` is 2.4
+- 5.3 EMPTY inside All work
+- 5.4 URGENT as Home's body
+- 5.5 OFFLINE at `/offline`, checked before 2.18 sends a code
+- 5.6 at `/chunk-failed`
+
+The dock now follows the board: Focus → 5.1 and You → 5.2. It previously sent
+Focus to All work and did nothing for Profile. It lives in one hook,
+`useDockNavigation`.
+
+- **5.4's MOVE TO** keeps the chunk at its planned time and hides the card. It
+  is shown only when that time is 15+ min away. The threshold is
+  `URGENT_WITHIN_HOURS = 6` (Q16).
+- 5.2 leaves out the school line, because it's never collected. CONNECTED rows
+  show "Not connected".
+- Section 4 is not built. It is blocked on real sign-in and an AI consent frame.
+- Added `@react-native-community/netinfo` and a `.prettierrc` matching the
+  existing style.

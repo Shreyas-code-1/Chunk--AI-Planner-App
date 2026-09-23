@@ -19,7 +19,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomDock, Chip } from '../../components/ui';
 import { Bell } from '../../components/icons';
 import { useDraft } from '../../features/onboarding/draft';
+import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { usePlan } from '../../features/work/usePlan';
+import { useWork } from '../../features/work/store';
+import { UrgentHome, findUrgent } from '../../features/work/UrgentHome';
 import { haptic } from '../../lib/haptics';
 import { planDateOf, fromDateKey } from '../../lib/planDate';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
@@ -35,6 +38,7 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
 
 export default function Home() {
   const router = useRouter();
+  const dock = useDockNavigation('home');
   const displayName = useDraft((state) => state.displayName);
   const classes = useDraft((state) => state.classes);
 
@@ -48,7 +52,10 @@ export default function Home() {
     focusedToday,
     allTimeChunks,
     classes: progress,
+    today: todayChunks,
   } = usePlan();
+  const keptForLater = useWork((state) => state.keptForLater);
+  const urgent = findUrgent(todayChunks, keptForLater, new Date());
   const chunksLeft = plannedToday - doneToday;
 
   // TODO(batch 6): a real streak needs completions that outlive the process.
@@ -89,128 +96,131 @@ export default function Home() {
           </View>
         </View>
 
-        <View style={[styles.says, shadows.hardEdge(7)]}>
-          <View style={styles.saysText}>
-            <Text style={styles.saysLabel}>CHUNK SAYS</Text>
-            <Text style={styles.saysLine}>
-              {chunksLeft === 0
-                ? 'Nothing planned yet'
-                : `${chunksLeft} ${chunksLeft === 1 ? 'chunk' : 'chunks'} left`}
-            </Text>
-
-            <View style={styles.segments}>
-              {Array.from({ length: Math.max(plannedToday, 5) }, (_, index) => (
-                <View
-                  key={index}
-                  style={[styles.segment, index < doneToday ? styles.segmentOn : styles.segmentOff]}
-                />
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.stats}>
-          <Stat value={`${doneToday}/${plannedToday}`} label="today" />
-          <Stat value={`${focusedToday}m`} label="focused" />
-          <Stat value={`${allTimeChunks}`} label="all time" />
-        </View>
-
-        <Text style={styles.sectionLabel}>
-          {upNext
-            ? `UP NEXT · ${upNext.scheduledStart.toLocaleTimeString(undefined, TIME_FORMAT)}`
-            : 'UP NEXT'}
-        </Text>
-
-        {upNext ? (
-          <View style={[styles.upNext, shadows.hardEdge(6)]}>
-            <View style={styles.upNextRow}>
-              <Chip className={upNext.classId ?? 'Other'} size={48} />
-              <View style={styles.upNextText}>
-                <Text style={styles.upNextLabel}>
-                  {`CHUNK ${upNext.index + 1} OF ${plannedToday}`}
+        {urgent ? (
+          <UrgentHome urgent={urgent} today={todayChunks} />
+        ) : (
+          <>
+            <View style={[styles.says, shadows.hardEdge(7)]}>
+              <View style={styles.saysText}>
+                <Text style={styles.saysLabel}>CHUNK SAYS</Text>
+                <Text style={styles.saysLine}>
+                  {chunksLeft === 0
+                    ? 'Nothing planned yet'
+                    : `${chunksLeft} ${chunksLeft === 1 ? 'chunk' : 'chunks'} left`}
                 </Text>
-                <Text style={styles.upNextTitle}>{upNext.title}</Text>
-                <Text style={styles.upNextMeta}>
-                  {`${upNext.classId ?? 'No class'} · ${upNext.plannedMinutes} min`}
-                </Text>
+
+                <View style={styles.segments}>
+                  {Array.from({ length: Math.max(plannedToday, 5) }, (_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.segment,
+                        index < doneToday ? styles.segmentOn : styles.segmentOff,
+                      ]}
+                    />
+                  ))}
+                </View>
               </View>
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                haptic('press');
-                router.push({
-                  pathname: '/focus',
-                  params: {
-                    chunk: upNext.key,
-                    assignment: upNext.assignmentId,
-                    title: upNext.title,
-                    className: upNext.classId ?? '',
-                    minutes: String(upNext.plannedMinutes),
-                    index: String(upNext.index + 1),
-                    total: String(plannedToday),
-                  },
-                });
-              }}
-              style={[styles.start, shadows.hardEdge(5)]}
-            >
-              <Text style={styles.startLabel}>START THIS CHUNK</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.empty}>
-            <Text style={styles.emptyLine}>
-              Nothing to start yet — add some work and Chunk will cut it up.
+            <View style={styles.stats}>
+              <Stat value={`${doneToday}/${plannedToday}`} label="today" />
+              <Stat value={`${focusedToday}m`} label="focused" />
+              <Stat value={`${allTimeChunks}`} label="all time" />
+            </View>
+
+            <Text style={styles.sectionLabel}>
+              {upNext
+                ? `UP NEXT · ${upNext.scheduledStart.toLocaleTimeString(undefined, TIME_FORMAT)}`
+                : 'UP NEXT'}
             </Text>
-          </View>
-        )}
 
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionLabel}>YOUR CLASSES</Text>
-          {classes.length > 0 ? (
-            <Pressable accessibilityRole="button" onPress={() => router.push('/all-work')}>
-              <Text style={styles.seeAll}>SEE ALL</Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        {classes.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyLine}>No classes yet.</Text>
-          </View>
-        ) : (
-          <View style={styles.classList}>
-            {classes.map((entry, index) => {
-              const row = progress.find((item) => item.className === entry.name);
-              const percent = row?.percent ?? 0;
-              return (
-                <View key={`${entry.name}-${index}`} style={[styles.classRow, shadows.hardEdge(5)]}>
-                  <Chip className={entry.name} />
-                  <View style={styles.classText}>
-                    <Text style={styles.className}>{entry.name}</Text>
-                    <View style={styles.track}>
-                      <View style={[styles.trackFill, { width: `${percent}%` }]} />
-                    </View>
+            {upNext ? (
+              <View style={[styles.upNext, shadows.hardEdge(6)]}>
+                <View style={styles.upNextRow}>
+                  <Chip className={upNext.classId ?? 'Other'} size={48} />
+                  <View style={styles.upNextText}>
+                    <Text style={styles.upNextLabel}>
+                      {`CHUNK ${upNext.index + 1} OF ${plannedToday}`}
+                    </Text>
+                    <Text style={styles.upNextTitle}>{upNext.title}</Text>
+                    <Text style={styles.upNextMeta}>
+                      {`${upNext.classId ?? 'No class'} · ${upNext.plannedMinutes} min`}
+                    </Text>
                   </View>
-                  <Text style={styles.percent}>{`${percent}%`}</Text>
                 </View>
-              );
-            })}
-          </View>
+
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    haptic('press');
+                    router.push({
+                      pathname: '/focus',
+                      params: {
+                        chunk: upNext.key,
+                        assignment: upNext.assignmentId,
+                        title: upNext.title,
+                        className: upNext.classId ?? '',
+                        minutes: String(upNext.plannedMinutes),
+                        index: String(upNext.index + 1),
+                        total: String(plannedToday),
+                      },
+                    });
+                  }}
+                  style={[styles.start, shadows.hardEdge(5)]}
+                >
+                  <Text style={styles.startLabel}>START THIS CHUNK</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.empty}>
+                <Text style={styles.emptyLine}>
+                  Nothing to start yet — add some work and Chunk will cut it up.
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionLabel}>YOUR CLASSES</Text>
+              {classes.length > 0 ? (
+                <Pressable accessibilityRole="button" onPress={() => router.push('/all-work')}>
+                  <Text style={styles.seeAll}>SEE ALL</Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            {classes.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyLine}>No classes yet.</Text>
+              </View>
+            ) : (
+              <View style={styles.classList}>
+                {classes.map((entry, index) => {
+                  const row = progress.find((item) => item.className === entry.name);
+                  const percent = row?.percent ?? 0;
+                  return (
+                    <View
+                      key={`${entry.name}-${index}`}
+                      style={[styles.classRow, shadows.hardEdge(5)]}
+                    >
+                      <Chip className={entry.name} />
+                      <View style={styles.classText}>
+                        <Text style={styles.className}>{entry.name}</Text>
+                        <View style={styles.track}>
+                          <View style={[styles.trackFill, { width: `${percent}%` }]} />
+                        </View>
+                      </View>
+                      <Text style={styles.percent}>{`${percent}%`}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
 
-      <BottomDock
-        active="home"
-        style={styles.dock}
-        onSelect={(tab) => {
-          // TODO(batch 6): 5.2 PROFILE is not built, so that tab holds.
-          if (tab === 'week') router.replace('/today');
-          if (tab === 'focus') router.replace('/all-work');
-        }}
-        onAdd={() => router.push('/add')}
-      />
+      <BottomDock active="home" style={styles.dock} {...dock} />
     </SafeAreaView>
   );
 }
