@@ -1,8 +1,8 @@
 /**
  * 2.16 PAYWALL.
  *
- * Store prices come from the billing layer. Nothing here charges anyone:
- * CONTINUE and NO THANKS move to login; purchasing is a later step.
+ * Store prices and purchases come from the billing layer. A purchase continues
+ * to login only after Chunk Pro is active; NO THANKS still skips the paywall.
  *
  * The board draws one state only — 12 months chosen, 1 month not — so the
  * selected look is read off the frame rather than invented: gold 3px border
@@ -18,7 +18,7 @@
  * against the cream.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -31,6 +31,7 @@ import { haptic } from '../../lib/haptics';
 import type { PlanId } from '../../features/billing/usePro';
 import { useOffering } from '../../features/billing/useOffering';
 import { getPaywallPlans } from '../../features/billing/paywallPlans';
+import { purchasePlan } from '../../features/billing/purchase';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 const BENEFITS = [
@@ -41,15 +42,57 @@ const BENEFITS = [
 
 export default function Paywall() {
   const router = useRouter();
-  const onwards = () => router.replace('/login');
+  const active = useRef(true);
+  const purchaseLock = useRef(false);
+  const [purchasing, setPurchasing] = useState(false);
+  const [purchaseMessage, setPurchaseMessage] = useState<string | null>(null);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
+  const onwards = () => {
+    active.current = false;
+    router.replace('/login');
+  };
 
   const [plan, setPlan] = useState<PlanId>('yearly');
   const { data, isPending, isError, isFetching, refetch } = useOffering();
   const plans = isError ? null : getPaywallPlans(data);
   const selectedPackage = plans?.[plan].package;
   const choose = (next: PlanId) => {
+    if (purchaseLock.current) return;
     haptic('select');
     setPlan(next);
+  };
+
+  const onContinue = async () => {
+    if (!selectedPackage || isPending || purchaseLock.current || !active.current) return;
+    purchaseLock.current = true;
+    setPurchasing(true);
+    setPurchaseMessage(null);
+    try {
+      haptic('press');
+      const result = await purchasePlan(selectedPackage);
+      if (!active.current) return;
+      switch (result.status) {
+        case 'purchased':
+          onwards();
+          break;
+        case 'cancelled':
+          break;
+        case 'entitlement-inactive':
+          setPurchaseMessage('Your purchase completed, but Chunk Pro is not active yet. Please wait before trying again.');
+          break;
+        case 'failed':
+          setPurchaseMessage('We couldn’t complete your purchase. Please try again.');
+          break;
+      }
+    } catch {
+      if (active.current) setPurchaseMessage('We couldn’t complete your purchase. Please try again.');
+    } finally {
+      purchaseLock.current = false;
+      if (active.current) setPurchasing(false);
+    }
   };
 
   const cardEdge = (selected: boolean) =>
@@ -66,6 +109,7 @@ export default function Paywall() {
           hitSlop={8}
           onPress={() => {
             haptic('select');
+            active.current = false;
             router.back();
           }}
           style={styles.back}
@@ -109,7 +153,8 @@ export default function Paywall() {
         <View style={styles.plans} accessibilityRole="radiogroup">
           <Pressable
             accessibilityRole="radio"
-            accessibilityState={{ checked: plan === 'yearly' }}
+            disabled={purchasing}
+            accessibilityState={{ checked: plan === 'yearly', disabled: purchasing }}
             accessibilityLabel={plans.yearly.accessibilityLabel}
             onPress={() => choose('yearly')}
             style={[
@@ -136,7 +181,8 @@ export default function Paywall() {
 
           <Pressable
             accessibilityRole="radio"
-            accessibilityState={{ checked: plan === 'monthly' }}
+            disabled={purchasing}
+            accessibilityState={{ checked: plan === 'monthly', disabled: purchasing }}
             accessibilityLabel={plans.monthly.accessibilityLabel}
             onPress={() => choose('monthly')}
             style={[
@@ -167,21 +213,22 @@ export default function Paywall() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Text style={styles.footnote}>Continuing will not charge you.</Text>
+        <Text style={styles.footnote}>Continue to purchase your selected plan.</Text>
+        {purchaseMessage ? (
+          <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.footnote}>
+            {purchaseMessage}
+          </Text>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
-          disabled={!selectedPackage || isPending}
-          accessibilityState={{ disabled: !selectedPackage || isPending }}
-          onPress={() => {
-            if (!selectedPackage || isPending) return;
-            haptic('press');
-            // selectedPackage is the actual SDK package; no purchase is made yet.
-            onwards();
-          }}
+          disabled={!selectedPackage || isPending || purchasing}
+          accessibilityState={{ disabled: !selectedPackage || isPending || purchasing, busy: purchasing }}
+          onPress={onContinue}
           style={[styles.cta, shadows.hardEdge(6), !selectedPackage && { opacity: 0.5 }]}
         >
-          <Text style={styles.ctaLabel}>CONTINUE</Text>
+          {purchasing ? <ActivityIndicator color={colors.ink} /> : null}
+          <Text style={styles.ctaLabel}>{purchasing ? 'PROCESSING…' : 'CONTINUE'}</Text>
         </Pressable>
 
         <Pressable accessibilityRole="button" onPress={onwards} style={styles.decline}>

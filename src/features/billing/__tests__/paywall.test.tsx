@@ -1,11 +1,13 @@
 import React from 'react';
 import Paywall from '../../../app/(onboarding)/paywall';
 import { useOffering } from '../useOffering';
+import { purchasePlan, type PurchaseResult } from '../purchase';
 
 const { act, create } = require('react-test-renderer');
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace, back: jest.fn() }) }));
 jest.mock('../useOffering', () => ({ useOffering: jest.fn() }));
+jest.mock('../purchase', () => ({ purchasePlan: jest.fn() }));
 jest.mock('../../../lib/haptics', () => ({ haptic: jest.fn() }));
 jest.mock('../../../components/ui/StrokedText', () => ({
   HighlightChip: ({ children }: { children: React.ReactNode }) => children,
@@ -35,12 +37,13 @@ function radio(prefix: string) {
     && node.props.accessibilityLabel?.startsWith(prefix))[0];
 }
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
   jest.mocked(useOffering).mockReturnValue(state());
+  jest.mocked(purchasePlan).mockResolvedValue({ status: 'purchased' });
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); tree = undefined; });
 
-test('shows localized prices, preserves selection, and continues without a purchase claim', () => {
+test('shows localized prices, preserves selection, and purchases the monthly package before navigating', async () => {
   act(() => { tree = create(<Paywall />); });
   const radios = [radio('12 months'), radio('1 month,')];
   expect(radios[0].props.accessibilityState.checked).toBe(true);
@@ -50,16 +53,94 @@ test('shows localized prices, preserves selection, and continues without a purch
   expect(radios[1].props.accessibilityState.checked).toBe(true);
   expect(radios[0].props.accessibilityState.checked).toBe(false);
   expect(JSON.stringify(tree.toJSON())).not.toMatch(/days free|FREE WEEK|27%|\$7\.99/);
-  act(() => button('CONTINUE').props.onPress());
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(purchasePlan).toHaveBeenCalledWith(jest.mocked(useOffering).mock.results[0].value.data.monthly.package);
   expect(mockReplace).toHaveBeenCalledWith('/login');
 });
 
-test('loading disables continue while preserving the skip action', () => {
+test('purchases the default yearly package and navigates only on success', async () => {
+  act(() => { tree = create(<Paywall />); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(jest.mocked(purchasePlan).mock.calls[0][0]).toBe(jest.mocked(useOffering).mock.results[0].value.data.annual.package);
+  expect(mockReplace).toHaveBeenCalledWith('/login');
+});
+
+test('cancellation remains on the paywall without an error and preserves selection', async () => {
+  jest.mocked(purchasePlan).mockResolvedValue({ status: 'cancelled' });
+  act(() => { tree = create(<Paywall />); });
+  act(() => radio('1 month,').props.onPress());
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(radio('1 month,').props.accessibilityState.checked).toBe(true);
+  expect(tree.root.findAll((node: any) => node.props.accessibilityRole === 'alert')).toHaveLength(0);
+  expect(button('CONTINUE').props.disabled).toBe(false);
+});
+
+test('failed purchases show an error and allow an explicit retry', async () => {
+  jest.mocked(purchasePlan).mockResolvedValueOnce({ status: 'failed', reason: 'purchase' });
+  act(() => { tree = create(<Paywall />); });
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('Please try again.');
+  expect(button('CONTINUE').props.disabled).toBe(false);
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(purchasePlan).toHaveBeenCalledTimes(2);
+  expect(mockReplace).toHaveBeenCalledWith('/login');
+});
+
+test('inactive entitlement explains that access is pending without navigating', async () => {
+  jest.mocked(purchasePlan).mockResolvedValue({ status: 'entitlement-inactive' });
+  act(() => { tree = create(<Paywall />); });
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('Chunk Pro is not active yet');
+});
+
+test('pending purchase disables the button and plan changes and blocks immediate duplicate taps', async () => {
+  let finish!: (result: PurchaseResult) => void;
+  jest.mocked(purchasePlan).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  act(() => { tree = create(<Paywall />); });
+  const press = button('CONTINUE').props.onPress;
+  let pending!: Promise<void>;
+  act(() => { pending = press(); void press(); });
+  expect(purchasePlan).toHaveBeenCalledTimes(1);
+  expect(button('PROCESSING…').props.disabled).toBe(true);
+  expect(button('PROCESSING…').props.accessibilityState.busy).toBe(true);
+  act(() => radio('1 month,').props.onPress());
+  expect(radio('12 months').props.accessibilityState.checked).toBe(true);
+  expect(mockReplace).not.toHaveBeenCalled();
+  await act(async () => { finish({ status: 'cancelled' }); await pending; });
+  expect(button('CONTINUE').props.disabled).toBe(false);
+});
+
+test('unexpected rejection shows only a safe retryable error', async () => {
+  jest.mocked(purchasePlan).mockRejectedValue(new Error('private details'));
+  act(() => { tree = create(<Paywall />); });
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('Please try again.');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('private details');
+});
+
+test('NO THANKS during a pending purchase navigates once and ignores the late result', async () => {
+  let finish!: (result: PurchaseResult) => void;
+  jest.mocked(purchasePlan).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  act(() => { tree = create(<Paywall />); });
+  let pending!: Promise<void>;
+  act(() => { pending = button('CONTINUE').props.onPress(); });
+  act(() => button('NO THANKS').props.onPress());
+  await act(async () => { finish({ status: 'purchased' }); await pending; });
+  expect(mockReplace).toHaveBeenCalledTimes(1);
+  expect(mockReplace).toHaveBeenCalledWith('/login');
+});
+
+test('loading disables continue while preserving the skip action', async () => {
   jest.mocked(useOffering).mockReturnValue(state({ data: undefined, isPending: true, isFetching: true }));
   act(() => { tree = create(<Paywall />); });
   expect(JSON.stringify(tree.toJSON())).toContain('Loading plans');
   expect(button('CONTINUE').props.disabled).toBe(true);
-  act(() => button('CONTINUE').props.onPress());
+  await act(async () => { await button('CONTINUE').props.onPress(); });
   expect(mockReplace).not.toHaveBeenCalled();
   act(() => button('NO THANKS').props.onPress());
   expect(mockReplace).toHaveBeenCalledWith('/login');
