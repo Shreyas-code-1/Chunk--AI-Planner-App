@@ -33,7 +33,4 @@ export function usePro(): ProState {
   return { isPro: false, loading: false };
 }
 
-/** Placeholder so call sites can exist before the native module does. */
-export async function restorePurchases(): Promise<void> {
-  throw new Error('Purchases require a development build; not available in Expo Go.');
-}
+export { restorePurchases, type RestoreResult } from './restore';
