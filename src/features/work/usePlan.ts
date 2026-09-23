@@ -19,7 +19,16 @@ import {
   MIN_SAMPLES_FOR_MEDIAN,
   WEEKDAY_FACTORS,
 } from '../../planner/constants';
-import type { DayPlan, History, Prefs, ScheduledChunk, WeekdayFactors } from '../../planner/types';
+import type {
+  Break,
+  DayPlan,
+  Deferral,
+  History,
+  Prefs,
+  ScheduledChunk,
+  UrgentTriage,
+  WeekdayFactors,
+} from '../../planner/types';
 import { DAY_CUTOFF_HOUR, planDateOf } from '../../lib/planDate';
 import { BEST_TIMES, useDraft } from '../onboarding/draft';
 import { toPlannerAssignments, useWork, type Completion } from './store';
@@ -52,6 +61,12 @@ export type PlanView = {
   allTimeChunks: number;
   classes: ClassProgress[];
   atRiskTitles: string[];
+  /** Engine v2 outputs. TODO(design): none of these has a frame yet. */
+  breaksToday: Break[];
+  bedtimeOverrunToday: DayPlan['bedtimeOverrun'];
+  deferrals: Deferral[];
+  urgentTriage: UrgentTriage | null;
+  needsSubmitOrder: string[];
 };
 
 const chunkKey = (chunk: { assignmentId: string; index: number }) =>
@@ -94,6 +109,8 @@ function prefsFrom(draft: ReturnType<typeof useDraft.getState>): Prefs {
     startStyle: draft.startStyle,
     weekdayFactors: factors,
     dayCutoffHour: DAY_CUTOFF_HOUR,
+    // TODO(design): onboarding has no bedtime question yet; DEFAULT_BEDTIME applies.
+    bedtime: null,
   };
 }
 
@@ -150,6 +167,7 @@ export function usePlan(now: Date = new Date()): PlanView {
     );
 
     const today = all.filter((chunk) => chunk.planDate === todayKey);
+    const todayPlan = result.days.find((day) => day.planDate === todayKey);
     const doneToday = today.filter((chunk) => chunk.done).length;
 
     const focusedToday = completions
@@ -181,6 +199,11 @@ export function usePlan(now: Date = new Date()): PlanView {
         percent: row.total === 0 ? 0 : Math.round((row.done / row.total) * 100),
       })),
       atRiskTitles: result.atRisk.map((entry) => entry.title),
+      breaksToday: todayPlan?.breaks ?? [],
+      bedtimeOverrunToday: todayPlan?.bedtimeOverrun ?? null,
+      deferrals: result.deferrals,
+      urgentTriage: result.urgentTriage,
+      needsSubmitOrder: result.needsSubmitOrder,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignments, completions, draft, todayKey]);

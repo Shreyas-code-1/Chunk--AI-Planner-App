@@ -5,7 +5,7 @@
  * changes here and nowhere else, and the reason goes in docs/decision-log.md.
  */
 
-import type { ChunkLengthPref, Difficulty, StartStyle, WeekdayFactors } from './types';
+import type { ChunkLengthPref, Difficulty, Mode, StartStyle, WeekdayFactors } from './types';
 
 /** Target chunk length in minutes, from screen 2.6. */
 export const TARGET_MINUTES: Record<ChunkLengthPref, number> = {
@@ -70,9 +70,49 @@ export const START_STYLE_WINDOW_DAYS: Record<StartStyle, number | 'all'> = {
   day_before: 1,
 };
 
-/** A break after this many consecutive chunks, and how long it lasts. */
-export const CHUNKS_BETWEEN_BREAKS = 2;
-export const BREAK_MINUTES = 10;
+// ---- Engine v2 (docs/scheduling-engine-v2.md). Every tunable lives here. ----
+
+/** The one warm-up must be a chunk this short or shorter. */
+export const WARMUP_MAX_MINUTES = 10;
+
+/** 5 minutes at a batch boundary, and inside a long batch. */
+export const SHORT_BREAK_MINUTES = 5;
+/** Inside a batch longer than this, breaks come roughly every IN_BATCH_BREAK_EVERY. */
+export const IN_BATCH_BREAK_MIN_BATCH = 30;
+export const IN_BATCH_BREAK_EVERY = 25;
+/** Breaks snap to a chunk boundary within this many minutes. */
+export const BREAK_SNAP_MINUTES = 5;
+/** A 15-minute break after about 90 minutes of work. */
+export const LONG_BREAK_AFTER = 90;
+export const LONG_BREAK_MINUTES = 15;
+
+/** Nothing is scheduled later than bedtime minus this. */
+export const BEDTIME_MARGIN_MINUTES = 30;
+/**
+ * How far past bedtime must-do-tonight work may run. PROVISIONAL: the spec
+ * says "up to 60 minutes past it" and its example copy measures from bedtime,
+ * so this measures from bedtime, not from the cutoff.
+ */
+export const BEDTIME_BEND_MAX_MINUTES = 60;
+/**
+ * PROVISIONAL: used until onboarding asks for a bedtime. 10:30 PM, the spec's
+ * example.
+ */
+export const DEFAULT_BEDTIME = 22 * 60 + 30;
+/** Share of the evening left unscheduled at the end. Spent when something is due today. */
+export const BUFFER_FRACTION = 0.15;
+
+/** Batch "hardness" is the sum of these over the batch's tasks. */
+export const DIFFICULTY_SCORE: Record<Difficulty, number> = {
+  easy: 1,
+  medium: 2,
+  hard: 3,
+};
+/** Tie-break when two batches are equally hard. */
+export const MODE_TIE_ORDER: readonly Mode[] = ['problems', 'writing', 'reading', 'memorizing'];
+
+/** Estimate padding for new users (v2 §5 — not built yet). */
+export const NEW_USER_PADDING = 1.5;
 
 /**
  * A re-plan that would move a chunk by less than this leaves it alone. A

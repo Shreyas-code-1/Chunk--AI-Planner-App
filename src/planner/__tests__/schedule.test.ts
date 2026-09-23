@@ -1,110 +1,267 @@
 /**
- * Laying a day on the clock: order, interleaving and breaks.
+ * Laying a day on the clock — engine v2: due-today first, one warm-up, mode
+ * batches, breaks, and the bedtime cutoff.
  */
 
-import { BREAK_MINUTES } from '../constants';
+import {
+  BEDTIME_BEND_MAX_MINUTES,
+  LONG_BREAK_MINUTES,
+  MAX_CHUNK_MINUTES,
+  SHORT_BREAK_MINUTES,
+} from '../constants';
 import { scheduleDay } from '../schedule';
 import { toDateKey } from '../../lib/planDate';
 import type { BalancedDay, PlacedChunk } from '../balance';
+import type { Difficulty, Mode } from '../types';
 import { NOW, dueIn, prefs } from './fixtures';
 
 let seq = 0;
 const placed = (overrides: Partial<PlacedChunk> = {}): PlacedChunk => ({
-  assignmentId: 'a',
-  index: ++seq,
+  assignmentId: `t${++seq}`,
+  index: 1,
   title: 'Part',
   plannedMinutes: 30,
   planDate: toDateKey(NOW),
   classId: 'bio',
   dueAt: dueIn(5),
   pinned: false,
+  mode: 'reading',
+  difficulty: 'medium',
+  firstAction: 'Read the first page',
   ...overrides,
 });
+
+const task = (
+  id: string,
+  mode: Mode,
+  difficulty: Difficulty,
+  minutes: number,
+  extra: Partial<PlacedChunk> = {},
+) =>
+  placed({
+    assignmentId: id,
+    mode,
+    difficulty,
+    plannedMinutes: minutes,
+    ...extra,
+  });
 
 const dayOf = (chunks: PlacedChunk[]): BalancedDay => ({
   planDate: chunks[0].planDate,
   chunks,
   loadMinutes: chunks.reduce((s, c) => s + c.plannedMinutes, 0),
-  targetMinutes: 120,
+  targetMinutes: 600,
   overTargetReason: null,
 });
 
-const minutesInto = (start: Date) => start.getHours() * 60 + start.getMinutes();
+const clock = (d: Date) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+const bed = (hour: number, minute = 0) => prefs({ bedtime: hour * 60 + minute });
 
-describe('scheduleDay', () => {
+describe('scheduleDay — the spec example', () => {
+  // vocab 10 easy, math 25 hard, chem 20 medium, English 50 hard (2x25, due
+  // tomorrow), history 40 medium. Bedtime 10:30, start 4:00.
+  const chunks = [
+    task('vocab', 'memorizing', 'easy', 10),
+    task('math', 'problems', 'hard', 25),
+    task('chem', 'problems', 'medium', 20),
+    task('eng', 'writing', 'hard', 25, {
+      index: 1,
+      dueAt: dueIn(1),
+      pinned: true,
+    }),
+    task('eng', 'writing', 'hard', 25, {
+      index: 2,
+      dueAt: dueIn(1),
+      pinned: true,
+    }),
+    task('hist', 'writing', 'medium', 40),
+  ];
+  const { day } = scheduleDay(dayOf(chunks), bed(22, 30), NOW);
+
+  it('orders warm-up, then problems, then writing, hardest first', () => {
+    expect(day.chunks.map((c) => c.assignmentId)).toEqual([
+      'vocab',
+      'math',
+      'chem',
+      'eng',
+      'eng',
+      'hist',
+    ]);
+    expect(day.chunks.map((c) => clock(c.scheduledStart))).toEqual([
+      '16:00',
+      '16:10',
+      '16:40',
+      '17:05',
+      '17:35',
+      '18:15',
+    ]);
+  });
+
+  it('places the example breaks', () => {
+    expect(day.breaks.map((b) => [clock(b.start), b.minutes])).toEqual([
+      ['16:35', SHORT_BREAK_MINUTES], // inside the problems batch
+      ['17:00', SHORT_BREAK_MINUTES], // batch boundary
+      ['17:30', SHORT_BREAK_MINUTES], // ~25 min into the essay
+      ['18:00', LONG_BREAK_MINUTES], // after ~90 min of work
+    ]);
+  });
+
+  it('labels segments', () => {
+    expect(day.chunks.map((c) => c.segment)).toEqual([
+      'warmup',
+      'problems',
+      'problems',
+      'writing',
+      'writing',
+      'writing',
+    ]);
+  });
+});
+
+describe('scheduleDay — ordering', () => {
+  it('takes exactly one warm-up, the shortest under the threshold', () => {
+    const { day } = scheduleDay(
+      dayOf([
+        task('a', 'memorizing', 'easy', 10),
+        task('b', 'memorizing', 'easy', 5),
+        task('c', 'reading', 'hard', 30),
+      ]),
+      bed(23),
+      NOW,
+    );
+    expect(day.chunks.filter((c) => c.segment === 'warmup').map((c) => c.assignmentId)).toEqual([
+      'b',
+    ]);
+  });
+
+  it('skips the warm-up when nothing is short enough', () => {
+    const { day } = scheduleDay(dayOf([task('a', 'reading', 'easy', 30)]), bed(23), NOW);
+    expect(day.chunks.some((c) => c.segment === 'warmup')).toBe(false);
+  });
+
+  it('puts due-today work first and skips the warm-up', () => {
+    const { day } = scheduleDay(
+      dayOf([
+        task('vocab', 'memorizing', 'easy', 10),
+        task('hard', 'problems', 'hard', 30),
+        task('urgent', 'reading', 'easy', 20, {
+          dueAt: dueIn(0, 23),
+          pinned: true,
+        }),
+      ]),
+      bed(23),
+      NOW,
+    );
+    expect(day.chunks[0].assignmentId).toBe('urgent');
+    expect(day.chunks[0].segment).toBe('dueToday');
+    expect(day.chunks.some((c) => c.segment === 'warmup')).toBe(false);
+  });
+
+  it('asks which is submitted first when due-today deadlines tie', () => {
+    const due = dueIn(0, 23);
+    const result = scheduleDay(
+      dayOf([
+        task('x', 'reading', 'easy', 20, { dueAt: due, pinned: true }),
+        task('y', 'writing', 'easy', 20, { dueAt: due, pinned: true }),
+      ]),
+      bed(23),
+      NOW,
+    );
+    expect(result.needsSubmitOrder.sort()).toEqual(['x', 'y']);
+  });
+});
+
+describe('scheduleDay — bedtime', () => {
+  it('defers movable work, latest deadline first, past the cutoff and buffer', () => {
+    // 16:00 to 19:30 cutoff (bed 20:00) is 210 min; minus 15% leaves ~178.
+    const result = scheduleDay(
+      dayOf([
+        task('soon', 'reading', 'hard', 50, { dueAt: dueIn(2) }),
+        task('mid', 'reading', 'hard', 50, { dueAt: dueIn(4) }),
+        task('late', 'reading', 'hard', 50, { dueAt: dueIn(9) }),
+        task('later', 'reading', 'hard', 50, { dueAt: dueIn(10) }),
+      ]),
+      bed(20),
+      NOW,
+    );
+    expect(result.deferred.map((c) => c.assignmentId)).toEqual(['later']);
+    expect(result.day.bedtimeOverrun).toBeNull();
+  });
+
+  it('bends past bedtime for must-do-tonight work and reports it', () => {
+    const result = scheduleDay(
+      dayOf([
+        task('a', 'writing', 'hard', 55, { dueAt: dueIn(0, 23), pinned: true }),
+        task('b', 'writing', 'hard', 55, { dueAt: dueIn(0, 23), pinned: true }),
+        task('c', 'writing', 'hard', 55, { dueAt: dueIn(0, 23), pinned: true }),
+      ]),
+      bed(18, 30),
+      NOW,
+    );
+    // 55, break 5, 55, long break 15 (past ~90 min), 55 → ends 19:05.
+    expect(result.day.bedtimeOverrun).toEqual({
+      minutesPastCutoff: 65,
+      minutesPastBedtime: 35,
+    });
+    expect(result.urgentTriage).toBeNull();
+    expect(result.day.breaks.length).toBeGreaterThan(0); // breaks stay
+  });
+
+  it('offers triage instead of scheduling into the small hours', () => {
+    const result = scheduleDay(
+      dayOf([
+        task('math', 'problems', 'hard', 50, {
+          dueAt: dueIn(0, 23),
+          pinned: true,
+        }),
+        task('essay', 'writing', 'hard', 55, {
+          dueAt: dueIn(0, 23),
+          pinned: true,
+        }),
+        task('hist', 'reading', 'medium', 40, {
+          dueAt: dueIn(0, 23),
+          pinned: true,
+        }),
+        task('hist', 'reading', 'medium', 40, {
+          index: 2,
+          dueAt: dueIn(0, 23),
+          pinned: true,
+        }),
+      ]),
+      bed(17, 30),
+      NOW,
+    );
+    expect(result.urgentTriage?.letGo).toEqual(['hist']);
+    const end = Math.max(
+      ...result.day.chunks.map((c) => c.scheduledStart.getTime() / 60_000 + c.plannedMinutes),
+    );
+    expect(end - NOW.getTime() / 60_000).toBeLessThanOrEqual(90 + BEDTIME_BEND_MAX_MINUTES);
+  });
+
+  it('never grows a chunk past the cap', () => {
+    const { day } = scheduleDay(
+      dayOf([task('a', 'writing', 'hard', 55, { dueAt: dueIn(0, 23), pinned: true })]),
+      bed(17),
+      NOW,
+    );
+    expect(Math.max(...day.chunks.map((c) => c.plannedMinutes))).toBeLessThanOrEqual(
+      MAX_CHUNK_MINUTES,
+    );
+  });
+});
+
+describe('scheduleDay — start time', () => {
   it('starts today from now when now is past the usual start time', () => {
-    // availableStart is 16:00 and NOW is 16:00, so they coincide; push now on.
     const later = new Date(NOW.getTime());
     later.setHours(18, 30, 0, 0);
-
-    const day = scheduleDay(dayOf([placed()]), prefs(), later);
-
-    expect(minutesInto(day.chunks[0].scheduledStart)).toBe(18 * 60 + 30);
+    const { day } = scheduleDay(dayOf([placed()]), bed(23), later);
+    expect(clock(day.chunks[0].scheduledStart)).toBe('18:30');
   });
 
-  it('starts a future day from the student’s usual start time', () => {
+  it('starts a future day from the usual start time', () => {
     const tomorrow = new Date(NOW.getTime());
     tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const day = scheduleDay(dayOf([placed({ planDate: toDateKey(tomorrow) })]), prefs(), NOW);
-
-    expect(minutesInto(day.chunks[0].scheduledStart)).toBe(16 * 60);
-  });
-
-  it('runs chunks back to back, with a break after every two', () => {
-    const day = scheduleDay(
-      dayOf([placed(), placed(), placed(), placed()]),
-      prefs(),
-      NOW,
-    );
-
-    const starts = day.chunks.map((c) => minutesInto(c.scheduledStart));
-    expect(starts[1] - starts[0]).toBe(30); // straight on
-    expect(starts[2] - starts[1]).toBe(30 + BREAK_MINUTES); // break after two
-    expect(starts[3] - starts[2]).toBe(30);
-  });
-
-  it('interleaves classes rather than blocking one subject', () => {
-    const day = scheduleDay(
-      dayOf([
-        placed({ classId: 'bio' }),
-        placed({ classId: 'bio' }),
-        placed({ classId: 'bio' }),
-        placed({ classId: 'eng' }),
-        placed({ classId: 'alg' }),
-      ]),
-      prefs(),
-      NOW,
-    );
-
-    const classes = day.chunks.map((c) => c.classId);
-    // No three of the same class in a row anywhere in the day.
-    for (let i = 0; i + 2 < classes.length; i++) {
-      expect(new Set(classes.slice(i, i + 3)).size).toBeGreaterThan(1);
-    }
-  });
-
-  it('does not let interleaving overtake an earlier deadline', () => {
-    const day = scheduleDay(
-      dayOf([
-        placed({ classId: 'bio', dueAt: dueIn(9) }),
-        placed({ classId: 'eng', dueAt: dueIn(2) }),
-        placed({ classId: 'bio', dueAt: dueIn(2) }),
-      ]),
-      prefs(),
-      NOW,
-    );
-
-    const deadlines = day.chunks.map((c) => c.dueAt.getTime());
-    expect([...deadlines]).toEqual([...deadlines].sort((a, b) => a - b));
-  });
-
-  it('carries the day’s load, target and over-target reason through untouched', () => {
-    const source = { ...dayOf([placed()]), overTargetReason: 'everything here is due soon' };
-    const day = scheduleDay(source, prefs(), NOW);
-
-    expect(day.loadMinutes).toBe(source.loadMinutes);
-    expect(day.targetMinutes).toBe(source.targetMinutes);
-    expect(day.overTargetReason).toBe(source.overTargetReason);
+    const { day } = scheduleDay(dayOf([placed({ planDate: toDateKey(tomorrow) })]), bed(23), NOW);
+    expect(clock(day.chunks[0].scheduledStart)).toBe('16:00');
   });
 });

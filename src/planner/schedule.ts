@@ -1,112 +1,278 @@
 /**
- * Lay each day's chunks onto the clock.
- */
-
-import { BREAK_MINUTES, CHUNKS_BETWEEN_BREAKS } from './constants';
-import { planDateOf, startOfPlanDay, type PlanDate } from '../lib/planDate';
-import type { BalancedDay, PlacedChunk } from './balance';
-import type { DayPlan, Prefs, ScheduledChunk } from './types';
-
-/**
- * Interleave classes without disturbing deadline order.
+ * Lay one day's chunks onto the clock (engine v2 §2, §4).
  *
- * Three Biology chunks back to back makes the evening feel like one long slog,
- * and interleaving different material beats blocking one subject. But urgency
- * outranks variety: chunks are grouped into deadline tiers first, and the
- * shuffling only ever happens inside a tier, so nothing overtakes something due
- * sooner.
+ * Order: anything due today first, then one warm-up, then batches of the same
+ * mode, hardest batch first. Breaks go at batch boundaries, every ~25 minutes
+ * inside a long batch, and a long one after ~90 minutes of work. Nothing runs
+ * past bedtime minus the margin: movable work is handed back to be deferred,
+ * and must-do-tonight work may bend past bedtime once, with the overrun
+ * reported.
  */
-function interleaveClasses(chunks: PlacedChunk[]): PlacedChunk[] {
-  const tiers = new Map<number, PlacedChunk[]>();
-  for (const chunk of chunks) {
-    const key = chunk.dueAt.getTime();
-    const tier = tiers.get(key);
-    if (tier) tier.push(chunk);
-    else tiers.set(key, [chunk]);
-  }
 
-  const out: PlacedChunk[] = [];
-  for (const key of [...tiers.keys()].sort((a, b) => a - b)) {
-    out.push(...roundRobinByClass(tiers.get(key) ?? []));
-  }
-  return out;
+import {
+  BEDTIME_BEND_MAX_MINUTES,
+  BEDTIME_MARGIN_MINUTES,
+  BREAK_SNAP_MINUTES,
+  BUFFER_FRACTION,
+  DEFAULT_BEDTIME,
+  DIFFICULTY_SCORE,
+  IN_BATCH_BREAK_EVERY,
+  IN_BATCH_BREAK_MIN_BATCH,
+  LONG_BREAK_AFTER,
+  LONG_BREAK_MINUTES,
+  MODE_TIE_ORDER,
+  SHORT_BREAK_MINUTES,
+  WARMUP_MAX_MINUTES,
+} from './constants';
+import { addDays, daysBetween, planDateOf, startOfPlanDay, type PlanDate } from '../lib/planDate';
+import type { BalancedDay, PlacedChunk } from './balance';
+import type { Break, DayPlan, Mode, Prefs, ScheduledChunk, UrgentTriage } from './types';
+
+type Segment = { kind: ScheduledChunk['segment']; chunks: PlacedChunk[] };
+
+export type DayResult = {
+  day: DayPlan;
+  /** Movable chunks that didn't fit before the cutoff, for the next day. */
+  deferred: PlacedChunk[];
+  urgentTriage: UrgentTriage | null;
+  /** Due-today assignments whose deadlines tie. */
+  needsSubmitOrder: string[];
+};
+
+const sum = (chunks: PlacedChunk[]) => chunks.reduce((t, c) => t + c.plannedMinutes, 0);
+const dueDayOf = (chunk: PlacedChunk, prefs: Prefs) => planDateOf(chunk.dueAt, prefs.dayCutoffHour);
+
+/** Due today, or on a day already past. Batching and the warm-up don't apply. */
+function isDueToday(chunk: PlacedChunk, planDate: PlanDate, prefs: Prefs): boolean {
+  return daysBetween(planDate, dueDayOf(chunk, prefs)) <= 0;
 }
 
-/** Deal one chunk from each class in turn, shortest class queue first. */
-function roundRobinByClass(chunks: PlacedChunk[]): PlacedChunk[] {
-  const queues = new Map<string, PlacedChunk[]>();
-  for (const chunk of chunks) {
-    const key = chunk.classId ?? '(none)';
-    const queue = queues.get(key);
-    if (queue) queue.push(chunk);
-    else queues.set(key, [chunk]);
-  }
-  // Within a class, shortest first — an early completion is worth more than an
-  // early start on something long.
-  for (const queue of queues.values()) {
-    queue.sort((a, b) => a.plannedMinutes - b.plannedMinutes);
-  }
+/** Has to be done tonight: the day before it's due is this day or already past. */
+function mustBeTonight(chunk: PlacedChunk, planDate: PlanDate, prefs: Prefs): boolean {
+  return chunk.pinned || daysBetween(planDate, addDays(dueDayOf(chunk, prefs), -1)) <= 0;
+}
 
-  const out: PlacedChunk[] = [];
-  const order = [...queues.keys()];
-  let placed = 0;
-  while (placed < chunks.length) {
-    for (const key of order) {
-      const next = queues.get(key)?.shift();
-      if (next) {
-        out.push(next);
-        placed++;
-      }
+/** Keeps an assignment's chunks together and in order. */
+function byAssignmentThenIndex(a: PlacedChunk, b: PlacedChunk): number {
+  if (a.assignmentId !== b.assignmentId) return a.assignmentId < b.assignmentId ? -1 : 1;
+  return a.index - b.index;
+}
+
+/** Hardest task first; then the sooner deadline. */
+function hardestFirst(a: PlacedChunk, b: PlacedChunk): number {
+  return (
+    DIFFICULTY_SCORE[b.difficulty] - DIFFICULTY_SCORE[a.difficulty] ||
+    a.dueAt.getTime() - b.dueAt.getTime() ||
+    byAssignmentThenIndex(a, b)
+  );
+}
+
+/** Sum of difficulty over the batch's distinct tasks. */
+function batchScore(chunks: PlacedChunk[]): number {
+  const seen = new Map<string, number>();
+  for (const chunk of chunks) seen.set(chunk.assignmentId, DIFFICULTY_SCORE[chunk.difficulty]);
+  return [...seen.values()].reduce((t, v) => t + v, 0);
+}
+
+export function orderDay(chunks: PlacedChunk[], planDate: PlanDate, prefs: Prefs): Segment[] {
+  const dueToday = chunks
+    .filter((c) => isDueToday(c, planDate, prefs))
+    .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime() || byAssignmentThenIndex(a, b));
+  let rest = chunks.filter((c) => !isDueToday(c, planDate, prefs));
+
+  const segments: Segment[] = [];
+  if (dueToday.length > 0) segments.push({ kind: 'dueToday', chunks: dueToday });
+
+  // Exactly one warm-up, and none at all when something is due today.
+  if (dueToday.length === 0) {
+    const candidates = rest.filter((c) => c.plannedMinutes <= WARMUP_MAX_MINUTES);
+    if (candidates.length > 0) {
+      const warmup = candidates.reduce((a, b) => (b.plannedMinutes < a.plannedMinutes ? b : a));
+      segments.push({ kind: 'warmup', chunks: [warmup] });
+      rest = rest.filter((c) => c !== warmup);
     }
   }
-  return out;
+
+  const batches = new Map<Mode, PlacedChunk[]>();
+  for (const chunk of rest) batches.set(chunk.mode, [...(batches.get(chunk.mode) ?? []), chunk]);
+
+  const ordered = [...batches.entries()].sort(
+    ([modeA, a], [modeB, b]) =>
+      batchScore(b) - batchScore(a) ||
+      MODE_TIE_ORDER.indexOf(modeA) - MODE_TIE_ORDER.indexOf(modeB),
+  );
+  for (const [mode, batch] of ordered) {
+    segments.push({ kind: mode, chunks: [...batch].sort(hardestFirst) });
+  }
+  return segments;
 }
 
-/**
- * The minute of the day this plan day starts from.
- *
- * Today starts from now if the student is already past their usual start time —
- * a plan that schedules work for an hour that has passed is worse than useless.
- */
+/** Minutes from the plan day's midnight, before noon read as after midnight. */
+function bedtimeOf(prefs: Prefs): number {
+  const bedtime = prefs.bedtime ?? DEFAULT_BEDTIME;
+  return bedtime < 12 * 60 ? bedtime + 24 * 60 : bedtime;
+}
+
+/** Today starts from now if the usual start time has already passed. */
 function firstSlotMinutes(planDate: PlanDate, prefs: Prefs, now: Date): number {
   if (planDate !== planDateOf(now, prefs.dayCutoffHour)) return prefs.availableStart;
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  return Math.max(prefs.availableStart, nowMinutes);
+  // After midnight but before the cutoff hour still belongs to the previous plan day.
+  const sinceMidnight = now.getHours() < prefs.dayCutoffHour ? nowMinutes + 24 * 60 : nowMinutes;
+  return Math.max(prefs.availableStart, sinceMidnight);
 }
 
-export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayPlan {
-  const ordered = interleaveClasses(day.chunks);
-  const dayStart = startOfPlanDay(day.planDate).getTime();
+type Layout = {
+  chunks: { chunk: PlacedChunk; slot: number; segment: Segment['kind'] }[];
+  breaks: { slot: number; minutes: number }[];
+  end: number;
+};
 
-  let slot = firstSlotMinutes(day.planDate, prefs, now);
+function layout(segments: Segment[], start: number): Layout {
+  const out: Layout = { chunks: [], breaks: [], end: start };
+  const all = segments.flatMap((s) => s.chunks.map((chunk, i) => ({ chunk, segment: s, i })));
+
+  let slot = start;
   let sinceBreak = 0;
+  let sinceLong = 0;
 
-  const chunks: ScheduledChunk[] = ordered.map((chunk) => {
-    if (sinceBreak >= CHUNKS_BETWEEN_BREAKS) {
-      slot += BREAK_MINUTES;
-      sinceBreak = 0;
-    }
-    const scheduledStart = new Date(dayStart + slot * 60_000);
+  all.forEach(({ chunk, segment, i }, n) => {
+    out.chunks.push({ chunk, slot, segment: segment.kind });
     slot += chunk.plannedMinutes;
-    sinceBreak++;
+    sinceBreak += chunk.plannedMinutes;
+    sinceLong += chunk.plannedMinutes;
+    if (n === all.length - 1) return;
 
-    return {
-      assignmentId: chunk.assignmentId,
-      index: chunk.index,
-      title: chunk.title,
-      plannedMinutes: chunk.plannedMinutes,
-      planDate: chunk.planDate,
-      classId: chunk.classId,
-      dueAt: chunk.dueAt,
-      scheduledStart,
-    };
+    const lastInSegment = i === segment.chunks.length - 1;
+    let minutes = 0;
+    if (sinceLong >= LONG_BREAK_AFTER - BREAK_SNAP_MINUTES) {
+      minutes = LONG_BREAK_MINUTES;
+    } else if (lastInSegment) {
+      // No break straight after the warm-up — it is the run-up, not a block.
+      if (segment.kind !== 'warmup') minutes = SHORT_BREAK_MINUTES;
+    } else if (
+      sum(segment.chunks) > IN_BATCH_BREAK_MIN_BATCH &&
+      sinceBreak >= IN_BATCH_BREAK_EVERY - BREAK_SNAP_MINUTES
+    ) {
+      minutes = SHORT_BREAK_MINUTES;
+    }
+
+    if (minutes > 0) {
+      out.breaks.push({ slot, minutes });
+      slot += minutes;
+      sinceBreak = 0;
+      if (minutes === LONG_BREAK_MINUTES) sinceLong = 0;
+    }
   });
 
-  return {
+  out.end = slot;
+  return out;
+}
+
+export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResult {
+  const start = firstSlotMinutes(day.planDate, prefs, now);
+  const bedtime = bedtimeOf(prefs);
+  const cutoff = bedtime - BEDTIME_MARGIN_MINUTES;
+
+  let chunks = [...day.chunks];
+  const anyDueToday = chunks.some((c) => isDueToday(c, day.planDate, prefs));
+  // The buffer is spent when something is due today.
+  const limit = anyDueToday ? cutoff : start + Math.max(0, cutoff - start) * (1 - BUFFER_FRACTION);
+
+  let segments = orderDay(chunks, day.planDate, prefs);
+  let result = layout(segments, start);
+
+  // 1. Defer movable work, latest deadline first.
+  const deferred: PlacedChunk[] = [];
+  while (result.end > limit) {
+    const movable = chunks.filter((c) => !mustBeTonight(c, day.planDate, prefs));
+    if (movable.length === 0) break;
+    const latest = movable.reduce((a, b) =>
+      b.dueAt > a.dueAt || (b.dueAt.getTime() === a.dueAt.getTime() && b.index > a.index) ? b : a,
+    );
+    chunks = chunks.filter((c) => c !== latest);
+    deferred.push(latest);
+    segments = orderDay(chunks, day.planDate, prefs);
+    result = layout(segments, start);
+  }
+
+  // 2. Must-do-tonight work that still doesn't fit: offer to let the largest go.
+  let urgentTriage: UrgentTriage | null = null;
+  const hardLimit = bedtime + BEDTIME_BEND_MAX_MINUTES;
+  if (result.end > hardLimit) {
+    const needMinutes = sum(chunks);
+    const letGo: string[] = [];
+    while (result.end > hardLimit && chunks.length > 0) {
+      const perTask = new Map<string, number>();
+      for (const c of chunks)
+        perTask.set(c.assignmentId, (perTask.get(c.assignmentId) ?? 0) + c.plannedMinutes);
+      const [largest] = [...perTask.entries()].reduce((a, b) => (b[1] > a[1] ? b : a));
+      letGo.push(largest);
+      chunks = chunks.filter((c) => c.assignmentId !== largest);
+      segments = orderDay(chunks, day.planDate, prefs);
+      result = layout(segments, start);
+    }
+    urgentTriage = {
+      planDate: day.planDate,
+      needMinutes,
+      haveMinutes: Math.max(0, bedtime - start),
+      letGo,
+    };
+  }
+
+  const dayStart = startOfPlanDay(day.planDate).getTime();
+  const at = (slot: number) => new Date(dayStart + slot * 60_000);
+
+  const scheduled: ScheduledChunk[] = result.chunks.map(({ chunk, slot, segment }) => ({
+    assignmentId: chunk.assignmentId,
+    index: chunk.index,
+    title: chunk.title,
+    plannedMinutes: chunk.plannedMinutes,
     planDate: day.planDate,
-    chunks,
-    loadMinutes: day.loadMinutes,
-    targetMinutes: day.targetMinutes,
-    overTargetReason: day.overTargetReason,
+    classId: chunk.classId,
+    dueAt: chunk.dueAt,
+    mode: chunk.mode,
+    difficulty: chunk.difficulty,
+    firstAction: chunk.firstAction,
+    segment,
+    scheduledStart: at(slot),
+  }));
+
+  const breaks: Break[] = result.breaks.map((b) => ({
+    start: at(b.slot),
+    minutes: b.minutes,
+    kind: b.minutes === LONG_BREAK_MINUTES ? 'long' : 'short',
+  }));
+
+  const dueTodayTasks = new Map<string, number>();
+  for (const c of chunks) {
+    if (isDueToday(c, day.planDate, prefs)) dueTodayTasks.set(c.assignmentId, c.dueAt.getTime());
+  }
+  const needsSubmitOrder = [...dueTodayTasks.entries()]
+    .filter(([id, time]) =>
+      [...dueTodayTasks.entries()].some(([other, t]) => other !== id && t === time),
+    )
+    .map(([id]) => id);
+
+  const loadMinutes = sum(chunks);
+  return {
+    day: {
+      planDate: day.planDate,
+      chunks: scheduled,
+      loadMinutes,
+      targetMinutes: day.targetMinutes,
+      overTargetReason: loadMinutes > day.targetMinutes ? day.overTargetReason : null,
+      breaks,
+      bedtimeOverrun:
+        result.end > cutoff
+          ? {
+              minutesPastCutoff: result.end - cutoff,
+              minutesPastBedtime: Math.max(0, result.end - bedtime),
+            }
+          : null,
+    },
+    deferred,
+    urgentTriage,
+    needsSubmitOrder,
   };
 }

@@ -10,6 +10,10 @@
  * hit. They are built here as chip rows, because that is the control the board
  * uses everywhere else it offers a small set of choices (2.6, 2.8), rather
  * than as a wheel or a calendar that appears nowhere in the design.
+ *
+ * Engine v2 adds two things the board doesn't draw (TODO(design)): a "Today"
+ * due chip, so the panic case is one tap, and the mode chip under the name,
+ * which is inferred as you type and cycles with one tap when it's wrong.
  */
 
 import { useMemo, useState } from 'react';
@@ -24,7 +28,8 @@ import { useDraft } from '../../features/onboarding/draft';
 import { useWork } from '../../features/work/store';
 import { addDays, fromDateKey, planDateOf } from '../../lib/planDate';
 import { haptic } from '../../lib/haptics';
-import type { Difficulty } from '../../planner/types';
+import { inferMode, nextMode } from '../../planner/mode';
+import type { Difficulty, Mode } from '../../planner/types';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 /** The board's Easy / Medium / Tough. The planner's third value is `hard`. */
@@ -39,6 +44,13 @@ const LENGTHS = [30, 60, 90, 120, 180, 240];
 
 const DUE_FORMAT: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
 
+const MODE_LABEL: Record<Mode, string> = {
+  problems: 'Problems',
+  writing: 'Writing',
+  reading: 'Reading',
+  memorizing: 'Memorizing',
+};
+
 function lengthLabel(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const hours = minutes / 60;
@@ -51,15 +63,18 @@ export default function AddAssignment() {
   const addAssignment = useWork((state) => state.addAssignment);
 
   const today = planDateOf(new Date());
-  /** The next fortnight. Beyond that the spread has nothing useful to do. */
+  /** Today, then the next fortnight. Beyond that the spread has nothing useful to do. */
   const dueOptions = useMemo(
-    () => Array.from({ length: 14 }, (_, index) => addDays(today, index + 1)),
+    () => Array.from({ length: 15 }, (_, index) => addDays(today, index)),
     [today],
   );
 
   const [title, setTitle] = useState('');
   const [className, setClassName] = useState<string | null>(classes[0]?.name ?? null);
-  const [due, setDue] = useState(dueOptions[2]);
+  const [due, setDue] = useState(dueOptions[3]);
+  // Inferred until the student taps the chip; after that, theirs.
+  const [chosenMode, setChosenMode] = useState<Mode | null>(null);
+  const mode = chosenMode ?? inferMode(title, className);
   const [minutes, setMinutes] = useState(120);
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [notes, setNotes] = useState('');
@@ -84,6 +99,8 @@ export default function AddAssignment() {
       minutes,
       difficulty,
       notes: notes.trim(),
+      mode,
+      firstAction: null,
     });
 
     router.replace({ pathname: '/chunked', params: { assignment: assignment.id } });
@@ -130,6 +147,19 @@ export default function AddAssignment() {
           />
         </View>
 
+        {/* TODO(design): the mode chip has no frame; drawn with the chip styles. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Kind of work: ${MODE_LABEL[mode]}. Tap to change.`}
+          onPress={() => {
+            haptic('select');
+            setChosenMode(nextMode(mode));
+          }}
+          style={[styles.chip, styles.chipOff, styles.modeChip]}
+        >
+          <Text style={styles.chipLabel}>{MODE_LABEL[mode]} · tap to change</Text>
+        </Pressable>
+
         {classes.length > 0 ? (
           <>
             <Text style={styles.label}>CLASS</Text>
@@ -147,15 +177,20 @@ export default function AddAssignment() {
         ) : null}
 
         <Text style={styles.label}>DUE</Text>
+        {/* Bleeds to the screen edges and leaves room below for the chosen
+            chip's hard edge, which a horizontal ScrollView otherwise clips. */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
+          style={styles.dueScroll}
+          contentContainerStyle={styles.dueChips}
         >
           {dueOptions.map((key) => (
             <Choice
               key={key}
-              label={fromDateKey(key).toLocaleDateString(undefined, DUE_FORMAT)}
+              label={
+                key === today ? 'Today' : fromDateKey(key).toLocaleDateString(undefined, DUE_FORMAT)
+              }
               selected={due === key}
               onPress={() => setDue(key)}
             />
@@ -312,6 +347,9 @@ const styles = StyleSheet.create({
   },
 
   chips: { marginTop: 9, flexDirection: 'row', gap: 8, flexWrap: 'wrap', paddingRight: 4 },
+  dueScroll: { marginHorizontal: -22 },
+  dueChips: { marginTop: 9, flexDirection: 'row', gap: 8, paddingHorizontal: 22, paddingBottom: 6 },
+  modeChip: { marginTop: 10, alignSelf: 'flex-start' },
   chip: { borderRadius: radii.pill, paddingVertical: 9, paddingHorizontal: 15 },
   chipOff: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.cream },
   chipOn: { backgroundColor: colors.orange, paddingVertical: 10, paddingHorizontal: 16 },

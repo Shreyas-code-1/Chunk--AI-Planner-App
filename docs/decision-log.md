@@ -789,3 +789,37 @@ placeholder in `Button`.
 2.4 grade tiles and 2.6 chunk-length tiles. The check box on a selected goal
 row becomes white with an orange tick so it still shows on orange. 2.5's added
 class rows are not choices and keep their white fill.
+
+## 2026-09-22 — Scheduling engine v2, first three features
+
+Spec: `docs/scheduling-engine-v2.md`. Built §1–§4 (mode, batching, first
+actions, breaks and bedtime). §5–§7 are deferred by the spec itself.
+
+**Superseded:** the 10-minute break after every 2 chunks
+(`CHUNKS_BETWEEN_BREAKS`, `BREAK_MINUTES`, both removed), and the
+class-interleaving, deadline-tiered order inside a day. The daily target and
+the balancer are unchanged. Bedtime is an extra, hard cap inside the day. The
+daily target still levels the week.
+
+Choices the spec left open, all in `src/planner/constants.ts`:
+- **Bedtime bend** measures from bedtime, not the cutoff: must-do-tonight work
+  may end up to 60 min past bedtime (the spec's copy says "past your bedtime").
+  Provisional.
+- **DEFAULT_BEDTIME 22:30** until onboarding asks. Provisional.
+- The bend and the let-go triage apply to anything that **must be done tonight**
+  (due today *or* due tomorrow), because due-tomorrow work has nowhere else to
+  go either. Buffer-spending and warm-up-skipping apply to due-today only.
+- Breaks only land on chunk boundaries. A chunk is never split by a break.
+- Batch ties break problems → writing → reading → memorizing. This reproduces
+  the spec's example, which is now a test.
+- Due-today triage drops the largest task first until the rest fits, and
+  reports it as a suggestion (`Plan.urgentTriage`). Nothing is dropped
+  silently.
+
+3.6 gains a "Today" due chip and the mode chip. 3.3 gains the first-action
+line. None of these has a frame: they are drawn with existing styles and marked
+`TODO(design)`.
+
+**Fixed:** 3.6's DUE row clipped the chosen chip's hard edge and the last chip
+at the screen margin. The row now bleeds to the screen edges and leaves room
+below for the edge.

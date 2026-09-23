@@ -27,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OrangeGradient, ProgressRing } from '../../components/ui';
 import { useWork } from '../../features/work/store';
+import { FirstActionLine } from '../../features/work/FirstActionLine';
 import { Close, MoreVertical, MusicNote } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { haptic } from '../../lib/haptics';
@@ -134,6 +135,7 @@ export default function Focus() {
         <View style={[styles.chunkCard, shadows.hardEdge(6, 'rgba(0,0,0,0.12)')]}>
           <Text style={styles.chunkLabel}>THIS CHUNK</Text>
           <Text style={styles.chunkTitle}>{params.title ?? 'No chunk selected'}</Text>
+          {params.assignment ? <FirstActionLine assignmentId={params.assignment} /> : null}
           <Text style={styles.chunkHint}>
             {params.title
               ? 'Mark the cycles as you go.'

@@ -18,7 +18,7 @@
 
 import { create } from 'zustand';
 
-import type { Assignment, Difficulty } from '../../planner/types';
+import type { Assignment, Difficulty, Mode } from '../../planner/types';
 
 export type WorkAssignment = {
   id: string;
@@ -30,6 +30,9 @@ export type WorkAssignment = {
   minutes: number | null;
   difficulty: Difficulty | null;
   notes: string;
+  mode: Mode;
+  /** The student's edit of the first action; null uses the mode's default. */
+  firstAction: string | null;
   addedAt: Date;
 };
 
@@ -46,6 +49,8 @@ type WorkState = {
   completions: Completion[];
   addAssignment(input: Omit<WorkAssignment, 'id' | 'addedAt'>): WorkAssignment;
   removeAssignment(id: string): void;
+  setMode(id: string, mode: Mode): void;
+  setFirstAction(id: string, firstAction: string | null): void;
   completeChunk(entry: Omit<Completion, 'at'>): void;
   reset(): void;
 };
@@ -58,7 +63,11 @@ export const useWork = create<WorkState>((set) => ({
   completions: [],
 
   addAssignment(input) {
-    const assignment: WorkAssignment = { ...input, id: newId(), addedAt: new Date() };
+    const assignment: WorkAssignment = {
+      ...input,
+      id: newId(),
+      addedAt: new Date(),
+    };
     set((state) => ({ assignments: [...state.assignments, assignment] }));
     return assignment;
   },
@@ -67,6 +76,18 @@ export const useWork = create<WorkState>((set) => ({
     set((state) => ({
       assignments: state.assignments.filter((entry) => entry.id !== id),
       completions: state.completions.filter((entry) => entry.assignmentId !== id),
+    }));
+  },
+
+  setMode(id, mode) {
+    set((state) => ({
+      assignments: state.assignments.map((a) => (a.id === id ? { ...a, mode } : a)),
+    }));
+  },
+
+  setFirstAction(id, firstAction) {
+    set((state) => ({
+      assignments: state.assignments.map((a) => (a.id === id ? { ...a, firstAction } : a)),
     }));
   },
 
@@ -96,5 +117,7 @@ export function toPlannerAssignments(assignments: WorkAssignment[]): Assignment[
     minutes: entry.minutes,
     difficulty: entry.difficulty,
     source: 'typed' as const,
+    mode: entry.mode,
+    firstAction: entry.firstAction,
   }));
 }

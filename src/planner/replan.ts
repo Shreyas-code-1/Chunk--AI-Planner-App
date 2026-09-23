@@ -80,5 +80,5 @@ export function replan(
     }),
   }));
 
-  return { plan: { days, atRisk: fresh.atRisk }, moves };
+  return { plan: { ...fresh, days }, moves };
 }

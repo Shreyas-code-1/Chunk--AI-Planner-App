@@ -28,6 +28,8 @@ export const prefs = (overrides: Partial<Prefs> = {}): Prefs => ({
   startStyle: 'asap',
   weekdayFactors: DEFAULT_WEEKDAY_FACTORS,
   dayCutoffHour: 3,
+  // Late enough that the v2 bedtime cutoff never interferes with the older suites.
+  bedtime: 23 * 60 + 59,
   ...overrides,
 });
 
@@ -40,6 +42,8 @@ export const assignment = (overrides: Partial<Assignment> = {}): Assignment => (
   minutes: 60,
   difficulty: 'medium',
   source: 'typed',
+  mode: 'reading',
+  firstAction: null,
   ...overrides,
 });
 
