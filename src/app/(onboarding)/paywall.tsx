@@ -32,6 +32,7 @@ import type { PlanId } from '../../features/billing/usePro';
 import { useOffering } from '../../features/billing/useOffering';
 import { getPaywallPlans } from '../../features/billing/paywallPlans';
 import { purchasePlan } from '../../features/billing/purchase';
+import { restorePurchases } from '../../features/billing/restore';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 const BENEFITS = [
@@ -43,9 +44,11 @@ const BENEFITS = [
 export default function Paywall() {
   const router = useRouter();
   const active = useRef(true);
-  const purchaseLock = useRef(false);
+  const billingLock = useRef(false);
   const [purchasing, setPurchasing] = useState(false);
-  const [purchaseMessage, setPurchaseMessage] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const busy = purchasing || restoring;
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
   useEffect(() => {
     active.current = true;
     return () => { active.current = false; };
@@ -60,16 +63,16 @@ export default function Paywall() {
   const plans = isError ? null : getPaywallPlans(data);
   const selectedPackage = plans?.[plan].package;
   const choose = (next: PlanId) => {
-    if (purchaseLock.current) return;
+    if (billingLock.current) return;
     haptic('select');
     setPlan(next);
   };
 
   const onContinue = async () => {
-    if (!selectedPackage || isPending || purchaseLock.current || !active.current) return;
-    purchaseLock.current = true;
+    if (!selectedPackage || isPending || billingLock.current || !active.current) return;
+    billingLock.current = true;
     setPurchasing(true);
-    setPurchaseMessage(null);
+    setBillingMessage(null);
     try {
       haptic('press');
       const result = await purchasePlan(selectedPackage);
@@ -81,22 +84,50 @@ export default function Paywall() {
         case 'cancelled':
           break;
         case 'entitlement-inactive':
-          setPurchaseMessage('Your purchase completed, but Chunk Pro is not active yet. Please wait before trying again.');
+          setBillingMessage('Your purchase completed, but Chunk Pro is not active yet. Please wait before trying again.');
           break;
         case 'failed':
-          setPurchaseMessage('We couldn’t complete your purchase. Please try again.');
+          setBillingMessage('We couldn’t complete your purchase. Please try again.');
           break;
       }
     } catch {
-      if (active.current) setPurchaseMessage('We couldn’t complete your purchase. Please try again.');
+      if (active.current) setBillingMessage('We couldn’t complete your purchase. Please try again.');
     } finally {
-      purchaseLock.current = false;
+      billingLock.current = false;
       if (active.current) setPurchasing(false);
     }
   };
 
   const cardEdge = (selected: boolean) =>
     selected ? shadows.hardEdge(7, colors.goldEdge) : shadows.hardEdge(5, colors.edgeSand);
+
+  const onRestore = async () => {
+    if (billingLock.current || !active.current) return;
+    billingLock.current = true;
+    setRestoring(true);
+    setBillingMessage(null);
+    try {
+      haptic('press');
+      const result = await restorePurchases();
+      if (!active.current) return;
+      switch (result.status) {
+        case 'restored':
+          onwards();
+          break;
+        case 'entitlement-inactive':
+          setBillingMessage('No active Chunk Pro purchase was found to restore.');
+          break;
+        case 'failed':
+          setBillingMessage('We couldn’t restore your purchases. Please try again.');
+          break;
+      }
+    } catch {
+      if (active.current) setBillingMessage('We couldn’t restore your purchases. Please try again.');
+    } finally {
+      billingLock.current = false;
+      if (active.current) setRestoring(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -153,8 +184,8 @@ export default function Paywall() {
         <View style={styles.plans} accessibilityRole="radiogroup">
           <Pressable
             accessibilityRole="radio"
-            disabled={purchasing}
-            accessibilityState={{ checked: plan === 'yearly', disabled: purchasing }}
+            disabled={busy}
+            accessibilityState={{ checked: plan === 'yearly', disabled: busy }}
             accessibilityLabel={plans.yearly.accessibilityLabel}
             onPress={() => choose('yearly')}
             style={[
@@ -181,8 +212,8 @@ export default function Paywall() {
 
           <Pressable
             accessibilityRole="radio"
-            disabled={purchasing}
-            accessibilityState={{ checked: plan === 'monthly', disabled: purchasing }}
+            disabled={busy}
+            accessibilityState={{ checked: plan === 'monthly', disabled: busy }}
             accessibilityLabel={plans.monthly.accessibilityLabel}
             onPress={() => choose('monthly')}
             style={[
@@ -214,21 +245,27 @@ export default function Paywall() {
 
       <View style={styles.footer}>
         <Text style={styles.footnote}>Continue to purchase your selected plan.</Text>
-        {purchaseMessage ? (
+        {billingMessage ? (
           <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.footnote}>
-            {purchaseMessage}
+            {billingMessage}
           </Text>
         ) : null}
 
         <Pressable
           accessibilityRole="button"
-          disabled={!selectedPackage || isPending || purchasing}
-          accessibilityState={{ disabled: !selectedPackage || isPending || purchasing, busy: purchasing }}
+          disabled={!selectedPackage || isPending || busy}
+          accessibilityState={{ disabled: !selectedPackage || isPending || busy, busy: purchasing }}
           onPress={onContinue}
           style={[styles.cta, shadows.hardEdge(6), !selectedPackage && { opacity: 0.5 }]}
         >
           {purchasing ? <ActivityIndicator color={colors.ink} /> : null}
           <Text style={styles.ctaLabel}>{purchasing ? 'PROCESSING…' : 'CONTINUE'}</Text>
+        </Pressable>
+
+        <Pressable accessibilityRole="button" onPress={onRestore} disabled={busy}
+          accessibilityState={{ disabled: busy, busy: restoring }} style={styles.decline}>
+          {restoring ? <ActivityIndicator color={colors.muted} /> : null}
+          <Text style={styles.declineLabel}>{restoring ? 'RESTORING…' : 'RESTORE PURCHASES'}</Text>
         </Pressable>
 
         <Pressable accessibilityRole="button" onPress={onwards} style={styles.decline}>

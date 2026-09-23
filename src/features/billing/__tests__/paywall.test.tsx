@@ -2,12 +2,14 @@ import React from 'react';
 import Paywall from '../../../app/(onboarding)/paywall';
 import { useOffering } from '../useOffering';
 import { purchasePlan, type PurchaseResult } from '../purchase';
+import { restorePurchases, type RestoreResult } from '../restore';
 
 const { act, create } = require('react-test-renderer');
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace, back: jest.fn() }) }));
 jest.mock('../useOffering', () => ({ useOffering: jest.fn() }));
 jest.mock('../purchase', () => ({ purchasePlan: jest.fn() }));
+jest.mock('../restore', () => ({ restorePurchases: jest.fn() }));
 jest.mock('../../../lib/haptics', () => ({ haptic: jest.fn() }));
 jest.mock('../../../components/ui/StrokedText', () => ({
   HighlightChip: ({ children }: { children: React.ReactNode }) => children,
@@ -40,8 +42,107 @@ beforeEach(() => {
   jest.resetAllMocks();
   jest.mocked(useOffering).mockReturnValue(state());
   jest.mocked(purchasePlan).mockResolvedValue({ status: 'purchased' });
+  jest.mocked(restorePurchases).mockResolvedValue({ status: 'restored' });
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); tree = undefined; });
+
+test('restore success navigates only after active entitlement is reported, even without offerings', async () => {
+  jest.mocked(useOffering).mockReturnValue(state({ data: undefined, isError: true }));
+  act(() => { tree = create(<Paywall />); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  await act(async () => { await button('RESTORE PURCHASES').props.onPress(); });
+  expect(restorePurchases).toHaveBeenCalledTimes(1);
+  expect(mockReplace).toHaveBeenCalledWith('/login');
+  expect(purchasePlan).not.toHaveBeenCalled();
+});
+
+test('inactive restore shows a friendly message without navigation or changing selection', async () => {
+  jest.mocked(restorePurchases).mockResolvedValue({ status: 'entitlement-inactive' });
+  act(() => { tree = create(<Paywall />); });
+  act(() => radio('1 month,').props.onPress());
+  await act(async () => { await button('RESTORE PURCHASES').props.onPress(); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('No active Chunk Pro purchase was found to restore.');
+  expect(radio('1 month,').props.accessibilityState.checked).toBe(true);
+});
+
+test('failed restore shows an error, then clears it when retrying', async () => {
+  jest.mocked(restorePurchases).mockResolvedValueOnce({ status: 'failed', reason: 'restore' });
+  act(() => { tree = create(<Paywall />); });
+  await act(async () => { await button('RESTORE PURCHASES').props.onPress(); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('We couldn’t restore your purchases.');
+  await act(async () => { await button('RESTORE PURCHASES').props.onPress(); });
+  expect(mockReplace).toHaveBeenCalledWith('/login');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('We couldn’t restore your purchases.');
+});
+
+test('pending restore blocks duplicate restores and purchases before and after rerender', async () => {
+  let finish!: (result: RestoreResult) => void;
+  jest.mocked(restorePurchases).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  act(() => { tree = create(<Paywall />); });
+  const restore = button('RESTORE PURCHASES').props.onPress;
+  const purchase = button('CONTINUE').props.onPress;
+  let pending!: Promise<void>;
+  act(() => { pending = restore(); void restore(); void purchase(); });
+  expect(restorePurchases).toHaveBeenCalledTimes(1);
+  expect(purchasePlan).not.toHaveBeenCalled();
+  expect(button('RESTORING…').props.accessibilityState).toEqual({ disabled: true, busy: true });
+  expect(button('CONTINUE').props.disabled).toBe(true);
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(purchasePlan).not.toHaveBeenCalled();
+  await act(async () => { finish({ status: 'entitlement-inactive' }); await pending; });
+  expect(button('RESTORE PURCHASES').props.disabled).toBe(false);
+  expect(button('CONTINUE').props.disabled).toBe(false);
+});
+
+test('pending purchase blocks restoration, and restore clears the old purchase error', async () => {
+  let finish!: (result: PurchaseResult) => void;
+  jest.mocked(purchasePlan).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  act(() => { tree = create(<Paywall />); });
+  const restore = button('RESTORE PURCHASES').props.onPress;
+  let pending!: Promise<void>;
+  act(() => { pending = button('CONTINUE').props.onPress(); void restore(); });
+  expect(restorePurchases).not.toHaveBeenCalled();
+  expect(button('RESTORE PURCHASES').props.disabled).toBe(true);
+  await act(async () => { finish({ status: 'failed', reason: 'purchase' }); await pending; });
+  expect(JSON.stringify(tree.toJSON())).toContain('We couldn’t complete your purchase.');
+  jest.mocked(restorePurchases).mockResolvedValue({ status: 'entitlement-inactive' });
+  await act(async () => { await button('RESTORE PURCHASES').props.onPress(); });
+  expect(JSON.stringify(tree.toJSON())).not.toContain('We couldn’t complete your purchase.');
+});
+
+test('starting a purchase clears a stale restore error', async () => {
+  jest.mocked(restorePurchases).mockResolvedValue({ status: 'failed', reason: 'restore' });
+  jest.mocked(purchasePlan).mockResolvedValue({ status: 'cancelled' });
+  act(() => { tree = create(<Paywall />); });
+  await act(async () => { await button('RESTORE PURCHASES').props.onPress(); });
+  await act(async () => { await button('CONTINUE').props.onPress(); });
+  expect(JSON.stringify(tree.toJSON())).not.toContain('We couldn’t restore your purchases.');
+  expect(mockReplace).not.toHaveBeenCalled();
+});
+
+test('unexpected restore rejection remains retryable without exposing details', async () => {
+  jest.mocked(restorePurchases).mockRejectedValue(new Error('private details'));
+  act(() => { tree = create(<Paywall />); });
+  await act(async () => { await button('RESTORE PURCHASES').props.onPress(); });
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('We couldn’t restore your purchases.');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('private details');
+  expect(button('RESTORE PURCHASES').props.disabled).toBe(false);
+});
+
+test('NO THANKS during restoration preserves skip behavior and ignores late completion', async () => {
+  let finish!: (result: RestoreResult) => void;
+  jest.mocked(restorePurchases).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  act(() => { tree = create(<Paywall />); });
+  let pending!: Promise<void>;
+  act(() => { pending = button('RESTORE PURCHASES').props.onPress(); });
+  act(() => button('NO THANKS').props.onPress());
+  await act(async () => { finish({ status: 'restored' }); await pending; });
+  expect(mockReplace).toHaveBeenCalledTimes(1);
+  expect(mockReplace).toHaveBeenCalledWith('/login');
+});
 
 test('shows localized prices, preserves selection, and purchases the monthly package before navigating', async () => {
   act(() => { tree = create(<Paywall />); });
