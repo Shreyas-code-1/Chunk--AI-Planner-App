@@ -182,10 +182,14 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
   let segments = orderDay(chunks, day.planDate, prefs);
   let result = layout(segments, start);
 
-  // 1. Defer movable work, latest deadline first.
+  // 1. Defer movable work, latest deadline first. Work due tomorrow goes
+  // last of all: it breaks the day-early rule and lands on its due day, which
+  // beats pushing tonight past bedtime. Only work due today may bend bedtime.
   const deferred: PlacedChunk[] = [];
   while (result.end > limit) {
-    const movable = chunks.filter((c) => !mustBeTonight(c, day.planDate, prefs));
+    const free = chunks.filter((c) => !mustBeTonight(c, day.planDate, prefs));
+    const movable =
+      free.length > 0 ? free : chunks.filter((c) => !isDueToday(c, day.planDate, prefs));
     if (movable.length === 0) break;
     const latest = movable.reduce((a, b) =>
       b.dueAt > a.dueAt || (b.dueAt.getTime() === a.dueAt.getTime() && b.index > a.index) ? b : a,
@@ -196,11 +200,14 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
     result = layout(segments, start);
   }
 
-  // 2. Must-do-tonight work that still doesn't fit: offer to let the largest go.
+  // 2. Must-do-tonight work that still doesn't fit: suggest letting the
+  // largest go. The suggestion is reported; the work stays on the plan, last,
+  // until the student answers — it never silently disappears.
   let urgentTriage: UrgentTriage | null = null;
   const hardLimit = bedtime + BEDTIME_BEND_MAX_MINUTES;
   if (result.end > hardLimit) {
     const needMinutes = sum(chunks);
+    const everything = chunks;
     const letGo: string[] = [];
     while (result.end > hardLimit && chunks.length > 0) {
       const perTask = new Map<string, number>();
@@ -218,6 +225,21 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
       haveMinutes: Math.max(0, bedtime - start),
       letGo,
     };
+
+    const suggested = everything.filter((c) => letGo.includes(c.assignmentId)).sort(hardestFirst);
+    chunks = everything;
+    segments = [
+      ...orderDay(
+        everything.filter((c) => !letGo.includes(c.assignmentId)),
+        day.planDate,
+        prefs,
+      ),
+      {
+        kind: isDueToday(suggested[0], day.planDate, prefs) ? 'dueToday' : suggested[0].mode,
+        chunks: suggested,
+      },
+    ];
+    result = layout(segments, start);
   }
 
   const dayStart = startOfPlanDay(day.planDate).getTime();

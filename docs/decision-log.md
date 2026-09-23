@@ -851,3 +851,33 @@ Focus to All work and did nothing for Profile. It lives in one hook,
 - Section 4 is not built. It is blocked on real sign-in and an AI consent frame.
 - Added `@react-native-community/netinfo` and a `.prettierrc` matching the
   existing style.
+
+## 2026-09-22 — Fix: work due today didn't appear, and finished chunks were re-planned
+
+Reported: "It's not chunking properly for today."
+
+Causes, each now covered by `src/planner/__tests__/today.test.ts`:
+1. **Triage gave due-today work zero capacity.** It only counted days *before*
+   the due date, so anything due today was always at risk. Today now counts.
+2. **At-risk work was removed from the plan.** No screen shows the at-risk
+   list, so the work vanished. **Supersedes** "the kept set is planned, the
+   at-risk set is not." Everything stays on the plan until the student
+   decides, and `atRisk` is still reported.
+3. **The due-today let-go suggestion also removed the work.** Now it stays on
+   the plan, placed last.
+4. **Work due tomorrow displaced work due tonight.** On a crowded night it now
+   moves to its due day before bedtime bends. Only work due today may bend
+   bedtime.
+5. **Finished chunks were scheduled again** from "now" on every re-plan, so
+   they ate tonight's time. `plan()` now takes the finished chunk keys and
+   leaves them out. `usePlan` shows finished chunks at the time they were
+   finished.
+6. `usePlan` re-plans every 5 minutes, not once a day, so today's slots start
+   from the real time.
+
+Also fixed while verifying in a browser:
+- Chunk titles now lead with the assignment's name ("Essay · Part 1 of 4").
+- Home's "CHUNK N OF M" was off by one.
+- Focus said "Nothing running" for chunks with no class.
+- 3.4's break button now says 5 min, matching the engine instead of the old 10.
+- 5.1's finish rate counts a chunk only once its slot has passed.

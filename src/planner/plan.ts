@@ -20,24 +20,54 @@ import { scheduleDay } from './schedule';
 import { split } from './split';
 import { spread } from './spread';
 import { triage } from './triage';
-import type { Assignment, DayPlan, Deferral, History, Plan, Prefs, UrgentTriage } from './types';
+import { chunkKey } from './types';
+import type {
+  DoneChunk,
+  Assignment,
+  DayPlan,
+  Deferral,
+  History,
+  Plan,
+  Prefs,
+  UrgentTriage,
+} from './types';
 
 export function plan(
   assignments: Assignment[],
   prefs: Prefs,
   history: History,
   now: Date = new Date(),
+  /** Keys (chunkKey) of chunks already finished. They take no time tonight. */
+  done: ReadonlySet<string> = new Set(),
 ): Plan {
-  const { kept, atRisk } = triage(assignments, prefs, history, now);
   const today = planDateOf(now, prefs.dayCutoffHour);
 
   const placed: PlacedChunk[] = [];
-  for (const assignment of kept) {
+  const finished: DoneChunk[] = [];
+  const remainingMinutes = new Map<string, number>();
+  for (const assignment of assignments) {
     const chunks = split(assignment, prefs, history);
     const dueDay = planDateOf(assignment.dueAt, prefs.dayCutoffHour);
     const { difficulty } = resolve(assignment, history);
+    const extra = {
+      classId: assignment.classId,
+      dueAt: assignment.dueAt,
+      mode: assignment.mode,
+      difficulty,
+      firstAction: firstActionFor(assignment.mode, assignment.firstAction),
+    };
 
-    for (const chunk of spread(assignment, chunks, prefs, now)) {
+    // Chunk identity comes from the full split, so finishing one never
+    // renumbers the rest. Only what's left gets a day and a time.
+    const left = chunks.filter((chunk) => !done.has(chunkKey(chunk)));
+    for (const chunk of chunks)
+      if (done.has(chunkKey(chunk))) finished.push({ ...chunk, ...extra });
+    remainingMinutes.set(
+      assignment.id,
+      left.reduce((t, c) => t + c.plannedMinutes, 0),
+    );
+
+    for (const chunk of spread(assignment, left, prefs, now)) {
       placed.push({
         ...chunk,
         classId: assignment.classId,
@@ -52,6 +82,16 @@ export function plan(
       });
     }
   }
+
+  // Triage names what is at risk, but nothing leaves the plan until the
+  // student decides: dropping it here would make it silently vanish.
+  const { atRisk: sized } = triage(
+    assignments.map((a) => ({ ...a, minutes: remainingMinutes.get(a.id) ?? 0 })),
+    prefs,
+    history,
+    now,
+  );
+  const atRisk = assignments.filter((a) => sized.some((s) => s.id === a.id));
 
   // Lay days on the clock in order, rolling anything past the bedtime cutoff
   // onto the next day, which may not have existed until now.
@@ -100,5 +140,5 @@ export function plan(
     }
   }
 
-  return { days, atRisk, deferrals, urgentTriage, needsSubmitOrder };
+  return { days, atRisk, deferrals, urgentTriage, needsSubmitOrder, done: finished };
 }

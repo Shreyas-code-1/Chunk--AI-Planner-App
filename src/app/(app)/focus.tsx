@@ -106,8 +106,8 @@ export default function Focus() {
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>Focus session</Text>
             <Text style={styles.headerMeta}>
-              {params.className && params.index && params.total
-                ? `${params.className} · chunk ${params.index} of ${params.total}`
+              {params.index && params.total
+                ? `${params.className ? `${params.className} · ` : ''}chunk ${params.index} of ${params.total}`
                 : 'Nothing running'}
             </Text>
           </View>

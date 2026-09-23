@@ -132,6 +132,19 @@ export type UrgentTriage = {
   letGo: string[];
 };
 
+/** A finished chunk: it keeps its identity but no longer has a slot. */
+export type DoneChunk = SplitChunk & {
+  classId: string | null;
+  dueAt: Date;
+  mode: Mode;
+  difficulty: Difficulty;
+  firstAction: string;
+};
+
+/** The one chunk identity used by completions, the plan and the screens. */
+export const chunkKey = (chunk: { assignmentId: string; index: number }): string =>
+  `${chunk.assignmentId}:${chunk.index}`;
+
 export type Plan = {
   days: DayPlan[];
   /**
@@ -146,4 +159,6 @@ export type Plan = {
    * first can't be guessed, so the student is asked (v2 §2).
    */
   needsSubmitOrder: string[];
+  /** Chunks already finished, excluded from scheduling. */
+  done: DoneChunk[];
 };

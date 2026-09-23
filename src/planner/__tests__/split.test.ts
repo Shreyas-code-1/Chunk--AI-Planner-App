@@ -42,8 +42,12 @@ describe('split', () => {
   });
 
   it('numbers multi-chunk parts plainly', () => {
-    const chunks = split(assignment({ minutes: 90 }), prefs(), noHistory);
-    expect(chunks.map((c) => c.title)).toEqual(['Part 1 of 3', 'Part 2 of 3', 'Part 3 of 3']);
+    const chunks = split(assignment({ title: 'Essay', minutes: 90 }), prefs(), noHistory);
+    expect(chunks.map((c) => c.title)).toEqual([
+      'Essay · Part 1 of 3',
+      'Essay · Part 2 of 3',
+      'Essay · Part 3 of 3',
+    ]);
   });
 
   describe('"mixed" is a 30-minute target, not random variation', () => {

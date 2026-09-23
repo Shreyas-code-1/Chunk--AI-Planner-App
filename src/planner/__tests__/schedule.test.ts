@@ -207,7 +207,7 @@ describe('scheduleDay — bedtime', () => {
     expect(result.day.breaks.length).toBeGreaterThan(0); // breaks stay
   });
 
-  it('offers triage instead of scheduling into the small hours', () => {
+  it('suggests what to let go when must-do work runs past the bend', () => {
     const result = scheduleDay(
       dayOf([
         task('math', 'problems', 'hard', 50, {
@@ -232,9 +232,11 @@ describe('scheduleDay — bedtime', () => {
       NOW,
     );
     expect(result.urgentTriage?.letGo).toEqual(['hist']);
-    const end = Math.max(
-      ...result.day.chunks.map((c) => c.scheduledStart.getTime() / 60_000 + c.plannedMinutes),
-    );
+    // The suggested let-go stays visible, last; everything else fits the bend.
+    const ids = result.day.chunks.map((c) => c.assignmentId);
+    expect(ids.slice(-2)).toEqual(['hist', 'hist']);
+    const kept = result.day.chunks.filter((c) => c.assignmentId !== 'hist');
+    const end = Math.max(...kept.map((c) => c.scheduledStart.getTime() / 60_000 + c.plannedMinutes));
     expect(end - NOW.getTime() / 60_000).toBeLessThanOrEqual(90 + BEDTIME_BEND_MAX_MINUTES);
   });
 

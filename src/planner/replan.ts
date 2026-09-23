@@ -14,6 +14,7 @@
 
 import { REPLAN_MIN_SHIFT_MINUTES } from './constants';
 import { plan } from './plan';
+import { chunkKey } from './types';
 import type { Assignment, History, Plan, Prefs, ScheduledChunk } from './types';
 
 export type Move = {
@@ -31,8 +32,7 @@ export type Replan = {
   moves: Move[];
 };
 
-const keyOf = (chunk: { assignmentId: string; index: number }) =>
-  `${chunk.assignmentId}#${chunk.index}`;
+const keyOf = chunkKey;
 
 function indexByKey(plan: Plan): Map<string, ScheduledChunk> {
   const map = new Map<string, ScheduledChunk>();

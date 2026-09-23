@@ -23,10 +23,15 @@ export type Triage = {
   atRisk: Assignment[];
 };
 
-/** Study minutes available between now and the day before `dueAt`. */
+/**
+ * Study minutes available between now and the day before `dueAt`. Work due
+ * today (or already overdue) still has today — engine v2 schedules it now
+ * rather than counting it as impossible.
+ */
 function availableMinutesBefore(dueAt: Date, prefs: Prefs, now: Date): number {
   const today = planDateOf(now, prefs.dayCutoffHour);
-  const lastDay = addDays(planDateOf(dueAt, prefs.dayCutoffHour), -1);
+  const dayBefore = addDays(planDateOf(dueAt, prefs.dayCutoffHour), -1);
+  const lastDay = daysBetween(today, dayBefore) < 0 ? today : dayBefore;
 
   let total = 0;
   for (let day: PlanDate = today; daysBetween(day, lastDay) >= 0; day = addDays(day, 1)) {
@@ -35,7 +40,12 @@ function availableMinutesBefore(dueAt: Date, prefs: Prefs, now: Date): number {
   return total;
 }
 
-export function triage(assignments: Assignment[], prefs: Prefs, history: History, now: Date): Triage {
+export function triage(
+  assignments: Assignment[],
+  prefs: Prefs,
+  history: History,
+  now: Date,
+): Triage {
   const sized = assignments.map((assignment) => ({
     assignment,
     minutes: resolve(assignment, history).minutes,

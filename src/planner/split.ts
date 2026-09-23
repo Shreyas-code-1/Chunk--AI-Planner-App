@@ -25,11 +25,12 @@ function roundTo5(minutes: number): number {
  *
  * A photo gives us page ranges and problem numbers, so it is the only source
  * that can produce a title worth reading. Everything else gets "Part 2 of 5",
- * which is honest. Don't overthink it (spec, step 2).
+ * which is honest. Don't overthink it (spec, step 2). The assignment's name
+ * leads, because on the Today path a bare "Part 2 of 5" doesn't say of what.
  */
 function titleFor(assignment: Assignment, index: number, count: number): string {
   if (count === 1) return assignment.title;
-  return `Part ${index} of ${count}`;
+  return `${assignment.title} · Part ${index} of ${count}`;
 }
 
 export function split(assignment: Assignment, prefs: Prefs, history: History): SplitChunk[] {

@@ -123,11 +123,10 @@ describe('plan', () => {
     const p = plan(assignments, prefs(), noHistory, NOW);
 
     expect(p.atRisk.map((a) => a.title)).toEqual(['History essay']);
-    // The work that is still achievable is still planned.
-    expect(allChunks(p).length).toBeGreaterThan(0);
-    for (const chunk of allChunks(p)) {
-      expect(chunk.assignmentId).not.toBe(p.atRisk[0].id);
-    }
+    // Everything stays planned — the at-risk one included — until the
+    // student answers. Dropping it here made it silently vanish.
+    const planned = new Set(allChunks(p).map((c) => c.assignmentId));
+    for (const a of assignments) expect(planned.has(a.id)).toBe(true);
   });
 
   it('emits no days at all when there is no work', () => {

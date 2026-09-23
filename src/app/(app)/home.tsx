@@ -141,7 +141,7 @@ export default function Home() {
                   <Chip className={upNext.classId ?? 'Other'} size={48} />
                   <View style={styles.upNextText}>
                     <Text style={styles.upNextLabel}>
-                      {`CHUNK ${upNext.index + 1} OF ${plannedToday}`}
+                      {`CHUNK ${todayChunks.indexOf(upNext) + 1} OF ${plannedToday}`}
                     </Text>
                     <Text style={styles.upNextTitle}>{upNext.title}</Text>
                     <Text style={styles.upNextMeta}>
@@ -162,7 +162,7 @@ export default function Home() {
                         title: upNext.title,
                         className: upNext.classId ?? '',
                         minutes: String(upNext.plannedMinutes),
-                        index: String(upNext.index + 1),
+                        index: String(todayChunks.indexOf(upNext) + 1),
                         total: String(plannedToday),
                       },
                     });

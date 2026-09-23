@@ -26,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '../../components/ui';
 import { mascot } from '../../components/mascot';
+import { SHORT_BREAK_MINUTES } from '../../planner/constants';
 import { usePlan } from '../../features/work/usePlan';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
@@ -81,7 +82,7 @@ export default function ChunkComplete() {
 
         <View style={styles.actions}>
           <Button
-            label="TAKE A 10-MIN BREAK"
+            label={`TAKE A ${SHORT_BREAK_MINUTES}-MIN BREAK`}
             onPress={() => router.replace('/home')}
           />
           <Button

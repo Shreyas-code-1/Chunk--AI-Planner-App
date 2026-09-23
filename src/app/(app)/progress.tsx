@@ -3,7 +3,7 @@
  *
  * Every number is derived from completions. The board's "27 chunks done" is
  * read as this week's count, and "finish rate" as chunks finished out of the
- * chunks whose start time has come.
+ * chunks whose slot has passed.
  *
  * TODO(batch 6): completions are memory-only, so last week and the streak
  * only cover this session.
@@ -48,7 +48,10 @@ export default function Progress() {
   const lastWeek = weekTotal(completions, addDays(monday, -7));
   const doneThisWeek = completions.filter((c) => planDateOf(c.at) >= monday).length;
 
-  const due = all.filter((c) => c.done || c.scheduledStart <= now);
+  // A chunk counts once its whole slot has passed, not the moment it starts.
+  const due = all.filter(
+    (c) => c.done || c.scheduledStart.getTime() + c.plannedMinutes * 60_000 <= now.getTime(),
+  );
   const finishRate =
     due.length === 0 ? null : Math.round((due.filter((c) => c.done).length / due.length) * 100);
 

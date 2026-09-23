@@ -14,6 +14,7 @@
 import { useMemo } from 'react';
 
 import { plan } from '../../planner';
+import { chunkKey } from '../../planner/types';
 import {
   DEFAULT_WEEKDAY_FACTORS,
   MIN_SAMPLES_FOR_MEDIAN,
@@ -68,9 +69,6 @@ export type PlanView = {
   urgentTriage: UrgentTriage | null;
   needsSubmitOrder: string[];
 };
-
-const chunkKey = (chunk: { assignmentId: string; index: number }) =>
-  `${chunk.assignmentId}:${chunk.index}`;
 
 /**
  * The student's answers as the planner wants them.
@@ -142,10 +140,11 @@ export function usePlan(now: Date = new Date()): PlanView {
   const completions = useWork((state) => state.completions);
   const draft = useDraft();
 
-  // `now` is a new Date on every render, so the memo keys on the plan day
-  // rather than the instant. Re-deriving once a day is the point; re-deriving
-  // sixty times a second is not.
+  // `now` is a new Date on every render, so the memo keys on a 5-minute
+  // bucket: fresh enough that today's slots start from the real time, without
+  // replanning on every render.
   const todayKey = planDateOf(now);
+  const bucket = Math.floor(now.getTime() / 300_000);
 
   return useMemo(() => {
     const classOf = new Map(assignments.map((entry) => [entry.id, entry.className]));
@@ -156,15 +155,28 @@ export function usePlan(now: Date = new Date()): PlanView {
       prefsFrom(draft),
       historyFrom(completions, classOf),
       now,
+      finished,
     );
 
-    const all: PlannedChunk[] = result.days.flatMap((day) =>
-      day.chunks.map((chunk) => ({
+    // Finished chunks sit on the day and at the time they were finished.
+    const finishedAt = new Map(completions.map((entry) => [entry.chunkKey, entry.at]));
+    const doneChunks: PlannedChunk[] = result.done.map((chunk) => {
+      const at = finishedAt.get(chunkKey(chunk)) ?? now;
+      return {
         ...chunk,
+        planDate: planDateOf(at),
+        scheduledStart: new Date(at.getTime() - chunk.plannedMinutes * 60_000),
+        segment: chunk.mode,
         key: chunkKey(chunk),
-        done: finished.has(chunkKey(chunk)),
-      })),
-    );
+        done: true,
+      };
+    });
+    const all: PlannedChunk[] = [
+      ...doneChunks,
+      ...result.days.flatMap((day) =>
+        day.chunks.map((chunk) => ({ ...chunk, key: chunkKey(chunk), done: false })),
+      ),
+    ].sort((a, b) => a.scheduledStart.getTime() - b.scheduledStart.getTime());
 
     const today = all.filter((chunk) => chunk.planDate === todayKey);
     const todayPlan = result.days.find((day) => day.planDate === todayKey);
@@ -206,5 +218,5 @@ export function usePlan(now: Date = new Date()): PlanView {
       needsSubmitOrder: result.needsSubmitOrder,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignments, completions, draft, todayKey]);
+  }, [assignments, completions, draft, todayKey, bucket]);
 }
