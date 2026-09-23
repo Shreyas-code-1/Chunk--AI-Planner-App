@@ -28,6 +28,7 @@ import { useEffect } from 'react';
 
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { SessionProvider } from '../features/auth/SessionProvider';
+import { initializeRevenueCat } from '../features/billing/initialize';
 import { queryClient } from '../lib/queryClient';
 
 // Screen 2.1 is a real splash with its own minimum duration; the native splash
@@ -35,6 +36,12 @@ import { queryClient } from '../lib/queryClient';
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useEffect(() => {
+    void initializeRevenueCat().catch(() => {
+      console.error('RevenueCat initialization failed. Check the local billing configuration.');
+    });
+  }, []);
+
   const [fontsLoaded, fontError] = useFonts({
     Baloo2_400Regular,
     Baloo2_600SemiBold,
