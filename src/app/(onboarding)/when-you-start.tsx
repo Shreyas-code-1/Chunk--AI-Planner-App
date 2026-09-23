@@ -21,7 +21,7 @@ import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { useDraft } from '../../features/onboarding/draft';
 import type { StartStyle } from '../../api/types';
 import { haptic } from '../../lib/haptics';
-import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows, selectedOption } from '../../theme/tokens';
 
 const OPTIONS: readonly (readonly [StartStyle, string, string])[] = [
   ['asap', 'As soon as I can', 'Start Monday, finish early'],
@@ -33,6 +33,7 @@ export default function WhenYouStart() {
   const router = useRouter();
   const startStyle = useDraft((s) => s.startStyle);
   const setStartStyle = useDraft((s) => s.setStartStyle);
+  const answered = useDraft((s) => !!s.answered.startStyle);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -46,7 +47,7 @@ export default function WhenYouStart() {
 
         <ScrollView contentContainerStyle={styles.options} showsVerticalScrollIndicator={false}>
           {OPTIONS.map(([value, title, detail]) => {
-            const on = startStyle === value;
+            const on = answered && startStyle === value;
             return (
               <Pressable
                 key={value}
@@ -79,7 +80,11 @@ export default function WhenYouStart() {
           {"I'll plan around how you like to work."}
         </SpeechBubble>
 
-        <Button label="CONTINUE" onPress={() => router.push('/what-goes-wrong')} />
+        <Button
+          label="CONTINUE"
+          disabled={!answered}
+          onPress={() => router.push('/what-goes-wrong')}
+        />
       </View>
     </SafeAreaView>
   );
@@ -106,7 +111,7 @@ const styles = StyleSheet.create({
   },
   // The chosen option takes the ink border the board reserves for emphasis —
   // 3px, not the 2px cream every other card carries.
-  optionOn: { backgroundColor: colors.orange, borderWidth: 3, borderColor: colors.ink },
+  optionOn: selectedOption,
   optionOff: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.cream },
   radio: {
     width: 26,

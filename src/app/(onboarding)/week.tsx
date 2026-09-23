@@ -49,6 +49,7 @@ export default function Week() {
   const router = useRouter();
   const weekLoad = useDraft((s) => s.weekLoad);
   const cycleDay = useDraft((s) => s.cycleDay);
+  const answered = useDraft((s) => !!s.answered.week);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -118,7 +119,11 @@ export default function Week() {
           {"Chunk won't pile work on your busy days."}
         </SpeechBubble>
 
-        <Button label="CONTINUE" onPress={() => router.push('/when-you-start')} />
+        <Button
+          label="CONTINUE"
+          disabled={!answered}
+          onPress={() => router.push('/when-you-start')}
+        />
       </View>
     </SafeAreaView>
   );

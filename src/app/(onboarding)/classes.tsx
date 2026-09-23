@@ -26,6 +26,7 @@ import { HighlightChip } from '../../components/ui/StrokedText';
 import { Check, Plus } from '../../components/icons';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { useDraft } from '../../features/onboarding/draft';
+import { isRealClass } from '../../features/onboarding/classNames';
 import { haptic } from '../../lib/haptics';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
@@ -37,13 +38,20 @@ export default function Classes() {
 
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
+  const [rejected, setRejected] = useState(false);
 
   const commit = () => {
     const trimmed = name.trim();
     if (trimmed.length === 0) {
+      setRejected(false);
       setAdding(false);
       return;
     }
+    if (!isRealClass(trimmed)) {
+      setRejected(true);
+      return;
+    }
+    setRejected(false);
     haptic('select');
     addClass({ name: trimmed });
     // Stay open: adding a timetable is five or six entries in a row, and
@@ -108,7 +116,10 @@ export default function Classes() {
             <Input
               autoFocus
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                setRejected(false);
+              }}
               onSubmitEditing={commit}
               onBlur={commit}
               placeholder="Class name"
@@ -132,9 +143,19 @@ export default function Classes() {
               <Text style={styles.addLabel}>Add a class</Text>
             </Pressable>
           )}
+          {/* TODO(design): the board draws no error state for this field. */}
+          {rejected ? (
+            <Text style={styles.error}>
+              {"That doesn't look like a class. Try something like \"AP Biology\"."}
+            </Text>
+          ) : null}
         </ScrollView>
 
-        <Button label="CONTINUE" onPress={() => router.push('/study-style')} />
+        <Button
+          label="CONTINUE"
+          disabled={classes.length === 0}
+          onPress={() => router.push('/study-style')}
+        />
       </View>
     </SafeAreaView>
   );
@@ -211,6 +232,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.amber,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  error: {
+    fontFamily: fonts.body.bold,
+    fontSize: 13,
+    color: colors.orangeDeep,
   },
   addLabel: {
     fontFamily: fonts.body.extraBold,

@@ -57,8 +57,16 @@ function formatMinutes(total: number): string {
 
 export default function StudyStyle() {
   const router = useRouter();
-  const { chunkLength, bestTime, dailyMinutes, setChunkLength, setBestTime, setDailyMinutes } =
-    useDraft();
+  const {
+    chunkLength,
+    bestTime,
+    dailyMinutes,
+    answered,
+    setChunkLength,
+    setBestTime,
+    setDailyMinutes,
+  } = useDraft();
+  const pickedTime = answered.bestTime ? bestTime : null;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -74,7 +82,7 @@ export default function StudyStyle() {
             {LENGTHS.map(([value, headline, word]) => (
               <OptionTile
                 key={value}
-                selected={chunkLength === value}
+                selected={!!answered.chunkLength && chunkLength === value}
                 onPress={() => setChunkLength(value)}
                 headline={headline}
                 caption={word}
@@ -86,8 +94,10 @@ export default function StudyStyle() {
           <Text style={styles.label}>BEST TIME OF DAY</Text>
           <View style={[styles.bars, shadows.hardEdge(5)]}>
             {BEST_TIMES.map((time, index) => {
-              const distance = Math.min(Math.abs(index - bestTime), 2);
-              const active = index === bestTime;
+              // Nothing is picked until tapped, so every bar starts short.
+              const distance =
+                pickedTime === null ? 2 : Math.min(Math.abs(index - pickedTime), 2);
+              const active = index === pickedTime;
               return (
                 <View key={time.minutes} style={[styles.barColumn, active && styles.barColumnWide]}>
                   <Pressable
@@ -136,7 +146,11 @@ export default function StudyStyle() {
           {"Be honest — I'd rather plan small and finish."}
         </SpeechBubble>
 
-        <Button label="CONTINUE" onPress={() => router.push('/week')} />
+        <Button
+          label="CONTINUE"
+          disabled={!answered.chunkLength || !answered.bestTime}
+          onPress={() => router.push('/week')}
+        />
       </View>
     </SafeAreaView>
   );

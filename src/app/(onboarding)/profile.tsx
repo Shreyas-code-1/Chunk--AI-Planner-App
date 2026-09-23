@@ -26,7 +26,7 @@ import { mascot } from '../../components/mascot';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { useDraft } from '../../features/onboarding/draft';
 import { haptic } from '../../lib/haptics';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, fonts, radii, shadows, selectedOption } from '../../theme/tokens';
 
 const GRADES = [9, 10, 11, 12] as const;
 
@@ -186,10 +186,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderColor: colors.cream,
   },
-  gradeOn: {
-    backgroundColor: colors.amber,
-    borderColor: colors.orange,
-  },
+  gradeOn: selectedOption,
   gradeText: {
     fontFamily: fonts.display.extraBold,
     fontSize: 30,
@@ -199,7 +196,7 @@ const styles = StyleSheet.create({
     color: colors.mutedLine,
   },
   gradeTextOn: {
-    color: colors.orangeDeep,
+    color: colors.white,
   },
   gateNote: {
     marginTop: 14,

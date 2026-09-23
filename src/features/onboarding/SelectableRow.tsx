@@ -14,13 +14,13 @@ import type { ReactNode } from 'react';
 
 import { Check } from '../../components/icons';
 import { haptic } from '../../lib/haptics';
-import { colors, radii, shadows } from '../../theme/tokens';
+import { colors, radii, selectedOption, shadows } from '../../theme/tokens';
 
 type Props = {
   selected: boolean;
   onPress(): void;
   children: ReactNode;
-  /** 2.3 fills a chosen row amber; 2.5 leaves it white. */
+  /** 'amber' is the filled selection (now solid orange); 'white' leaves it white. */
   fill?: 'amber' | 'white';
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
@@ -48,24 +48,32 @@ export function SelectableRow({
         shadows.hardEdge(5),
         selected
           ? {
-              backgroundColor: fill === 'amber' ? colors.amber : colors.card,
-              borderColor: colors.orange,
+              ...(fill === 'amber'
+                ? selectedOption
+                : { backgroundColor: colors.card, borderColor: colors.orange }),
             }
           : { backgroundColor: colors.card, borderColor: colors.cream },
         style,
       ]}
     >
       <View style={styles.content}>{children}</View>
-      <CheckBox checked={selected} />
+      <CheckBox checked={selected} onOrange={selected && fill === 'amber'} />
     </Pressable>
   );
 }
 
 /** The 26px box: filled orange with a white tick, or an empty cream outline. */
-function CheckBox({ checked }: { checked: boolean }) {
+function CheckBox({ checked, onOrange }: { checked: boolean; onOrange: boolean }) {
   return (
-    <View style={[styles.box, checked ? styles.boxChecked : styles.boxEmpty]}>
-      {checked ? <Check size={14} color={colors.white} strokeWidth={3.4} /> : null}
+    <View
+      style={[
+        styles.box,
+        checked ? (onOrange ? styles.boxOnOrange : styles.boxChecked) : styles.boxEmpty,
+      ]}
+    >
+      {checked ? (
+        <Check size={14} color={onOrange ? colors.orange : colors.white} strokeWidth={3.4} />
+      ) : null}
     </View>
   );
 }
@@ -92,6 +100,11 @@ const styles = StyleSheet.create({
   },
   boxChecked: {
     backgroundColor: colors.orange,
+  },
+  boxOnOrange: {
+    backgroundColor: colors.white,
+    borderWidth: 3,
+    borderColor: colors.ink,
   },
   boxEmpty: {
     borderWidth: 2,

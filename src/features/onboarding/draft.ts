@@ -58,6 +58,13 @@ export type Struggle = 'forget' | 'start_late' | 'distracted' | 'where_to_begin'
 /** 2.7 cycles each day through these. Values are WEEKDAY_FACTORS' three steps. */
 export type DayLoad = 'light' | 'normal' | 'busy';
 
+/**
+ * Answers that have a pre-filled value, so "has a value" can't tell us whether
+ * the user actually chose it. A screen's CONTINUE stays disabled until its
+ * keys are here.
+ */
+export type AnswerKey = 'chunkLength' | 'bestTime' | 'week' | 'startStyle' | 'dailyPace';
+
 type DraftState = {
   goals: Goal[];
   displayName: string;
@@ -73,7 +80,9 @@ type DraftState = {
   weekLoad: DayLoad[];
   startStyle: StartStyle;
   struggle: Struggle | null;
+  answered: Partial<Record<AnswerKey, true>>;
 
+  markAnswered(key: AnswerKey): void;
   toggleGoal(goal: Goal): void;
   setName(name: string): void;
   setGrade(grade: number): void;
@@ -110,7 +119,12 @@ const EMPTY = {
   weekLoad: ['normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal'] as DayLoad[],
   startStyle: 'few_days' as StartStyle,
   struggle: null,
+  answered: {} as Partial<Record<AnswerKey, true>>,
 };
+
+const answer = (key: AnswerKey) => (state: DraftState) => ({
+  answered: { ...state.answered, [key]: true as const },
+});
 
 export const useDraft = create<DraftState>((set) => ({
   ...EMPTY,
@@ -132,15 +146,18 @@ export const useDraft = create<DraftState>((set) => ({
   removeClass: (index) =>
     set((state) => ({ classes: state.classes.filter((_, i) => i !== index) })),
 
-  setChunkLength: (chunkLength) => set({ chunkLength }),
-  setBestTime: (bestTime) => set({ bestTime }),
+  markAnswered: (key) => set(answer(key)),
+
+  setChunkLength: (chunkLength) => set((s) => ({ chunkLength, ...answer('chunkLength')(s) })),
+  setBestTime: (bestTime) => set((s) => ({ bestTime, ...answer('bestTime')(s) })),
   setDailyMinutes: (dailyMinutes) => set({ dailyMinutes }),
-  setStartStyle: (startStyle) => set({ startStyle }),
+  setStartStyle: (startStyle) => set((s) => ({ startStyle, ...answer('startStyle')(s) })),
   setStruggle: (struggle) => set({ struggle }),
 
   cycleDay: (index) =>
     set((state) => ({
       weekLoad: state.weekLoad.map((load, i) => (i === index ? NEXT_LOAD[load] : load)),
+      ...answer('week')(state),
     })),
 
   reset: () => set(EMPTY),

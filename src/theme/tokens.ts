@@ -159,6 +159,16 @@ export const radii = {
  * buttons and chips. In iOS terms that is shadowRadius 0 and shadowOpacity 1.
  * `elevation` is an ordinary soft shadow used under cards and phone frames.
  */
+/**
+ * A chosen onboarding option: solid orange with the 3px ink border, as drawn
+ * on 2.8 and 2.9. Every onboarding choice uses this (decision log, 22 Sep).
+ */
+export const selectedOption = {
+  backgroundColor: colors.orange,
+  borderWidth: 3,
+  borderColor: colors.ink,
+} as const;
+
 export const shadows = {
   hardEdge: (offset: number, color: string = colors.edgeBrown) => ({
     shadowColor: color,

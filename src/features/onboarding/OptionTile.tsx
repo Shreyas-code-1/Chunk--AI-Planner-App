@@ -10,7 +10,7 @@ import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } fro
 import type { ReactNode } from 'react';
 
 import { haptic } from '../../lib/haptics';
-import { colors, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, fonts, radii, selectedOption, shadows } from '../../theme/tokens';
 
 export function TileRow({
   children,
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   off: { backgroundColor: colors.card, borderColor: colors.cream },
-  on: { backgroundColor: colors.amber, borderColor: colors.orange },
+  on: selectedOption,
   headline: {
     fontFamily: fonts.display.extraBold,
     fontSize: 24,
@@ -73,12 +73,12 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     color: colors.mutedLine,
   },
-  headlineOn: { color: colors.orangeDeep },
+  headlineOn: { color: colors.white },
   caption: {
     marginTop: 4,
     fontFamily: fonts.body.bold,
     fontSize: 11.5,
     color: colors.mutedLight,
   },
-  captionOn: { fontFamily: fonts.body.extraBold, color: colors.orangeDeep },
+  captionOn: { fontFamily: fonts.body.extraBold, color: colors.white },
 });

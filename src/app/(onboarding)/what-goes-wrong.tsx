@@ -20,7 +20,7 @@ import { mascot } from '../../components/mascot';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { useDraft, type Struggle } from '../../features/onboarding/draft';
 import { haptic } from '../../lib/haptics';
-import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
+import { colors, displayLine, fonts, radii, shadows, selectedOption } from '../../theme/tokens';
 
 const OPTIONS: readonly (readonly [Struggle, string, (props: IconProps) => React.ReactNode])[] = [
   ['forget', 'I forget things are due', BellQuiet],
@@ -75,7 +75,11 @@ export default function WhatGoesWrong() {
           {"Everyone's got one. I'll watch for yours."}
         </SpeechBubble>
 
-        <Button label="CONTINUE" onPress={() => router.push('/daily-pace')} />
+        <Button
+          label="CONTINUE"
+          disabled={struggle === null}
+          onPress={() => router.push('/daily-pace')}
+        />
       </View>
     </SafeAreaView>
   );
@@ -107,7 +111,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 18,
   },
-  optionOn: { backgroundColor: colors.orange, borderWidth: 3, borderColor: colors.ink },
+  optionOn: selectedOption,
   optionOff: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.cream },
   iconBox: {
     width: 40,

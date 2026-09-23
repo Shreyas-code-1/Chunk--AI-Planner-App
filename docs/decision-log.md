@@ -760,3 +760,32 @@ of those screens is derived. Nothing is mock data.
   follow the board's four-point cubic.
 - **3.4's two AI elements** and 3.3's music card, all batch 7.
 - **5.2 PROFILE** has no screen, so the dock's fourth tab holds.
+
+## 2026-09-22 — Onboarding: real classes, no skipping, one selected colour
+
+Requested by Shreyas. These override the board where the two disagree.
+
+**2.5 CLASSES only accepts real classes.** A name is added only if one of its
+words starts with a known subject stem ("AP Chem", "Honors English 10"), or is
+a whole-word abbreviation (US, PE, CS, ASL). Anything else stays in the field
+with the line "That doesn't look like a class." The list lives in
+`src/features/onboarding/classNames.ts` and is meant to be extended. The error
+line is ours; the board draws no error state (`TODO(design)`).
+
+**Every question screen needs an answer before CONTINUE works.** This
+supersedes the earlier note on 2.3 that CONTINUE was deliberately left ungated.
+Gates are: 2.3 at least one goal; 2.4 unchanged; 2.5 at least one class; 2.6
+chunk length and best time tapped; 2.7 at least one day tapped; 2.8 a start
+style tapped; 2.9 a struggle tapped; 2.10 the slider moved. Screens that were
+pre-selected (2.6, 2.8) now show **nothing selected** until tapped. The draft
+still holds the old defaults for the planner, and `draft.answered` records what
+the user actually chose. Screens that only show information, and the screens
+from 2.11 on, are not gated. The disabled look is still the 0.45-opacity
+placeholder in `Button`.
+
+**One selected colour for every onboarding choice.** The solid orange with a
+3px ink border and white text from 2.8 and 2.9 (`selectedOption` in
+`tokens.ts`) replaces the **amber fill with orange border** on 2.3 goal rows,
+2.4 grade tiles and 2.6 chunk-length tiles. The check box on a selected goal
+row becomes white with an orange tick so it still shows on orange. 2.5's added
+class rows are not choices and keep their white fill.

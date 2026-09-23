@@ -5,9 +5,7 @@
  * `profiles.goals` is a `goal[]`. The order the array keeps is the order they
  * were tapped in, not the order they are drawn — see the draft store.
  *
- * CONTINUE is not gated on choosing at least one. The column defaults to `{}`
- * in the schema and the board draws no disabled button state, so requiring a
- * selection would mean inventing both a rule and the styling for it.
+ * CONTINUE is gated on choosing at least one (decision log, 22 Sep).
  */
 
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -71,7 +69,11 @@ export default function Goals() {
           })}
         </ScrollView>
 
-        <Button label="CONTINUE" onPress={() => router.push('/profile')} />
+        <Button
+          label="CONTINUE"
+          disabled={selected.length === 0}
+          onPress={() => router.push('/profile')}
+        />
       </View>
     </SafeAreaView>
   );
@@ -108,5 +110,6 @@ const styles = StyleSheet.create({
   // The board thickens a chosen row's label from 700 to 800.
   labelSelected: {
     fontFamily: fonts.body.extraBold,
+    color: colors.white,
   },
 });

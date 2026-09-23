@@ -46,6 +46,8 @@ export default function DailyPace() {
   const router = useRouter();
   const dailyMinutes = useDraft((s) => s.dailyMinutes);
   const setDailyMinutes = useDraft((s) => s.setDailyMinutes);
+  const markAnswered = useDraft((s) => s.markAnswered);
+  const answered = useDraft((s) => !!s.answered.dailyPace);
   const classCount = useDraft((s) => s.classes.length);
   const active = bandFor(dailyMinutes);
 
@@ -77,7 +79,10 @@ export default function DailyPace() {
           min={DAILY_MIN}
           max={DAILY_MAX}
           step={DAILY_STEP}
-          onChange={setDailyMinutes}
+          onChange={(minutes) => {
+            setDailyMinutes(minutes);
+            markAnswered('dailyPace');
+          }}
           style={styles.slider}
         />
 
@@ -98,7 +103,7 @@ export default function DailyPace() {
         <View style={styles.spacer} />
 
         <Text style={styles.footnote}>You can change this any week.</Text>
-        <Button label="CONTINUE" onPress={() => router.push('/vs-alone')} />
+        <Button label="CONTINUE" disabled={!answered} onPress={() => router.push('/vs-alone')} />
       </View>
     </SafeAreaView>
   );
