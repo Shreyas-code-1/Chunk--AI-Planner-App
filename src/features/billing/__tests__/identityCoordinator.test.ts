@@ -2,6 +2,89 @@ import Purchases, { type CustomerInfo, type LogInResult } from 'react-native-pur
 import { initializeRevenueCat } from '../initialize';
 import { createIdentityCoordinator } from '../identityCoordinator';
 
+test('generation waiter resolves ready with entitlement result', async () => {
+  jest.mocked(Purchases.logIn).mockResolvedValueOnce(login(true));
+  const { generation } = coordinator.setDesiredIdentity(A);
+  await expect(coordinator.waitForGeneration(generation)).resolves.toEqual({ status: 'ready', generation, isPro: true });
+  await coordinator.whenIdle();
+});
+
+test('generation waiter resolves failure with sanitized reason', async () => {
+  jest.mocked(Purchases.logIn).mockRejectedValueOnce(new Error('private details'));
+  const { generation } = coordinator.setDesiredIdentity(A);
+  await expect(coordinator.waitForGeneration(generation)).resolves.toEqual({ status: 'failed', generation, reason: 'login' });
+  await coordinator.whenIdle();
+});
+
+test('superseded waiter resolves while old SDK call and newer destination are still pending', async () => {
+  const pending = deferred<LogInResult>();
+  const started = deferred<void>();
+  jest.mocked(Purchases.logIn).mockImplementationOnce(() => { started.resolve(); return pending.promise; });
+  const { generation } = coordinator.setDesiredIdentity(A);
+  const waiting = coordinator.waitForGeneration(generation);
+  await started.promise;
+  coordinator.setDesiredIdentity(B);
+  await expect(waiting).resolves.toEqual({ status: 'superseded', generation });
+  expect(coordinator.getSnapshot().status).toBe('transitioning');
+  expect(Purchases.logIn).toHaveBeenCalledTimes(1);
+  pending.resolve(login()); await coordinator.whenIdle();
+});
+
+test('held reservation does not falsely resolve waiter when worker is idle', async () => {
+  await desired(anon);
+  const reservation = coordinator.tryReserve()!;
+  const { generation } = coordinator.setDesiredIdentity(A);
+  const resolved = jest.fn();
+  const waiting = coordinator.waitForGeneration(generation).then(resolved);
+  await coordinator.whenIdle();
+  expect(resolved).not.toHaveBeenCalled();
+  expect(Purchases.logIn).not.toHaveBeenCalled();
+  reservation.release(); await waiting; await coordinator.whenIdle();
+  expect(resolved).toHaveBeenCalledWith({ status: 'ready', generation, isPro: false });
+});
+
+test('already ready, failed, and superseded generations settle immediately', async () => {
+  await desired(A);
+  const ready = coordinator.getSnapshot().generation;
+  await expect(coordinator.waitForGeneration(ready)).resolves.toEqual({ status: 'ready', generation: ready, isPro: false });
+  jest.mocked(Purchases.logIn).mockRejectedValueOnce(new Error('private'));
+  await desired(B);
+  const failed = coordinator.getSnapshot().generation;
+  await expect(coordinator.waitForGeneration(failed)).resolves.toEqual({ status: 'failed', generation: failed, reason: 'login' });
+  await expect(coordinator.waitForGeneration(ready)).resolves.toEqual({ status: 'superseded', generation: ready });
+});
+
+test('multiple waiters settle once and completed waiter groups are removed', async () => {
+  // Observe deletion of the internal generation group without exposing a debug API.
+  const deletion = jest.spyOn(Map.prototype, 'delete');
+  try {
+    const { generation } = coordinator.setDesiredIdentity(A);
+    const callbacks = [jest.fn(), jest.fn(), jest.fn()];
+    await Promise.all(callbacks.map(callback => coordinator.waitForGeneration(generation).then(callback)));
+    await coordinator.whenIdle();
+    expect(deletion).toHaveBeenCalledWith(generation);
+    const deletes = deletion.mock.calls.length;
+    await desired(B);
+    expect(deletion.mock.calls.length).toBe(deletes);
+    for (const callback of callbacks) expect(callback).toHaveBeenCalledTimes(1);
+  } finally { deletion.mockRestore(); }
+});
+
+test('unresolved generation waits for supersession', async () => {
+  const resolved = jest.fn();
+  const waiting = coordinator.waitForGeneration(0).then(resolved);
+  await coordinator.whenIdle();
+  expect(resolved).not.toHaveBeenCalled();
+  coordinator.setDesiredIdentity(anon);
+  await waiting;
+  expect(resolved).toHaveBeenCalledWith({ status: 'superseded', generation: 0 });
+  await coordinator.whenIdle();
+});
+
+test.each([-1, 0.5, NaN, Infinity, 1])('rejects invalid or future generation without registering a waiter %#', async generation => {
+  await expect(coordinator.waitForGeneration(generation)).rejects.toThrow(RangeError);
+});
+
 jest.mock('react-native-purchases', () => ({ __esModule: true,
   default: { logIn: jest.fn(), logOut: jest.fn(), isAnonymous: jest.fn() } }));
 jest.mock('../initialize', () => ({ initializeRevenueCat: jest.fn() }));

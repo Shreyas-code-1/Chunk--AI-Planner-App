@@ -6,6 +6,11 @@ export type DesiredIdentity = Readonly<
   { kind: 'unresolved' } | { kind: 'anonymous' } | { kind: 'identified'; userId: string }
 >;
 export type IdentityFailure = 'invalid-user-id' | 'initialization' | 'anonymous-check' | 'login' | 'logout';
+export type IdentityGenerationResult = Readonly<
+  | { status: 'ready'; generation: number; isPro: boolean | null }
+  | { status: 'failed'; generation: number; reason: IdentityFailure }
+  | { status: 'superseded'; generation: number }
+>;
 export type IdentitySnapshot = Readonly<{
   desired: DesiredIdentity;
   generation: number;
@@ -31,9 +36,44 @@ export function createIdentityCoordinator() {
   });
   let worker: Promise<void> | null = null;
   let reserved = false;
+  const waiters = new Map<number, Set<(result: IdentityGenerationResult) => void>>();
+
+  function outcome(generation: number): IdentityGenerationResult | null {
+    if (generation < snapshot.generation) return Object.freeze({ status: 'superseded', generation });
+    if (snapshot.status === 'ready') return Object.freeze({ status: 'ready', generation, isPro: snapshot.isPro });
+    if (snapshot.status === 'failed' && snapshot.failure) {
+      return Object.freeze({ status: 'failed', generation, reason: snapshot.failure });
+    }
+    return null;
+  }
+
+  /**
+   * Wait for an issued generation, independently of worker/reservation activity.
+   * Older generations are superseded, even if they were previously ready/failed.
+   * Unresolved generations wait until superseded. Invalid/future numbers reject.
+   */
+  function waitForGeneration(generation: number): Promise<IdentityGenerationResult> {
+    if (!Number.isSafeInteger(generation) || generation < 0 || generation > snapshot.generation) {
+      return Promise.reject(new RangeError('Expected an issued identity generation.'));
+    }
+    const result = outcome(generation);
+    if (result) return Promise.resolve(result);
+    return new Promise(resolve => {
+      const group = waiters.get(generation) ?? new Set();
+      group.add(resolve);
+      waiters.set(generation, group);
+    });
+  }
 
   function update(patch: Partial<IdentitySnapshot>) {
     snapshot = Object.freeze({ ...snapshot, ...patch });
+    for (const [generation, group] of waiters) {
+      const result = outcome(generation);
+      if (!result) continue;
+      waiters.delete(generation);
+      for (const resolve of group) resolve(result);
+      group.clear();
+    }
   }
 
   async function reconcile() {
@@ -116,6 +156,7 @@ export function createIdentityCoordinator() {
 
   return {
     getSnapshot: (): IdentitySnapshot => snapshot,
+    waitForGeneration,
     setDesiredIdentity,
     retry,
     tryReserve,
