@@ -19,6 +19,7 @@ import { getSupabase, isSupabaseConfigured } from '../../lib/supabase';
 
 type SessionState = {
   session: Session | null;
+  status: 'unresolved' | 'authenticated' | 'signed-out' | 'error';
   /** True until the stored session has been read; splash waits on this. */
   loading: boolean;
   /** Set when the app is not configured. Names the problem, never a value. */
@@ -40,33 +41,64 @@ const NOT_CONFIGURED =
   '`npx expo start --clear`.';
 
 const SessionContext = createContext<SessionState | null>(null);
+type Resolution = Pick<SessionState, 'session' | 'status' | 'loading' | 'configError'>;
+const failedResolution: Resolution = { session: null, status: 'error', loading: false, configError: null };
+
+function resolveSession(session: Session | null): Resolution {
+  if (session === null) return { session: null, status: 'signed-out', loading: false, configError: null };
+  if (!session.access_token || !session.refresh_token || !session.user?.id || session.user.is_anonymous) {
+    return failedResolution;
+  }
+  return { session, status: 'authenticated', loading: false, configError: null };
+}
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
   const configured = isSupabaseConfigured();
-  const [loading, setLoading] = useState(configured);
+  const [resolution, setResolution] = useState<Resolution>(() => configured
+    ? { session: null, status: 'unresolved', loading: true, configError: null }
+    : { ...failedResolution, configError: NOT_CONFIGURED });
 
   useEffect(() => {
-    if (!configured) return;
+    if (!configured) {
+      setResolution({ ...failedResolution, configError: NOT_CONFIGURED });
+      return;
+    }
 
     let cancelled = false;
-    const supabase = getSupabase();
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      setSession(data.session);
-      setLoading(false);
-    });
-
-    // Fires on sign-in, sign-out and every token refresh, so this is the only
-    // place session state is written.
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-    });
+    let revision = 0;
+    let unsubscribe: (() => void) | undefined;
+    setResolution({ session: null, status: 'unresolved', loading: true, configError: null });
+    let supabase: ReturnType<typeof getSupabase>;
+    try {
+      supabase = getSupabase();
+    } catch {
+      setResolution({ ...failedResolution, configError: 'Supabase configuration could not be initialized.' });
+      return;
+    }
+    const restorationRevision = revision;
+    const canRestore = () => !cancelled && revision === restorationRevision;
+    try {
+      const { data } = supabase.auth.onAuthStateChange((event, next) => {
+        if (cancelled) return;
+        // Empty INITIAL_SESSION can also accompany SDK initialization errors.
+        // Only the error-checked restoration or SIGNED_OUT confirms no session.
+        if (event !== 'SIGNED_OUT' && !next) return;
+        revision += 1;
+        setResolution(event === 'SIGNED_OUT' ? resolveSession(null) : resolveSession(next));
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+      void supabase.auth.getSession().then(({ data, error }) => {
+        if (canRestore()) setResolution(error ? failedResolution : resolveSession(data.session));
+      }).catch(() => {
+        if (canRestore()) setResolution(failedResolution);
+      });
+    } catch {
+      if (canRestore()) setResolution(failedResolution);
+    }
 
     return () => {
       cancelled = true;
-      data.subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, [configured]);
 
@@ -77,9 +109,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
 
     return {
-      session,
-      loading,
-      configError: configured ? null : NOT_CONFIGURED,
+      ...resolution,
       async signInWithEmail(email, password) {
         const { error } = await requireConfig().auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -96,7 +126,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
       },
     };
-  }, [session, loading, configured]);
+  }, [resolution, configured]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
