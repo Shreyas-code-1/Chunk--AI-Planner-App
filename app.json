@@ -7,7 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "chunk",
     "userInterfaceStyle": "automatic",
-    "ios": {},
+    "ios": {
+      "bundleIdentifier": "com.caidenn2.chunk"
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FF9934",
@@ -35,6 +37,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "caidenn2",
+    "extra": {
+      "eas": {
+        "projectId": "805f0a5f-067f-4fbd-a278-935eebb94a1e"
+      }
     }
   }
 }
