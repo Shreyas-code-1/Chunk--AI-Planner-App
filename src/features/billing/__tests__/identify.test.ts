@@ -1,6 +1,7 @@
 import Purchases, { type CustomerInfo, type LogInResult } from 'react-native-purchases';
 import { identifyCustomer } from '../identify';
 import { initializeRevenueCat } from '../initialize';
+import { identityCoordinator } from '../identityCoordinator';
 
 jest.mock('react-native-purchases', () => ({
   __esModule: true, default: { logIn: jest.fn(), logOut: jest.fn() },
@@ -12,17 +13,22 @@ function response(created = false, active: Record<string, { isActive: boolean }>
   return { created, customerInfo: { entitlements: { active } } as unknown as CustomerInfo };
 }
 beforeEach(() => {
+  identityCoordinator.setDesiredIdentity({ kind: 'unresolved' });
   jest.resetAllMocks();
   jest.mocked(initializeRevenueCat).mockResolvedValue(undefined);
   jest.mocked(Purchases.logIn).mockResolvedValue(response());
 });
-afterEach(() => expect(Purchases.logOut).not.toHaveBeenCalled());
+afterEach(async () => {
+  await identityCoordinator.whenIdle();
+  jest.restoreAllMocks();
+  expect(Purchases.logOut).not.toHaveBeenCalled();
+});
 
 test.each([true, false])('created=%s does not determine Pro status', async created => {
   jest.mocked(Purchases.logIn).mockResolvedValueOnce(response(created, { chunk_pro: { isActive: true } }));
   await expect(identifyCustomer(userId)).resolves.toEqual({ status: 'identified', isPro: true });
   jest.mocked(Purchases.logIn).mockResolvedValueOnce(response(created));
-  await expect(identifyCustomer(userId)).resolves.toEqual({ status: 'identified', isPro: false });
+  await expect(identifyCustomer(otherId)).resolves.toEqual({ status: 'identified', isPro: false });
   expect(Purchases.logIn).toHaveBeenCalledWith(userId);
 });
 
@@ -53,28 +59,59 @@ test('login failure is sanitized and releases lock for retry', async () => {
   expect(Purchases.logIn).toHaveBeenCalledTimes(2);
 });
 
-test('waits for initialization and blocks both duplicate and different IDs meanwhile', async () => {
+test('delegates to the singleton and same-user calls share the generation', async () => {
+  const request = jest.spyOn(identityCoordinator, 'setDesiredIdentity');
+  const wait = jest.spyOn(identityCoordinator, 'waitForGeneration');
   let ready!: () => void;
   jest.mocked(initializeRevenueCat).mockReturnValueOnce(new Promise(resolve => { ready = resolve; }));
   const pending = identifyCustomer(userId);
   expect(Purchases.logIn).not.toHaveBeenCalled();
-  await expect(identifyCustomer(userId)).resolves.toEqual({ status: 'failed', reason: 'in-progress' });
-  await expect(identifyCustomer(otherId)).resolves.toEqual({ status: 'failed', reason: 'in-progress' });
+  const duplicate = identifyCustomer(userId);
+  expect(request).toHaveBeenCalledWith({ kind: 'identified', userId });
+  expect(wait.mock.calls[0]).toEqual(wait.mock.calls[1]);
   ready();
   await expect(pending).resolves.toEqual({ status: 'identified', isPro: false });
+  await expect(duplicate).resolves.toEqual({ status: 'identified', isPro: false });
+  await expect(identifyCustomer(userId)).resolves.toEqual({ status: 'identified', isPro: false });
   expect(Purchases.logIn).toHaveBeenCalledTimes(1);
 });
 
-test('blocks overlapping logins and permits another account after completion', async () => {
+test('supersedes A immediately while B waits for its in-flight login', async () => {
   let finish!: (result: LogInResult) => void;
-  jest.mocked(Purchases.logIn).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  let started!: () => void;
+  const began = new Promise<void>(resolve => { started = resolve; });
+  jest.mocked(Purchases.logIn).mockImplementationOnce(() => { started(); return new Promise(resolve => { finish = resolve; }); });
   const pending = identifyCustomer(userId);
-  await Promise.resolve();
+  await began;
   expect(Purchases.logIn).toHaveBeenCalledTimes(1);
-  await expect(identifyCustomer(userId)).resolves.toEqual({ status: 'failed', reason: 'in-progress' });
-  await expect(identifyCustomer(otherId)).resolves.toEqual({ status: 'failed', reason: 'in-progress' });
+  const next = identifyCustomer(otherId);
+  await expect(pending).resolves.toEqual({ status: 'superseded' });
+  expect(Purchases.logIn).toHaveBeenCalledTimes(1);
   finish(response());
-  await pending;
-  await expect(identifyCustomer(otherId)).resolves.toEqual({ status: 'identified', isPro: false });
+  await expect(next).resolves.toEqual({ status: 'identified', isPro: false });
   expect(Purchases.logIn).toHaveBeenLastCalledWith(otherId);
+});
+
+test('waits behind an exclusive reservation rather than falsely failing', async () => {
+  await identifyCustomer(userId);
+  await identityCoordinator.whenIdle();
+  const reservation = identityCoordinator.tryReserve()!;
+  const settled = jest.fn();
+  const pending = identifyCustomer(otherId).then(settled);
+  await identityCoordinator.whenIdle();
+  expect(settled).not.toHaveBeenCalled();
+  reservation.release(); await pending;
+  expect(settled).toHaveBeenCalledWith({ status: 'identified', isPro: false });
+});
+
+test('rechecks generation after a ready result to avoid publishing stale success', async () => {
+  await identifyCustomer(userId);
+  const pending = identifyCustomer(userId);
+  identityCoordinator.setDesiredIdentity({ kind: 'identified', userId: otherId });
+  await expect(pending).resolves.toEqual({ status: 'superseded' });
+});
+
+test('unexpected coordinator rejection is sanitized', async () => {
+  jest.spyOn(identityCoordinator, 'waitForGeneration').mockRejectedValueOnce(new Error('private details'));
+  await expect(identifyCustomer(userId)).resolves.toEqual({ status: 'failed', reason: 'login' });
 });
