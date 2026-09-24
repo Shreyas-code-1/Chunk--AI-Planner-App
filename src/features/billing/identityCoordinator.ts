@@ -1,0 +1,128 @@
+import Purchases from 'react-native-purchases';
+import { revenueCatConfig } from './config';
+import { initializeRevenueCat } from './initialize';
+
+export type DesiredIdentity = Readonly<
+  { kind: 'unresolved' } | { kind: 'anonymous' } | { kind: 'identified'; userId: string }
+>;
+export type IdentityFailure = 'invalid-user-id' | 'initialization' | 'anonymous-check' | 'login' | 'logout';
+export type IdentitySnapshot = Readonly<{
+  desired: DesiredIdentity;
+  generation: number;
+  status: 'unresolved' | 'transitioning' | 'ready' | 'failed';
+  /** null means unknown/not applicable; anonymous readiness never grants Pro. */
+  isPro: boolean | null;
+  failure: IdentityFailure | null;
+}>;
+export type IdentityReservation = Readonly<{
+  generation: number;
+  isCurrent(): boolean;
+  /** Release in finally. Idempotent; never starts or replays a purchase. */
+  release(): void;
+}>;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Factory for isolated tests. Future app consumers must use the shared singleton below. */
+export function createIdentityCoordinator() {
+  let snapshot: IdentitySnapshot = Object.freeze({
+    desired: Object.freeze({ kind: 'unresolved' }), generation: 0,
+    status: 'unresolved', isPro: null, failure: null,
+  });
+  let worker: Promise<void> | null = null;
+  let reserved = false;
+
+  function update(patch: Partial<IdentitySnapshot>) {
+    snapshot = Object.freeze({ ...snapshot, ...patch });
+  }
+
+  async function reconcile() {
+    while (snapshot.status === 'transitioning' && !reserved) {
+      const { generation, desired } = snapshot;
+      const current = () => snapshot.generation === generation;
+      let stage: IdentityFailure = 'initialization';
+      try {
+        await initializeRevenueCat();
+        if (!current()) continue;
+        if (desired.kind === 'identified') {
+          stage = 'login';
+          const { customerInfo } = await Purchases.logIn(desired.userId);
+          if (current()) update({ status: 'ready', failure: null,
+            isPro: customerInfo.entitlements.active[revenueCatConfig.entitlementIdentifier]?.isActive === true });
+        } else if (desired.kind === 'anonymous') {
+          stage = 'anonymous-check';
+          const anonymous = await Purchases.isAnonymous();
+          if (!current()) continue;
+          if (!anonymous) {
+            stage = 'logout';
+            await Purchases.logOut();
+          }
+          if (current()) update({ status: 'ready', isPro: null, failure: null });
+        }
+      } catch {
+        if (current()) update({ status: 'failed', isPro: null, failure: stage });
+      }
+    }
+  }
+
+  function kick() {
+    if (worker || reserved || snapshot.status !== 'transitioning') return;
+    // Schedule after assigning worker, so there can only ever be one worker.
+    worker = Promise.resolve().then(reconcile).finally(() => {
+      worker = null;
+      kick();
+    });
+  }
+
+  function setDesiredIdentity(identity: DesiredIdentity): IdentitySnapshot {
+    const old = snapshot.desired;
+    const same = old.kind === identity.kind &&
+      (old.kind !== 'identified' || (identity.kind === 'identified' && old.userId === identity.userId));
+    if (same) return snapshot; // A failed request requires explicit retry.
+    const invalid = identity.kind === 'identified' &&
+      (typeof identity.userId !== 'string' || !UUID.test(identity.userId) ||
+       identity.userId === '00000000-0000-0000-0000-000000000000');
+    update({ desired: Object.freeze({ ...identity }), generation: snapshot.generation + 1,
+      status: invalid ? 'failed' : identity.kind === 'unresolved' ? 'unresolved' : 'transitioning',
+      isPro: null, failure: invalid ? 'invalid-user-id' : null });
+    kick();
+    return snapshot;
+  }
+
+  function retry(): IdentitySnapshot {
+    if (snapshot.status === 'failed' && snapshot.failure !== 'invalid-user-id') {
+      update({ generation: snapshot.generation + 1, status: 'transitioning', failure: null, isPro: null });
+      kick();
+    }
+    return snapshot;
+  }
+
+  function tryReserve(): IdentityReservation | null {
+    if (snapshot.status !== 'ready' || worker || reserved) return null;
+    reserved = true;
+    const generation = snapshot.generation;
+    let released = false;
+    return Object.freeze({
+      generation,
+      isCurrent: () => !released && snapshot.generation === generation && snapshot.status === 'ready',
+      release() {
+        if (released) return;
+        released = true;
+        reserved = false;
+        kick();
+      },
+    });
+  }
+
+  return {
+    getSnapshot: (): IdentitySnapshot => snapshot,
+    setDesiredIdentity,
+    retry,
+    tryReserve,
+    /** Wait for scheduled SDK work only; a held reservation must be released separately. */
+    async whenIdle(): Promise<void> { while (worker) await worker; },
+  };
+}
+
+// Inert until explicitly requested. Not wired into any production flow in this phase.
+export const identityCoordinator = createIdentityCoordinator();
