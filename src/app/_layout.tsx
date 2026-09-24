@@ -29,6 +29,7 @@ import { useEffect } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { SessionProvider } from '../features/auth/SessionProvider';
 import { initializeRevenueCat } from '../features/billing/initialize';
+import { RevenueCatIdentitySync } from '../features/billing/RevenueCatIdentitySync';
 import { queryClient } from '../lib/queryClient';
 
 // Screen 2.1 is a real splash with its own minimum duration; the native splash
@@ -70,6 +71,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
+            <RevenueCatIdentitySync />
             <Stack
               screenOptions={{
                 headerShown: false,
