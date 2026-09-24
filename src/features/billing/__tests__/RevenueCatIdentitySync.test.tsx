@@ -1,19 +1,24 @@
 import React from 'react';
+import Purchases, { type CustomerInfo, type LogInResult } from 'react-native-purchases';
 import { useSession } from '../../auth/SessionProvider';
-import { identifyCustomer, type IdentifyCustomerResult } from '../identify';
+import { initializeRevenueCat } from '../initialize';
+import { identityCoordinator } from '../identityCoordinator';
 import { RevenueCatIdentitySync } from '../RevenueCatIdentitySync';
-
 const { act, create } = require('react-test-renderer');
 jest.mock('../../auth/SessionProvider', () => ({ useSession: jest.fn() }));
-jest.mock('../identify', () => ({ identifyCustomer: jest.fn() }));
+jest.mock('../initialize', () => ({ initializeRevenueCat: jest.fn() }));
+jest.mock('react-native-purchases', () => ({ __esModule: true,
+  default: { logIn: jest.fn(), logOut: jest.fn(), isAnonymous: jest.fn() } }));
 const a = '8c62a3c1-b70f-498d-b3af-086afcce328b';
 const b = '1ca68f9f-c830-443f-b85c-0f2e3a63b52f';
 const c = '2ca68f9f-c830-443f-b85c-0f2e3a63b52f';
 const signOut = jest.fn();
+const result = (pro = false): LogInResult => ({ created: true,
+  customerInfo: { entitlements: { active: pro ? { chunk_pro: { isActive: true } } : {} } } as unknown as CustomerInfo });
 let tree: any;
 function session(id: string | null, loading = false, overrides = {}) {
   jest.mocked(useSession).mockReturnValue({
-    session: id ? { access_token: 'test-token', user: { id, email: 'unused@example.com', is_anonymous: false } } : null,
+    session: id ? { access_token: 'test', user: { id, email: 'unused@example.com', is_anonymous: false } } : null,
     loading, configError: null, signOut, ...overrides,
   } as unknown as ReturnType<typeof useSession>);
 }
@@ -24,87 +29,99 @@ async function render() {
   });
 }
 beforeEach(() => {
+  identityCoordinator.setDesiredIdentity({ kind: 'unresolved' });
   jest.resetAllMocks();
-  jest.mocked(identifyCustomer).mockResolvedValue({ status: 'identified', isPro: false });
+  jest.mocked(initializeRevenueCat).mockResolvedValue(undefined);
+  jest.mocked(Purchases.logIn).mockResolvedValue(result());
   session(null);
 });
 afterEach(async () => {
   if (tree) await act(async () => tree.unmount());
   tree = undefined;
+  await identityCoordinator.whenIdle();
   expect(signOut).not.toHaveBeenCalled();
+  expect(Purchases.logOut).not.toHaveBeenCalled();
+  expect(Purchases.isAnonymous).not.toHaveBeenCalled();
 });
-
-test('waits for restoration then identifies using only the restored user ID', async () => {
+test('restoration pending stays unresolved then identifies only the restored UUID', async () => {
   session(a, true); await render();
-  expect(identifyCustomer).not.toHaveBeenCalled();
+  expect(identityCoordinator.getSnapshot().status).toBe('unresolved');
+  expect(Purchases.logIn).not.toHaveBeenCalled();
   session(a); await render();
-  expect(identifyCustomer).toHaveBeenCalledTimes(1);
-  expect(identifyCustomer).toHaveBeenCalledWith(a);
+  expect(Purchases.logIn).toHaveBeenCalledWith(a);
+  expect(identityCoordinator.getSnapshot().status).toBe('ready');
 });
-test('signed-out journey is untouched; later login identifies', async () => {
+test('signed-out startup preserves SDK customer; later login identifies', async () => {
   await render();
-  expect(identifyCustomer).not.toHaveBeenCalled();
+  expect(initializeRevenueCat).not.toHaveBeenCalled();
   session(a); await render();
-  expect(identifyCustomer).toHaveBeenCalledWith(a);
+  expect(Purchases.logIn).toHaveBeenCalledTimes(1);
 });
-test('unchanged ID and refreshed session do not repeat identification', async () => {
+test('same-user and token refresh do not repeat identification or change generation', async () => {
   session(a); await render();
+  const generation = identityCoordinator.getSnapshot().generation;
   session(a); await render();
-  session(a, false, { session: { access_token: 'refreshed-token', user: { id: a } } }); await render();
-  expect(identifyCustomer).toHaveBeenCalledTimes(1);
+  session(a, false, { session: { access_token: 'refreshed', user: { id: a } } }); await render();
+  expect(Purchases.logIn).toHaveBeenCalledTimes(1);
+  expect(identityCoordinator.getSnapshot().generation).toBe(generation);
 });
-test('completed A followed by B identifies B independently', async () => {
+test('A to B replaces account and Pro state', async () => {
+  jest.mocked(Purchases.logIn).mockResolvedValueOnce(result(true));
   session(a); await render();
   session(b); await render();
-  expect(jest.mocked(identifyCustomer).mock.calls).toEqual([[a], [b]]);
+  expect(jest.mocked(Purchases.logIn).mock.calls).toEqual([[a], [b]]);
+  expect(identityCoordinator.getSnapshot()).toMatchObject({ status: 'ready', isPro: false });
 });
-test('in-flight A completes before B, and obsolete queued sessions are skipped', async () => {
-  let finish!: (result: IdentifyCustomerResult) => void;
-  jest.mocked(identifyCustomer).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+test('in-flight A is superseded immediately and obsolete B is skipped', async () => {
+  let finish!: (value: LogInResult) => void;
+  jest.mocked(Purchases.logIn).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
   session(a); await render();
+  const generation = identityCoordinator.getSnapshot().generation;
+  const waiting = identityCoordinator.waitForGeneration(generation);
   session(b); await render();
   session(c); await render();
-  expect(identifyCustomer).toHaveBeenCalledTimes(1);
-  await act(async () => finish({ status: 'identified', isPro: true }));
-  expect(jest.mocked(identifyCustomer).mock.calls).toEqual([[a], [c]]);
-  expect(tree.toJSON()).toBeNull();
+  await expect(waiting).resolves.toEqual({ status: 'superseded', generation });
+  expect(identityCoordinator.getSnapshot()).toMatchObject({ status: 'transitioning', isPro: null });
+  expect(Purchases.logIn).toHaveBeenCalledTimes(1);
+  await act(async () => { finish(result(true)); await identityCoordinator.whenIdle(); });
+  expect(jest.mocked(Purchases.logIn).mock.calls).toEqual([[a], [c]]);
+  expect(identityCoordinator.getSnapshot().isPro).toBe(false);
 });
-test('sign-out while identification is pending does not start another call or publish Pro', async () => {
-  let finish!: (result: IdentifyCustomerResult) => void;
-  jest.mocked(identifyCustomer).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+test('sign-out invalidates pending results without logout', async () => {
+  let finish!: (value: LogInResult) => void;
+  jest.mocked(Purchases.logIn).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
   session(a); await render();
   session(null); await render();
-  await act(async () => finish({ status: 'identified', isPro: true }));
-  expect(identifyCustomer).toHaveBeenCalledTimes(1);
-  expect(tree.toJSON()).toBeNull();
-  session(a); await render();
-  expect(identifyCustomer).toHaveBeenCalledTimes(2);
+  await act(async () => { finish(result(true)); await identityCoordinator.whenIdle(); });
+  expect(identityCoordinator.getSnapshot()).toMatchObject({ status: 'unresolved', isPro: null });
+  expect(Purchases.logIn).toHaveBeenCalledTimes(1);
 });
-test.each(['result', 'rejection'])('failure (%s) preserves session and allows the next account to synchronize', async kind => {
-  if (kind === 'result') jest.mocked(identifyCustomer).mockResolvedValueOnce({ status: 'failed', reason: 'login' });
-  else jest.mocked(identifyCustomer).mockRejectedValueOnce(new Error('private details'));
+test('failure preserves Supabase session and does not retry on unchanged-user events', async () => {
+  jest.mocked(Purchases.logIn).mockRejectedValueOnce(new Error('private details'));
   session(a); await render();
   expect(useSession().session?.user.id).toBe(a);
+  expect(identityCoordinator.getSnapshot()).toMatchObject({ status: 'failed', isPro: null });
   session(a); await render();
-  expect(identifyCustomer).toHaveBeenCalledTimes(1);
+  expect(Purchases.logIn).toHaveBeenCalledTimes(1);
   session(b); await render();
-  expect(identifyCustomer).toHaveBeenLastCalledWith(b);
-  expect(tree.toJSON()).toBeNull();
+  expect(identityCoordinator.getSnapshot().status).toBe('ready');
 });
-test('anonymous Supabase session or missing configuration does not identify', async () => {
-  session(a, false, { session: { access_token: 'test', user: { id: a, is_anonymous: true } } });
-  await render();
+test('configuration error and anonymous Supabase session stay unresolved', async () => {
   session(a, false, { configError: 'Not configured' }); await render();
-  expect(identifyCustomer).not.toHaveBeenCalled();
+  session(a, false, { session: { access_token: 'test', user: { id: a, is_anonymous: true } } }); await render();
+  expect(identityCoordinator.getSnapshot().status).toBe('unresolved');
+  expect(Purchases.logIn).not.toHaveBeenCalled();
 });
-test('unmount cancels queued work while a remount waits for the existing call', async () => {
-  let finish!: (result: IdentifyCustomerResult) => void;
-  jest.mocked(identifyCustomer).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+test('returning to loading clears ready account state', async () => {
   session(a); await render();
-  session(b); await render();
+  session(a, true); await render();
+  expect(identityCoordinator.getSnapshot()).toMatchObject({ status: 'unresolved', isPro: null });
+});
+test('unmount invalidates pending completion', async () => {
+  let finish!: (value: LogInResult) => void;
+  jest.mocked(Purchases.logIn).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  session(a); await render();
   await act(async () => tree.unmount()); tree = undefined;
-  session(c); await render();
-  expect(identifyCustomer).toHaveBeenCalledTimes(1);
-  await act(async () => finish({ status: 'identified', isPro: false }));
-  expect(jest.mocked(identifyCustomer).mock.calls).toEqual([[a], [c]]);
+  finish(result(true)); await identityCoordinator.whenIdle();
+  expect(identityCoordinator.getSnapshot()).toMatchObject({ status: 'unresolved', isPro: null });
 });

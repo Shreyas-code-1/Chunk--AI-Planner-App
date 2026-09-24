@@ -1,10 +1,6 @@
 import { useEffect } from 'react';
-
 import { useSession } from '../auth/SessionProvider';
-import { identifyCustomer } from './identify';
-
-// Shared across bridge remounts so a previous SDK call finishes before the next.
-let identificationQueue: Promise<void> = Promise.resolve();
+import { identityCoordinator } from './identityCoordinator';
 
 /** Identity only. Does not publish entitlement state, mutate auth, or log out. */
 export function RevenueCatIdentitySync() {
@@ -13,21 +9,12 @@ export function RevenueCatIdentitySync() {
     ? session.user.id : null;
 
   useEffect(() => {
-    if (!userId) return;
-    let current = true;
-    identificationQueue = identificationQueue.then(async () => {
-      if (!current) return;
-      try {
-        // Initialization and UUID validation are owned by the tested operation.
-        // An already-started SDK call cannot be cancelled. The latest session's
-        // queued call runs afterward; no stale result is stored or published.
-        await identifyCustomer(userId);
-      } catch {
-        // Keep unexpected failures isolated from Supabase and later queue entries.
-      }
-    });
-    return () => { current = false; };
-    // Depend only on the eligible ID: token refreshes must not trigger logIn.
+    // Anonymous would introduce logout. Unresolved invalidates readiness while
+    // leaving the SDK customer untouched until the later logout phase.
+    identityCoordinator.setDesiredIdentity(userId
+      ? { kind: 'identified', userId }
+      : { kind: 'unresolved' });
+    return () => { identityCoordinator.setDesiredIdentity({ kind: 'unresolved' }); };
   }, [userId]);
 
   return null;
