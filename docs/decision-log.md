@@ -881,3 +881,11 @@ Also fixed while verifying in a browser:
 - Focus said "Nothing running" for chunks with no class.
 - 3.4's break button now says 5 min, matching the engine instead of the old 10.
 - 5.1's finish rate counts a chunk only once its slot has passed.
+
+## 24 Sep — App icon is the Chunk logo
+
+- The Expo default icons are replaced by the Chunk beaver logo (`design/assets/chunk-logo.png`). `python scripts/make-app-icons.py` regenerates `icon.png`, `android-icon-foreground.png`, `splash-icon.png` and `favicon.png` from it.
+- iOS now uses `icon.png`; the Expo-branded `assets/expo.icon` is deleted.
+- Android adaptive background changes from `#E6F4FE` to `#FF9934` (the logo orange). The Expo monochrome and background images are removed.
+- Splash background changes from `#208AEF` to `#FFFFFF`, and the image width from 76 to 200.
+- Expo Go always shows its own icon; the new icon only appears in a development or store build.
