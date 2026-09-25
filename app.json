@@ -11,6 +11,7 @@
       "bundleIdentifier": "com.caidenn2.chunk"
     },
     "android": {
+      "package": "com.caidenn2.chunk",
       "adaptiveIcon": {
         "backgroundColor": "#FF9934",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
