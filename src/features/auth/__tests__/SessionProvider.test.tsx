@@ -2,6 +2,8 @@ import React from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { SessionProvider, useSession } from '../SessionProvider';
 import { getSupabase, isSupabaseConfigured } from '../../../lib/supabase';
+import { signInWithGoogle } from '../googleSignIn';
+jest.mock('../googleSignIn', () => ({ signInWithGoogle: jest.fn() }));
 const { act, create } = require('react-test-renderer');
 jest.mock('../../../lib/supabase', () => ({ getSupabase: jest.fn(), isSupabaseConfigured: jest.fn() }));
 const getSession = jest.fn();
@@ -28,6 +30,14 @@ beforeEach(() => {
 afterEach(() => { if (tree) act(() => tree.unmount()); tree = undefined; });
 test('initial restoration is unresolved and loading', async () => {
   await mount(); expect(latest).toMatchObject({ session: null, status: 'unresolved', loading: true, configError: null });
+});
+
+test('Google delegates to OAuth and receives its session through the existing auth listener', async () => {
+  await mount();
+  jest.mocked(signInWithGoogle).mockImplementation(async () => { event('SIGNED_IN', user); });
+  await act(async () => latest.signInWithGoogle());
+  expect(signInWithGoogle).toHaveBeenCalledTimes(1);
+  expect(latest).toMatchObject({ status: 'authenticated', session: user });
 });
 test('valid restoration authenticates', async () => {
   await mount(); await act(async () => finish({ data: { session: user }, error: null }));

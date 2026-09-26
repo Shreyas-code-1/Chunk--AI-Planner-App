@@ -1,10 +1,8 @@
 /**
  * Auth session.
  *
- * One Supabase user per person, however they signed in. Email works today;
- * Apple and Google are native modules that cannot run in Expo Go, so they
- * exist as call sites that fail with a clear message until the 2.10 dev build
- * (see docs/decision-log.md).
+ * One Supabase user per person. Email and Google create real sessions;
+ * Apple remains a stub.
  *
  * If the app has not been configured, this provider reports that through
  * `configError` and renders its children anyway. Auth is not a prerequisite
@@ -16,6 +14,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { getSupabase, isSupabaseConfigured } from '../../lib/supabase';
+import { signInWithGoogle } from './googleSignIn';
 
 type SessionState = {
   session: Session | null;
@@ -119,7 +118,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
       },
       signInWithApple: needsDevBuild('Apple'),
-      signInWithGoogle: needsDevBuild('Google'),
+      signInWithGoogle,
       async signOut() {
         // Clears the stored session as well as the server-side one.
         const { error } = await requireConfig().auth.signOut();

@@ -4,18 +4,14 @@
  * Reached two ways: forward from the paywall, and back from 2.2's "I already
  * have an account", which was inert until this screen existed.
  *
- * Apple and Google are native modules that cannot run in Expo Go, so
- * SessionProvider's stubs throw a message saying exactly that rather than
- * failing silently — see the decision log. Email works today.
- *
- * "Continue with email" leads to 2.18, which is a frame now. It collects the
- * address only — nothing is sent and nothing is verified yet.
+ * Google uses browser OAuth and returns to this route through chunk://login.
+ * Email uses the OTP screens. Apple remains a stub.
  *
  * TODO: the Terms and Privacy Policy line is not yet a link — neither document
  * exists, and both are required before submission.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -29,8 +25,12 @@ import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 export default function Login() {
   const router = useRouter();
-  const { signInWithApple, signInWithGoogle } = useSession();
+  const { signInWithApple, signInWithGoogle, status, session } = useSession();
   const [problem, setProblem] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user.id) router.replace('/home');
+  }, [status, session?.user.id, router]);
 
   const attempt = async (run: () => Promise<void>) => {
     haptic('press');
