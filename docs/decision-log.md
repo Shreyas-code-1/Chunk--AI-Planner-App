@@ -889,3 +889,83 @@ Also fixed while verifying in a browser:
 - Android adaptive background changes from `#E6F4FE` to `#FF9934` (the logo orange). The Expo monochrome and background images are removed.
 - Splash background changes from `#208AEF` to `#FFFFFF`, and the image width from 76 to 200.
 - Expo Go always shows its own icon; the new icon only appears in a development or store build.
+
+## 2026-09-26 — Engine v3: answers to the 12 pre-build questions
+
+Spec: `docs/scheduling-engine-v3.md`. Questions: `docs/scheduling-engine-v3-impact.md`.
+All 12 proposals accepted. Where Shreyas changed or sharpened one, the final
+value is what is written here.
+
+1. **Chunk-length preference (2.6) stays, as a multiplier on the mode base:**
+   short 0.85×, mixed 1.0×, long 1.15×. A guess.
+2. **Load is deleted as a concept.** The mapping would have been memorizing
+   high, problems high, reading medium, writing high, but since load only ever
+   came from mode it adds nothing the base doesn't. The base minutes encode it.
+   The spec's "high 0.9 / medium 1.0 / low 1.15" multipliers are not used.
+3. **Bases, unscaled:** memorizing 18, problems 25, reading 40, writing 45.
+   The dread factor multiplies base × chunk-length preference. A dreaded
+   writing task (mixed) therefore opens at 45 × 0.55 = 24.75 → **25**.
+4. **Ramp:** first chunk is strictly the shortest; later chunks rise and may be
+   **equal**, never descending. If the remainder after the first chunk is
+   smaller than the first chunk, the task stays **one chunk**. When no valid
+   ramp exists at the dread-sized first chunk, the first chunk shrinks in steps
+   of 5 (never below its floor) — the ramp's shape wins over the exact opener.
+5. **Opener:** the first chunk of a task, **20 minutes or less**, chosen for
+   **lowest dread**; ties go to the shorter, then the earlier due. Exactly one;
+   none when anything is due today.
+6. **Batch order within a due tier:** earliest due date in the batch first;
+   ties problems → writing → reading → memorizing (load no longer exists).
+7. **Most-dreaded goes second, literally** — in a two-task batch that is last.
+   Only applies when dread differs within the batch.
+8. **The worked example loses to the rules** wherever they disagree (pause only
+   over 35 min, in-batch break between Math and Chem, buffer size).
+9. **Re-cutting after progress:** finished chunks are frozen; only the
+   remaining minutes are re-ramped, and they get no second "first chunk"
+   shrink. See the identity design below — **awaiting Shreyas's approval
+   before it is built.**
+10. **First action:** mode default, student edit stored per assignment and
+    copied onto every chunk (chunks are disposable, so a per-chunk edit would
+    be lost on re-plan).
+11. **Ramp across days:** the dread-shrunk opener applies once per task, to its
+    first chunk, whichever day that lands on.
+12. **Buffer:** the evening is the smaller of the day's target and the bedtime
+    window (start → bedtime − 30). 15% of that is the buffer. Work within the
+    day's target is never deferred to make room for the buffer. Due today:
+    no buffer.
+
+**Re-plan hold (Shreyas's resolution):** clock times always show current
+reality and recalculate live. The 15-minute hold applies only to *structure* —
+reordering, or moving work between days. Times update freely; the order and
+day assignment stay stable unless the drift behind a change is 15 min or more.
+
+### Stable chunk identity — proposal, not yet built
+
+Problem: completions are keyed `assignmentId:index`. Any re-cut (dread tap,
+mode tap, the ramp itself, a changed estimate) renumbers chunks, so a
+completion can attach to a different chunk than the one finished.
+
+Proposal: **a finished chunk is a record, not a position; an unfinished chunk
+has no stored identity at all.**
+
+- A completion stores its own snapshot: a generated `id`, `assignmentId`,
+  `plannedMinutes`, `actualMinutes`, `startedAt`, `endedAt`, `mode`, `dread`,
+  and the title it had. It never refers back to a chunk by index.
+- The planner no longer receives "done keys". It receives completions, and for
+  each assignment computes **remaining = estimate − Σ plannedMinutes of its
+  completions**. Finished chunks are shown from the completion records (actual
+  times, "22m (said 25)"); only the remaining minutes are ramped and scheduled.
+- Unfinished chunks get display keys `assignmentId:n` where n counts on from
+  the completions. Nothing is ever stored against these keys, so a re-cut can
+  change them freely without corrupting anything.
+- Starting a chunk takes a snapshot (`activeChunk`: assignmentId, planned
+  minutes, title, startedAt) in the store. Focus runs off the snapshot, not
+  off the plan, so a re-cut mid-chunk can't swap what's on the timer, and the
+  completion is written from the snapshot. The snapshot's `startedAt` is also
+  what live times lay the rest of the evening from.
+- Out-of-order starts (Q14) still work: finishing "Part 3" first just adds a
+  completion; the remainder is re-ramped.
+- Planned minutes, not actual, reduce the remainder: finishing a 25-minute
+  chunk in 22 did 25 minutes' worth of the task.
+- In Supabase, `chunk_completions` already holds planned/actual minutes and is
+  append-only; migration 0002 adds `started_at`, `mode`, `dread`. `chunks`
+  stays disposable and is never the source of truth for what's done.
