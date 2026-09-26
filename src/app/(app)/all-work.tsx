@@ -22,6 +22,7 @@ import { BottomDock, Chip } from '../../components/ui';
 import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { usePlan } from '../../features/work/usePlan';
 import { EmptyWork } from '../../features/work/EmptyWork';
+import { TaskChips } from '../../features/work/TaskChips';
 import { useWork } from '../../features/work/store';
 import { addDays, planDateOf } from '../../lib/planDate';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
@@ -155,6 +156,7 @@ export default function AllWork() {
                           ? `${row.chunks.length} ${row.chunks.length === 1 ? 'chunk' : 'chunks'} done`
                           : `${row.left} ${row.left === 1 ? 'chunk' : 'chunks'} left · ${row.minutesLeft} min · due ${row.assignment.dueAt.toLocaleDateString(undefined, DAY_FORMAT)}`}
                       </Text>
+                      {row.isDone ? null : <TaskChips assignment={row.assignment} />}
                     </View>
                     <Text style={styles.percent}>{`${row.percent}%`}</Text>
                   </View>

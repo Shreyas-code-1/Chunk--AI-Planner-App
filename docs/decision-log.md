@@ -1101,3 +1101,38 @@ Built as approved:
   RLS; preferences gain `bedtime`. `src/api/types.ts` updated to match.
 - Data still lives in the memory store (no sign-in), so no real rows exist to
   migrate.
+
+## 2026-09-26 — Engine v3 step 5: clock times on screen
+
+Built (no new frames; every addition without a frame is marked `TODO(design)`):
+- **3.1 Home** — the big CHUNK SAYS line is now "Done at 6:55" (chunks left
+  moves into the label); the card label is "NEXT UP AT 4:23", or "ON NOW ·
+  SINCE 4:00" while a chunk runs.
+- **3.2 Today Path** — summary's big line is "Done at …"; every card leads
+  with its start time, finished ones with what happened ("2:04 · 22m (said
+  25)"), running ones "On now since …", long ones "pause at …". Break rows
+  and a "Catch-up time" row sit between cards. **The first-action line is not
+  on the path** — the spec's example shows it there, but §7's constraint
+  allows it on Focus only, and the constraint wins.
+- **3.3 Focus** — "Done for today at …" in small type under the countdown.
+- **3.4 Complete** — "Next chunk at 4:43." or "You're done. It's 6:41."
+- **3.5 All Work** — each unfinished task row has a mode chip and a dread chip,
+  one tap each to cycle.
+
+Found while checking in a browser, and fixed:
+- **Finishing Part 1 reshaped the rest.** Re-ramping what was left from the
+  base turned a planned 20 + 25 into one 45-min chunk. Now, when what's done
+  matches the start of the original ramp (chunks finished as planned), the
+  remaining chunks keep their planned sizes; only an unplanned amount of
+  progress re-ramps.
+- **"Next chunk at 4:00" at 2:05 PM.** A student who had already worked today
+  was told to wait for their usual start. Once anything is finished today,
+  tonight continues from now.
+
+Verified in the browser at 2 PM: add → chunked (15/20/25) → path with times,
+breaks, catch-up and "Done at" → Focus (finish time) → finish early →
+Complete ("Next chunk at 2:06") → Home ("Done at 5:05", "Next up at 2:06") →
+path ("2:04 · 1m (said 15)"). Not seen on screen: the All Work chips (the test
+session had no classes, so All Work wasn't reachable) and the pause state on
+Focus (the timer doesn't pause at the midpoint yet — `pauseAt` is computed and
+shown on the path, but 3.3 has no frame for the pause).

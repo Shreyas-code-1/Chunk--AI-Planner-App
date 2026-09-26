@@ -72,6 +72,9 @@ export type PlanView = {
   atRiskTitles: string[];
   /** Today's "Done at" (v3 §8). Null when nothing is left today. */
   finishAtToday: Date | null;
+  /** When today's last chunk ends, and the catch-up after it. */
+  workEndToday: Date | null;
+  bufferToday: number;
   /** Engine v2 outputs. TODO(design): none of these has a frame yet. */
   breaksToday: Break[];
   bedtimeOverrunToday: DayPlan['bedtimeOverrun'];
@@ -290,6 +293,8 @@ export function usePlan(): PlanView {
       })),
       atRiskTitles: result.atRisk.map((entry) => entry.title),
       finishAtToday: todayPlan?.finishAt ?? null,
+      workEndToday: todayPlan?.workEnd ?? null,
+      bufferToday: todayPlan?.bufferMinutes ?? 0,
       breaksToday: todayPlan?.breaks ?? [],
       bedtimeOverrunToday: todayPlan?.bedtimeOverrun ?? null,
       deferrals: result.deferrals,

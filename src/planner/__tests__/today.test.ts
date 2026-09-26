@@ -91,6 +91,17 @@ describe('finished chunks — stable identity', () => {
     expect(scheduled[0].scheduledStart.getHours()).toBe(17);
   });
 
+  it('leave the rest of the task as planned when a chunk finishes as planned', () => {
+    const math = [
+      assignment({ id: 'm', mode: 'problems', minutes: 60, dueAt: endOfDay(1), dread: 'dreading' }),
+    ];
+    const before = plan(math, appPrefs, noHistory, NOW).days[0].chunks;
+    const after = plan(math, appPrefs, noHistory, later, [completedFrom(before[0], later)]);
+    expect(after.days.flatMap((d) => d.chunks).map((c) => c.plannedMinutes)).toEqual(
+      before.slice(1).map((c) => c.plannedMinutes),
+    );
+  });
+
   it('stay attached to what was actually done when the task is re-cut', () => {
     // Changing dread re-cuts the task. The completion is a record, not a
     // position, so it keeps its own minutes and the remainder follows it.

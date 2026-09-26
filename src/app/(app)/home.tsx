@@ -20,14 +20,13 @@ import { BottomDock, Chip } from '../../components/ui';
 import { Bell } from '../../components/icons';
 import { useDraft } from '../../features/onboarding/draft';
 import { useDockNavigation } from '../../features/navigation/useDockNavigation';
+import { timeLabel } from '../../lib/clock';
 import { usePlan } from '../../features/work/usePlan';
 import { useWork } from '../../features/work/store';
 import { UrgentHome, findUrgent } from '../../features/work/UrgentHome';
 import { haptic } from '../../lib/haptics';
 import { planDateOf, fromDateKey } from '../../lib/planDate';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
-
-const TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
 
 /** The board's "Wednesday, May 14". */
 const DATE_FORMAT: Intl.DateTimeFormatOptions = {
@@ -53,6 +52,7 @@ export default function Home() {
     allTimeChunks,
     classes: progress,
     today: todayChunks,
+    finishAtToday,
   } = usePlan();
   const keptForLater = useWork((state) => state.keptForLater);
   const urgent = findUrgent(todayChunks, keptForLater, new Date());
@@ -102,11 +102,18 @@ export default function Home() {
           <>
             <View style={[styles.says, shadows.hardEdge(7)]}>
               <View style={styles.saysText}>
-                <Text style={styles.saysLabel}>CHUNK SAYS</Text>
-                <Text style={styles.saysLine}>
+                <Text style={styles.saysLabel}>
                   {chunksLeft === 0
-                    ? 'Nothing planned yet'
-                    : `${chunksLeft} ${chunksLeft === 1 ? 'chunk' : 'chunks'} left`}
+                    ? 'CHUNK SAYS'
+                    : `CHUNK SAYS · ${chunksLeft} ${chunksLeft === 1 ? 'CHUNK' : 'CHUNKS'} LEFT`}
+                </Text>
+                {/* The finish time is the most important string in the app (v3 §8). */}
+                <Text style={styles.saysLine}>
+                  {finishAtToday
+                    ? `Done at ${timeLabel(finishAtToday)}`
+                    : plannedToday > 0
+                      ? 'All done for today'
+                      : 'Nothing planned yet'}
                 </Text>
 
                 <View style={styles.segments}>
@@ -131,7 +138,9 @@ export default function Home() {
 
             <Text style={styles.sectionLabel}>
               {upNext
-                ? `UP NEXT · ${upNext.scheduledStart.toLocaleTimeString(undefined, TIME_FORMAT)}`
+                ? upNext.running
+                  ? `ON NOW · SINCE ${timeLabel(upNext.scheduledStart)}`
+                  : `NEXT UP AT ${timeLabel(upNext.scheduledStart)}`
                 : 'UP NEXT'}
             </Text>
 

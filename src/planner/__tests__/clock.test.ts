@@ -111,6 +111,14 @@ describe('live recalculation', () => {
     expect(today(after).chunks[0].scheduledStart).toEqual(next.scheduledStart);
   });
 
+  it('continues from now, not the usual start, once the student has worked today', () => {
+    // Started early: a chunk finished at 14:00, two hours before the 16:00 start.
+    const early = new Date(NOW.getTime() - 2 * 60 * 60_000);
+    const endedAt = new Date(early.getTime() + first.plannedMinutes * 60_000);
+    const after = plan(evening(), roomy, noHistory, endedAt, [completedFrom(first, endedAt)]);
+    expect(today(after).chunks[0].scheduledStart.getTime()).toBeLessThan(NOW.getTime());
+  });
+
   it('owes no break once the student has already taken one', () => {
     const endedAt = first.scheduledEnd;
     const now = new Date(endedAt.getTime() + 10 * 60_000);

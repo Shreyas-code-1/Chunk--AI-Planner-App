@@ -134,6 +134,22 @@ function titleFor(assignment: Assignment, index: number, count: number): string 
   return `${assignment.title} · Part ${index} of ${count}`;
 }
 
+/**
+ * What's left of a started task. If what's been done matches the start of the
+ * original ramp — the usual case, chunks finished as planned — the rest keeps
+ * its planned sizes, so finishing Part 1 never reshapes Parts 2 and 3.
+ * Otherwise the remainder is ramped afresh from the base: no second dread-sized
+ * opener (v3 Q9).
+ */
+function remainderOf(planned: number[], used: number, left: number, base: number): number[] {
+  let sum = 0;
+  for (let k = 0; k < planned.length; k++) {
+    if (sum === used) return planned.slice(k);
+    sum += planned[k];
+  }
+  return ramp({ total: left, base, firstTarget: base, firstFloor: MIN_CHUNK_MINUTES });
+}
+
 /** What of a task is already finished or on the timer. */
 export type Progress = {
   /** Planned minutes of its completions — planned, not actual: a 25-minute chunk done in 22 did 25 minutes' worth. */
@@ -167,15 +183,13 @@ export function split(
   const left = minutes - progress.doneMinutes - (progress.runningMinutes ?? 0);
   if (left <= 0) return [];
 
-  const lengths =
-    before === 0
-      ? ramp({
-          total: left,
-          base,
-          firstTarget: base * dreadFactor,
-          firstFloor: dread === 'dreading' ? MIN_DREADED_FIRST_CHUNK_MINUTES : MIN_CHUNK_MINUTES,
-        })
-      : ramp({ total: left, base, firstTarget: base, firstFloor: MIN_CHUNK_MINUTES });
+  const opening = ramp({
+    total: minutes,
+    base,
+    firstTarget: base * dreadFactor,
+    firstFloor: dread === 'dreading' ? MIN_DREADED_FIRST_CHUNK_MINUTES : MIN_CHUNK_MINUTES,
+  });
+  const lengths = before === 0 ? opening : remainderOf(opening, minutes - left, left, base);
 
   const count = before + lengths.length;
   return lengths.map((plannedMinutes, i) => ({

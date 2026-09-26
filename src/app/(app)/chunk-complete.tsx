@@ -28,6 +28,8 @@ import { Button } from '../../components/ui';
 import { mascot } from '../../components/mascot';
 import { SHORT_BREAK_MINUTES } from '../../planner/constants';
 import { usePlan } from '../../features/work/usePlan';
+import { useWork } from '../../features/work/store';
+import { timeLabel } from '../../lib/clock';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 export default function ChunkComplete() {
@@ -38,6 +40,8 @@ export default function ChunkComplete() {
   const index = Number(params.index ?? 0);
 
   const { doneToday, plannedToday, allTimeChunks, upNext } = usePlan();
+  // The chunk just finished; its end is "now" for the done line.
+  const justFinished = useWork((state) => state.completions[state.completions.length - 1]);
 
   // TODO(batch 6): a real streak spans days, which the memory store cannot.
   const streak = allTimeChunks > 0 ? 1 : 0;
@@ -54,7 +58,14 @@ export default function ChunkComplete() {
             <Text style={styles.headline}>
               {index > 0 ? `Chunk ${index} done!` : 'Chunk done!'}
             </Text>
-            <Text style={styles.sub}>That one is behind you. Take the win.</Text>
+            {/* v3 §8: when the next one starts, or that the evening is over. */}
+            <Text style={styles.sub}>
+              {upNext
+                ? `Next chunk at ${timeLabel(upNext.scheduledStart)}.`
+                : justFinished
+                  ? `You're done. It's ${timeLabel(justFinished.endedAt)}.`
+                  : 'That one is behind you. Take the win.'}
+            </Text>
           </View>
 
           <View style={[styles.card, shadows.hardEdge(6)]}>

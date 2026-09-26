@@ -30,6 +30,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OrangeGradient, ProgressRing } from '../../components/ui';
 import { useWork } from '../../features/work/store';
 import { FirstActionLine } from '../../features/work/FirstActionLine';
+import { usePlan } from '../../features/work/usePlan';
+import { timeLabel } from '../../lib/clock';
 import { Close, MoreVertical, MusicNote } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { haptic } from '../../lib/haptics';
@@ -60,6 +62,7 @@ export default function Focus() {
   const startChunk = useWork((state) => state.startChunk);
   const finishActive = useWork((state) => state.finishActive);
   const abandonActive = useWork((state) => state.abandonActive);
+  const { finishAtToday } = usePlan();
 
   // Re-opening the chunk that's already running picks up its snapshot.
   const snapshot = active?.assignmentId === params.assignment ? active : null;
@@ -150,6 +153,12 @@ export default function Focus() {
             <View style={styles.ringOf}>
               <Text style={styles.ringOfLabel}>{`of ${minutes || 0} min`}</Text>
             </View>
+            {/* The evening's end, small, under the countdown (v3 §8). */}
+            {finishAtToday ? (
+              <Text
+                style={styles.ringFinish}
+              >{`Done for today at ${timeLabel(finishAtToday)}`}</Text>
+            ) : null}
           </ProgressRing>
         </View>
 
@@ -284,6 +293,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
   },
   ringOfLabel: { fontFamily: fonts.body.black, fontSize: 11.5, color: colors.white },
+  // TODO(design): no frame draws this line; it borrows the header meta type.
+  ringFinish: {
+    marginTop: 8,
+    fontFamily: fonts.body.bold,
+    fontSize: 11.5,
+    color: 'rgba(255,255,255,0.85)',
+  },
 
   chunkCard: {
     marginTop: 22,

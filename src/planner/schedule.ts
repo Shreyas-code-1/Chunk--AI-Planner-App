@@ -165,10 +165,20 @@ function minutesInto(planDate: PlanDate, date: Date): number {
   return (date.getTime() - startOfPlanDay(planDate).getTime()) / 60_000;
 }
 
-/** Today starts from now if the usual start time has already passed. */
-function firstSlotMinutes(planDate: PlanDate, prefs: Prefs, now: Date): number {
+/**
+ * Today starts from now if the usual start time has already passed — or if
+ * the student has already been working today: someone mid-session at 2 PM
+ * isn't told to wait until their usual 4 PM.
+ */
+function firstSlotMinutes(
+  planDate: PlanDate,
+  prefs: Prefs,
+  now: Date,
+  workedToday: boolean,
+): number {
   if (planDate !== planDateOf(now, prefs.dayCutoffHour)) return prefs.availableStart;
-  return Math.max(prefs.availableStart, Math.floor(minutesInto(planDate, now)));
+  const nowMinutes = Math.floor(minutesInto(planDate, now));
+  return workedToday ? nowMinutes : Math.max(prefs.availableStart, nowMinutes);
 }
 
 /** Where the evening already stands: work since the last breaks, and the last chunk's end. */
@@ -307,7 +317,7 @@ export function scheduleDay(
   const start =
     running && active
       ? minutesInto(day.planDate, running.startedAt)
-      : firstSlotMinutes(day.planDate, prefs, now);
+      : firstSlotMinutes(day.planDate, prefs, now, (live.finishedToday ?? []).length > 0);
   const seam: Seam = isToday
     ? {
         ...seamOf(day.planDate, live.finishedToday ?? [], start),
