@@ -57,74 +57,102 @@ const dayOf = (chunks: PlacedChunk[]): BalancedDay => ({
 const clock = (d: Date) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
 const bed = (hour: number, minute = 0) => prefs({ bedtime: hour * 60 + minute });
 
-describe('scheduleDay — the spec example', () => {
-  // vocab 10 easy, math 25 hard, chem 20 medium, English 50 hard (2x25, due
-  // tomorrow), history 40 medium. Bedtime 10:30, start 4:00.
+describe('scheduleDay — an evening in order (v3 §5)', () => {
+  // Opener, then the due-tomorrow tier, then later work batched by mode, with
+  // the dreaded chem set second in the problems batch.
   const chunks = [
-    task('vocab', 'memorizing', 'fine', 10),
-    task('math', 'problems', 'dreading', 25),
-    task('chem', 'problems', 'meh', 20),
-    task('eng', 'writing', 'dreading', 25, {
-      index: 1,
-      dueAt: dueIn(1),
-      pinned: true,
-    }),
-    task('eng', 'writing', 'dreading', 25, {
-      index: 2,
-      dueAt: dueIn(1),
-      pinned: true,
-    }),
+    task('vocab', 'memorizing', 'fine', 15),
+    task('math', 'problems', 'meh', 20),
+    task('alg', 'problems', 'fine', 25),
+    task('chem', 'problems', 'dreading', 25),
+    task('eng', 'writing', 'meh', 35, { dueAt: dueIn(1), pinned: true }),
     task('hist', 'writing', 'meh', 40),
   ];
   const { day } = scheduleDay(dayOf(chunks), bed(22, 30), NOW);
 
-  it('orders warm-up, then problems, then writing, hardest first', () => {
+  it('orders opener, due tomorrow, then batches with the most-dreaded second', () => {
     expect(day.chunks.map((c) => c.assignmentId)).toEqual([
       'vocab',
+      'eng',
       'math',
       'chem',
-      'eng',
-      'eng',
+      'alg',
       'hist',
     ]);
-    expect(day.chunks.map((c) => clock(c.scheduledStart))).toEqual([
-      '16:00',
-      '16:10',
-      '16:40',
-      '17:05',
-      '17:35',
-      '18:15',
-    ]);
-  });
-
-  it('places the example breaks', () => {
-    expect(day.breaks.map((b) => [clock(b.start), b.minutes])).toEqual([
-      ['16:35', SHORT_BREAK_MINUTES], // inside the problems batch
-      ['17:00', SHORT_BREAK_MINUTES], // batch boundary
-      ['17:30', SHORT_BREAK_MINUTES], // ~25 min into the essay
-      ['18:00', LONG_BREAK_MINUTES], // after ~90 min of work
-    ]);
-  });
-
-  it('labels segments', () => {
     expect(day.chunks.map((c) => c.segment)).toEqual([
       'opener',
+      'writing',
       'problems',
       'problems',
+      'problems',
       'writing',
-      'writing',
-      'writing',
+    ]);
+  });
+
+  it('places breaks at tier and batch boundaries, inside long batches, and after ~90 min', () => {
+    expect(day.chunks.map((c) => clock(c.scheduledStart))).toEqual([
+      '16:00',
+      '16:15',
+      '16:55',
+      '17:20',
+      '18:00',
+      '18:30',
+    ]);
+    expect(day.breaks.map((b) => [clock(b.start), b.minutes])).toEqual([
+      ['16:50', SHORT_BREAK_MINUTES], // end of the due-tomorrow batch
+      ['17:15', SHORT_BREAK_MINUTES], // ~25 min into the problems batch
+      ['17:45', LONG_BREAK_MINUTES], // after ~90 min of work
+      ['18:25', SHORT_BREAK_MINUTES], // batch boundary
     ]);
   });
 });
 
 describe('scheduleDay — ordering', () => {
-  it('takes exactly one warm-up, the shortest under the threshold', () => {
+  it('puts the most-dreaded task second in its batch, not first or last', () => {
     const { day } = scheduleDay(
       dayOf([
-        task('a', 'memorizing', 'fine', 10),
-        task('b', 'memorizing', 'fine', 5),
-        task('c', 'reading', 'dreading', 30),
+        task('a', 'reading', 'dreading', 20),
+        task('b', 'reading', 'fine', 25),
+        task('c', 'reading', 'meh', 30),
+      ]),
+      bed(23),
+      NOW,
+    );
+    const reading = day.chunks.filter((c) => c.segment === 'reading').map((c) => c.assignmentId);
+    // Shortest-first would put the dreaded one first.
+    expect(reading).toEqual(['b', 'a', 'c']);
+  });
+
+  it('leaves a batch alone when everything in it is dreaded equally', () => {
+    const { day } = scheduleDay(
+      dayOf([task('a', 'reading', 'meh', 30), task('b', 'reading', 'meh', 25)]),
+      bed(23),
+      NOW,
+    );
+    expect(day.chunks.map((c) => c.assignmentId)).toEqual(['b', 'a']);
+  });
+
+  it("keeps an assignment's chunks together and in order", () => {
+    const { day } = scheduleDay(
+      dayOf([
+        task('a', 'reading', 'dreading', 30, { index: 2 }),
+        task('b', 'reading', 'fine', 25),
+        task('a', 'reading', 'dreading', 25, { index: 1 }),
+      ]),
+      bed(23),
+      NOW,
+    );
+    expect(day.chunks.map((c) => `${c.assignmentId}${c.index}`)).toEqual(['b1', 'a1', 'a2']);
+  });
+
+  it('takes exactly one opener: a first chunk of 20 min or less, lowest dread', () => {
+    const { day } = scheduleDay(
+      dayOf([
+        task('a', 'memorizing', 'meh', 10),
+        task('b', 'memorizing', 'fine', 20),
+        task('c', 'reading', 'fine', 15, { index: 2 }), // not a first chunk
+        task('d', 'reading', 'dreading', 30),
+        task('e', 'memorizing', 'dreading', 10), // dreaded: never the quick win
       ]),
       bed(23),
       NOW,
@@ -132,22 +160,35 @@ describe('scheduleDay — ordering', () => {
     expect(day.chunks.filter((c) => c.segment === 'opener').map((c) => c.assignmentId)).toEqual([
       'b',
     ]);
+    expect(day.chunks[0].assignmentId).toBe('b');
   });
 
-  it('skips the warm-up when nothing is short enough', () => {
+  it('skips the opener when nothing is short enough', () => {
     const { day } = scheduleDay(dayOf([task('a', 'reading', 'fine', 30)]), bed(23), NOW);
     expect(day.chunks.some((c) => c.segment === 'opener')).toBe(false);
   });
 
-  it('puts due-today work first and skips the warm-up', () => {
+  it('puts work due tomorrow before later work, and never batches across tiers', () => {
+    const { day } = scheduleDay(
+      dayOf([
+        task('later', 'problems', 'meh', 25),
+        task('tmrw', 'writing', 'meh', 30, { dueAt: dueIn(1), pinned: true }),
+        task('later2', 'writing', 'meh', 30),
+      ]),
+      bed(23),
+      NOW,
+    );
+    // Writing isn't merged across the tier line: tomorrow's essay, then the rest.
+    expect(day.chunks.map((c) => c.assignmentId)).toEqual(['tmrw', 'later', 'later2']);
+  });
+
+  it('puts due-today work first and skips the opener, but keeps breaks', () => {
     const { day } = scheduleDay(
       dayOf([
         task('vocab', 'memorizing', 'fine', 10),
         task('hard', 'problems', 'dreading', 30),
-        task('urgent', 'reading', 'fine', 20, {
-          dueAt: dueIn(0, 23),
-          pinned: true,
-        }),
+        task('urgent', 'reading', 'fine', 40, { dueAt: dueIn(0, 23), pinned: true }),
+        task('urgent', 'reading', 'fine', 45, { index: 2, dueAt: dueIn(0, 23), pinned: true }),
       ]),
       bed(23),
       NOW,
@@ -155,6 +196,9 @@ describe('scheduleDay — ordering', () => {
     expect(day.chunks[0].assignmentId).toBe('urgent');
     expect(day.chunks[0].segment).toBe('dueToday');
     expect(day.chunks.some((c) => c.segment === 'opener')).toBe(false);
+    expect(day.breaks[0].start.getTime()).toBe(
+      day.chunks[1].scheduledStart.getTime() - SHORT_BREAK_MINUTES * 60_000,
+    );
   });
 
   it('asks which is submitted first when due-today deadlines tie', () => {
@@ -236,7 +280,9 @@ describe('scheduleDay — bedtime', () => {
     const ids = result.day.chunks.map((c) => c.assignmentId);
     expect(ids.slice(-2)).toEqual(['hist', 'hist']);
     const kept = result.day.chunks.filter((c) => c.assignmentId !== 'hist');
-    const end = Math.max(...kept.map((c) => c.scheduledStart.getTime() / 60_000 + c.plannedMinutes));
+    const end = Math.max(
+      ...kept.map((c) => c.scheduledStart.getTime() / 60_000 + c.plannedMinutes),
+    );
     expect(end - NOW.getTime() / 60_000).toBeLessThanOrEqual(90 + BEDTIME_BEND_MAX_MINUTES);
   });
 

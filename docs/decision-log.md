@@ -1002,3 +1002,22 @@ Consequences worth knowing:
   problem set is 15 / 20 / 25, not 20 / 40.
 - A task kept as one chunk is its real size, even under 12 (a 5-minute task
   stays 5). The 12 / 10 floors apply to split tasks.
+
+## 2026-09-26 — Engine v3 step 2: ordering
+
+Built in `orderDay` (`src/planner/schedule.ts`):
+- **Tiers:** due today → due tomorrow → later. Batching by mode happens inside
+  the tomorrow and later tiers and never merges across them, so tomorrow's
+  essay and Friday's essay are separate writing batches with a break between.
+  "Due tomorrow, overriding batching" is read as: the tier comes first
+  regardless of mode; within the tier, batching still applies.
+- **Batch order within a tier:** soonest deadline in the batch, ties
+  problems → writing → reading → memorizing (Q6).
+- **Within a batch:** earliest due, then shortest; then the most-dreaded task
+  moves to second (Q7). No move when everyone's dread is equal.
+- **Opener:** a task's first chunk, ≤ 20 min, lowest dread (Q5). **Added:** a
+  task marked *dreading* is never the opener, however short — the opener is
+  the quick win, and "chosen for low dread" excludes the high end.
+
+**Superseded:** v2's "hardest batch first, hardest task first" (it ran on
+difficulty, which no longer exists) and the warm-up (shortest chunk ≤ 10 min).

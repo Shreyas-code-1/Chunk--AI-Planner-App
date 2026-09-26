@@ -1,9 +1,10 @@
 /**
- * Lay one day's chunks onto the clock (engine v2 §2, §4).
+ * Lay one day's chunks onto the clock (engine v3 §5–§6).
  *
- * Order: anything due today first, then one warm-up, then batches of the same
- * mode, hardest batch first. Breaks go at batch boundaries, every ~25 minutes
- * inside a long batch, and a long one after ~90 minutes of work. Nothing runs
+ * Order: anything due today first; else one opener; then work due tomorrow,
+ * then later work, each tier batched by mode with the most-dreaded task second
+ * in its batch. Breaks go at batch boundaries, every ~25 minutes inside a long
+ * batch, and a long one after ~90 minutes of work. Nothing runs
  * past bedtime minus the margin: movable work is handed back to be deferred,
  * and must-do-tonight work may bend past bedtime once, with the overrun
  * reported.
@@ -42,7 +43,7 @@ export type DayResult = {
 const sum = (chunks: PlacedChunk[]) => chunks.reduce((t, c) => t + c.plannedMinutes, 0);
 const dueDayOf = (chunk: PlacedChunk, prefs: Prefs) => planDateOf(chunk.dueAt, prefs.dayCutoffHour);
 
-/** Due today, or on a day already past. Batching and the warm-up don't apply. */
+/** Due today, or on a day already past. Batching and the opener don't apply. */
 function isDueToday(chunk: PlacedChunk, planDate: PlanDate, prefs: Prefs): boolean {
   return daysBetween(planDate, dueDayOf(chunk, prefs)) <= 0;
 }
@@ -58,51 +59,86 @@ function byAssignmentThenIndex(a: PlacedChunk, b: PlacedChunk): number {
   return a.index - b.index;
 }
 
-/** Hardest task first; then the sooner deadline. */
-function hardestFirst(a: PlacedChunk, b: PlacedChunk): number {
-  return (
-    DREAD_RANK[b.dread] - DREAD_RANK[a.dread] ||
-    a.dueAt.getTime() - b.dueAt.getTime() ||
-    byAssignmentThenIndex(a, b)
+/** Tasks in a batch, earliest due then shortest (v3 §5f), chunks kept together. */
+function tasksInOrder(chunks: PlacedChunk[]): PlacedChunk[][] {
+  const tasks = new Map<string, PlacedChunk[]>();
+  for (const chunk of [...chunks].sort(byAssignmentThenIndex))
+    tasks.set(chunk.assignmentId, [...(tasks.get(chunk.assignmentId) ?? []), chunk]);
+  return [...tasks.values()].sort(
+    (a, b) =>
+      a[0].dueAt.getTime() - b[0].dueAt.getTime() ||
+      sum(a) - sum(b) ||
+      byAssignmentThenIndex(a[0], b[0]),
   );
 }
 
-/** Sum of difficulty over the batch's distinct tasks. */
-function batchScore(chunks: PlacedChunk[]): number {
-  const seen = new Map<string, number>();
-  for (const chunk of chunks) seen.set(chunk.assignmentId, DREAD_RANK[chunk.dread]);
-  return [...seen.values()].reduce((t, v) => t + v, 0);
+/**
+ * The most-dreaded task goes second: first meets the most resistance, last is
+ * what gets dropped when the evening runs long (v3 §5e). Only when dread
+ * actually differs within the batch.
+ */
+function dreadSecond(tasks: PlacedChunk[][]): PlacedChunk[][] {
+  if (tasks.length < 2) return tasks;
+  const ranks = tasks.map((t) => DREAD_RANK[t[0].dread]);
+  const top = Math.max(...ranks);
+  if (ranks.every((r) => r === top)) return tasks;
+  const most = ranks.indexOf(top);
+  const rest = tasks.filter((_, i) => i !== most);
+  return [rest[0], tasks[most], ...rest.slice(1)];
+}
+
+/** Plan-day tiers: due today (or overdue), due tomorrow, later (v3 §5a–c). */
+function tierOf(chunk: PlacedChunk, planDate: PlanDate, prefs: Prefs): 0 | 1 | 2 {
+  const days = daysBetween(planDate, dueDayOf(chunk, prefs));
+  return days <= 0 ? 0 : days === 1 ? 1 : 2;
+}
+
+/**
+ * The opener: one first chunk of 20 minutes or less, not dreaded, lowest dread, then
+ * shortest, then soonest due (v3 Q5). Only an assignment's first chunk
+ * qualifies — it is the one sized as a commitment.
+ */
+function pickOpener(chunks: PlacedChunk[]): PlacedChunk | null {
+  // A dreaded task is never the quick win, however short.
+  const candidates = chunks.filter(
+    (c) => c.index === 1 && c.plannedMinutes <= OPENER_MAX_MINUTES && c.dread !== 'dreading',
+  );
+  if (candidates.length === 0) return null;
+  return [...candidates].sort(
+    (a, b) =>
+      DREAD_RANK[a.dread] - DREAD_RANK[b.dread] ||
+      a.plannedMinutes - b.plannedMinutes ||
+      a.dueAt.getTime() - b.dueAt.getTime() ||
+      byAssignmentThenIndex(a, b),
+  )[0];
 }
 
 export function orderDay(chunks: PlacedChunk[], planDate: PlanDate, prefs: Prefs): Segment[] {
-  const dueToday = chunks
-    .filter((c) => isDueToday(c, planDate, prefs))
-    .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime() || byAssignmentThenIndex(a, b));
-  let rest = chunks.filter((c) => !isDueToday(c, planDate, prefs));
+  const tier = (n: number) => chunks.filter((c) => tierOf(c, planDate, prefs) === n);
+  const dueToday = tier(0).sort(
+    (a, b) => a.dueAt.getTime() - b.dueAt.getTime() || byAssignmentThenIndex(a, b),
+  );
 
   const segments: Segment[] = [];
   if (dueToday.length > 0) segments.push({ kind: 'dueToday', chunks: dueToday });
 
-  // Exactly one warm-up, and none at all when something is due today.
-  if (dueToday.length === 0) {
-    const candidates = rest.filter((c) => c.plannedMinutes <= OPENER_MAX_MINUTES);
-    if (candidates.length > 0) {
-      const warmup = candidates.reduce((a, b) => (b.plannedMinutes < a.plannedMinutes ? b : a));
-      segments.push({ kind: 'opener', chunks: [warmup] });
-      rest = rest.filter((c) => c !== warmup);
-    }
-  }
+  // Exactly one opener, and none at all when something is due today.
+  const opener = dueToday.length === 0 ? pickOpener(chunks) : null;
+  if (opener) segments.push({ kind: 'opener', chunks: [opener] });
 
-  const batches = new Map<Mode, PlacedChunk[]>();
-  for (const chunk of rest) batches.set(chunk.mode, [...(batches.get(chunk.mode) ?? []), chunk]);
+  // Due tomorrow, then later. Batches by mode inside a tier, never across one.
+  for (const n of [1, 2]) {
+    const batches = new Map<Mode, PlacedChunk[]>();
+    for (const chunk of tier(n).filter((c) => c !== opener))
+      batches.set(chunk.mode, [...(batches.get(chunk.mode) ?? []), chunk]);
 
-  const ordered = [...batches.entries()].sort(
-    ([modeA, a], [modeB, b]) =>
-      batchScore(b) - batchScore(a) ||
-      MODE_TIE_ORDER.indexOf(modeA) - MODE_TIE_ORDER.indexOf(modeB),
-  );
-  for (const [mode, batch] of ordered) {
-    segments.push({ kind: mode, chunks: [...batch].sort(hardestFirst) });
+    const soonest = (batch: PlacedChunk[]) => Math.min(...batch.map((c) => c.dueAt.getTime()));
+    const ordered = [...batches.entries()].sort(
+      ([modeA, a], [modeB, b]) =>
+        soonest(a) - soonest(b) || MODE_TIE_ORDER.indexOf(modeA) - MODE_TIE_ORDER.indexOf(modeB),
+    );
+    for (const [mode, batch] of ordered)
+      segments.push({ kind: mode, chunks: dreadSecond(tasksInOrder(batch)).flat() });
   }
   return segments;
 }
@@ -148,7 +184,7 @@ function layout(segments: Segment[], start: number): Layout {
     if (sinceLong >= LONG_BREAK_AFTER - BREAK_SNAP_MINUTES) {
       minutes = LONG_BREAK_MINUTES;
     } else if (lastInSegment) {
-      // No break straight after the warm-up — it is the run-up, not a block.
+      // No break straight after the opener — it is the run-up, not a block.
       if (segment.kind !== 'opener') minutes = SHORT_BREAK_MINUTES;
     } else if (
       sum(segment.chunks) > IN_BATCH_BREAK_MIN_BATCH &&
@@ -226,7 +262,9 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
       letGo,
     };
 
-    const suggested = everything.filter((c) => letGo.includes(c.assignmentId)).sort(hardestFirst);
+    const suggested = everything
+      .filter((c) => letGo.includes(c.assignmentId))
+      .sort(byAssignmentThenIndex);
     chunks = everything;
     segments = [
       ...orderDay(
