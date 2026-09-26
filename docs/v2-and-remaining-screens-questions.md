@@ -59,3 +59,14 @@ Each item below gives the provisional choice currently in the code.
 13. **5.1's "chunks done".** Read as this week's count.
 14. **5.1's "finish rate".** Chunks finished out of the chunks whose start time
     has passed.
+
+## Engine v3 — open (2026-09-26)
+15. **Small dreaded tasks fragment.** A 30-min dreaded worksheet ramps to
+    10 + 20, and the spread can then put the two parts on different days
+    ("Chem worksheet · Part 1 of 2 · 10m" tonight, the rest tomorrow). It
+    follows the rules as written but reads badly. *Proposal:* a task stays one
+    chunk if it is no longer than the ramp's top (1.15 × base: memorizing 20,
+    problems 30, reading 45, writing 50). *Now:* unchanged, per the spec.
+16. **The Focus timer doesn't stop at the midpoint pause.** `pauseAt` is
+    computed and shown on the path; 3.3 has no frame for the pause itself.
+17. **Migration 0002 needs running by hand** from the Supabase dashboard.
