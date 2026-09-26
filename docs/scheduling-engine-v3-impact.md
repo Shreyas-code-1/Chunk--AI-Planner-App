@@ -36,7 +36,7 @@ The app still runs on the memory store (no sign-in), so **there is no real user 
 1. `create type dread as enum ('fine','meh','dreading')`; `create type mode as enum (...)`.
 2. `assignments`: add `dread dread`, `mode mode not null default 'reading'`, `first_action text`. Mode and first action were added to the planner in v2 but **never reached the schema** — this closes that gap.
 3. `update assignments set dread = case difficulty when 'easy' then 'fine' when 'medium' then 'meh' when 'hard' then 'dreading' end;` then drop `difficulty` and its enum.
-4. `chunks`: add `scheduled_end`, `first_action`, `pause_at`. Lower the planned-minutes floor check from 5 is fine as is; cap stays 55.
+4. `chunks`: add `scheduled_end`, `first_action`, `pause_at`. The existing 5–55 minutes check already allows the new sizes.
 5. `chunk_completions` (append-only): add `started_at`, `mode`, `dread`, `chunk_idx`. Planned and actual minutes already exist.
 6. New append-only `chunk_outcomes` (or a `status` on completions) to record **skipped / never started** — §9's "if they never start it" can't be learned from completions alone.
 7. `preferences`: add `bedtime smallint` (open item 6 in the v2 questions file still has no screen). `chunk_length` stays until Q1 is answered.
