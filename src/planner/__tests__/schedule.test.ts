@@ -12,7 +12,7 @@ import {
 import { scheduleDay } from '../schedule';
 import { toDateKey } from '../../lib/planDate';
 import type { BalancedDay, PlacedChunk } from '../balance';
-import type { Difficulty, Mode } from '../types';
+import type { Dread, Mode } from '../types';
 import { NOW, dueIn, prefs } from './fixtures';
 
 let seq = 0;
@@ -26,7 +26,7 @@ const placed = (overrides: Partial<PlacedChunk> = {}): PlacedChunk => ({
   dueAt: dueIn(5),
   pinned: false,
   mode: 'reading',
-  difficulty: 'medium',
+  dread: 'meh',
   firstAction: 'Read the first page',
   ...overrides,
 });
@@ -34,14 +34,14 @@ const placed = (overrides: Partial<PlacedChunk> = {}): PlacedChunk => ({
 const task = (
   id: string,
   mode: Mode,
-  difficulty: Difficulty,
+  dread: Dread,
   minutes: number,
   extra: Partial<PlacedChunk> = {},
 ) =>
   placed({
     assignmentId: id,
     mode,
-    difficulty,
+    dread,
     plannedMinutes: minutes,
     ...extra,
   });
@@ -61,20 +61,20 @@ describe('scheduleDay — the spec example', () => {
   // vocab 10 easy, math 25 hard, chem 20 medium, English 50 hard (2x25, due
   // tomorrow), history 40 medium. Bedtime 10:30, start 4:00.
   const chunks = [
-    task('vocab', 'memorizing', 'easy', 10),
-    task('math', 'problems', 'hard', 25),
-    task('chem', 'problems', 'medium', 20),
-    task('eng', 'writing', 'hard', 25, {
+    task('vocab', 'memorizing', 'fine', 10),
+    task('math', 'problems', 'dreading', 25),
+    task('chem', 'problems', 'meh', 20),
+    task('eng', 'writing', 'dreading', 25, {
       index: 1,
       dueAt: dueIn(1),
       pinned: true,
     }),
-    task('eng', 'writing', 'hard', 25, {
+    task('eng', 'writing', 'dreading', 25, {
       index: 2,
       dueAt: dueIn(1),
       pinned: true,
     }),
-    task('hist', 'writing', 'medium', 40),
+    task('hist', 'writing', 'meh', 40),
   ];
   const { day } = scheduleDay(dayOf(chunks), bed(22, 30), NOW);
 
@@ -108,7 +108,7 @@ describe('scheduleDay — the spec example', () => {
 
   it('labels segments', () => {
     expect(day.chunks.map((c) => c.segment)).toEqual([
-      'warmup',
+      'opener',
       'problems',
       'problems',
       'writing',
@@ -122,29 +122,29 @@ describe('scheduleDay — ordering', () => {
   it('takes exactly one warm-up, the shortest under the threshold', () => {
     const { day } = scheduleDay(
       dayOf([
-        task('a', 'memorizing', 'easy', 10),
-        task('b', 'memorizing', 'easy', 5),
-        task('c', 'reading', 'hard', 30),
+        task('a', 'memorizing', 'fine', 10),
+        task('b', 'memorizing', 'fine', 5),
+        task('c', 'reading', 'dreading', 30),
       ]),
       bed(23),
       NOW,
     );
-    expect(day.chunks.filter((c) => c.segment === 'warmup').map((c) => c.assignmentId)).toEqual([
+    expect(day.chunks.filter((c) => c.segment === 'opener').map((c) => c.assignmentId)).toEqual([
       'b',
     ]);
   });
 
   it('skips the warm-up when nothing is short enough', () => {
-    const { day } = scheduleDay(dayOf([task('a', 'reading', 'easy', 30)]), bed(23), NOW);
-    expect(day.chunks.some((c) => c.segment === 'warmup')).toBe(false);
+    const { day } = scheduleDay(dayOf([task('a', 'reading', 'fine', 30)]), bed(23), NOW);
+    expect(day.chunks.some((c) => c.segment === 'opener')).toBe(false);
   });
 
   it('puts due-today work first and skips the warm-up', () => {
     const { day } = scheduleDay(
       dayOf([
-        task('vocab', 'memorizing', 'easy', 10),
-        task('hard', 'problems', 'hard', 30),
-        task('urgent', 'reading', 'easy', 20, {
+        task('vocab', 'memorizing', 'fine', 10),
+        task('hard', 'problems', 'dreading', 30),
+        task('urgent', 'reading', 'fine', 20, {
           dueAt: dueIn(0, 23),
           pinned: true,
         }),
@@ -154,15 +154,15 @@ describe('scheduleDay — ordering', () => {
     );
     expect(day.chunks[0].assignmentId).toBe('urgent');
     expect(day.chunks[0].segment).toBe('dueToday');
-    expect(day.chunks.some((c) => c.segment === 'warmup')).toBe(false);
+    expect(day.chunks.some((c) => c.segment === 'opener')).toBe(false);
   });
 
   it('asks which is submitted first when due-today deadlines tie', () => {
     const due = dueIn(0, 23);
     const result = scheduleDay(
       dayOf([
-        task('x', 'reading', 'easy', 20, { dueAt: due, pinned: true }),
-        task('y', 'writing', 'easy', 20, { dueAt: due, pinned: true }),
+        task('x', 'reading', 'fine', 20, { dueAt: due, pinned: true }),
+        task('y', 'writing', 'fine', 20, { dueAt: due, pinned: true }),
       ]),
       bed(23),
       NOW,
@@ -176,10 +176,10 @@ describe('scheduleDay — bedtime', () => {
     // 16:00 to 19:30 cutoff (bed 20:00) is 210 min; minus 15% leaves ~178.
     const result = scheduleDay(
       dayOf([
-        task('soon', 'reading', 'hard', 50, { dueAt: dueIn(2) }),
-        task('mid', 'reading', 'hard', 50, { dueAt: dueIn(4) }),
-        task('late', 'reading', 'hard', 50, { dueAt: dueIn(9) }),
-        task('later', 'reading', 'hard', 50, { dueAt: dueIn(10) }),
+        task('soon', 'reading', 'dreading', 50, { dueAt: dueIn(2) }),
+        task('mid', 'reading', 'dreading', 50, { dueAt: dueIn(4) }),
+        task('late', 'reading', 'dreading', 50, { dueAt: dueIn(9) }),
+        task('later', 'reading', 'dreading', 50, { dueAt: dueIn(10) }),
       ]),
       bed(20),
       NOW,
@@ -191,9 +191,9 @@ describe('scheduleDay — bedtime', () => {
   it('bends past bedtime for must-do-tonight work and reports it', () => {
     const result = scheduleDay(
       dayOf([
-        task('a', 'writing', 'hard', 55, { dueAt: dueIn(0, 23), pinned: true }),
-        task('b', 'writing', 'hard', 55, { dueAt: dueIn(0, 23), pinned: true }),
-        task('c', 'writing', 'hard', 55, { dueAt: dueIn(0, 23), pinned: true }),
+        task('a', 'writing', 'dreading', 55, { dueAt: dueIn(0, 23), pinned: true }),
+        task('b', 'writing', 'dreading', 55, { dueAt: dueIn(0, 23), pinned: true }),
+        task('c', 'writing', 'dreading', 55, { dueAt: dueIn(0, 23), pinned: true }),
       ]),
       bed(18, 30),
       NOW,
@@ -210,19 +210,19 @@ describe('scheduleDay — bedtime', () => {
   it('suggests what to let go when must-do work runs past the bend', () => {
     const result = scheduleDay(
       dayOf([
-        task('math', 'problems', 'hard', 50, {
+        task('math', 'problems', 'dreading', 50, {
           dueAt: dueIn(0, 23),
           pinned: true,
         }),
-        task('essay', 'writing', 'hard', 55, {
+        task('essay', 'writing', 'dreading', 55, {
           dueAt: dueIn(0, 23),
           pinned: true,
         }),
-        task('hist', 'reading', 'medium', 40, {
+        task('hist', 'reading', 'meh', 40, {
           dueAt: dueIn(0, 23),
           pinned: true,
         }),
-        task('hist', 'reading', 'medium', 40, {
+        task('hist', 'reading', 'meh', 40, {
           index: 2,
           dueAt: dueIn(0, 23),
           pinned: true,
@@ -242,7 +242,7 @@ describe('scheduleDay — bedtime', () => {
 
   it('never grows a chunk past the cap', () => {
     const { day } = scheduleDay(
-      dayOf([task('a', 'writing', 'hard', 55, { dueAt: dueIn(0, 23), pinned: true })]),
+      dayOf([task('a', 'writing', 'dreading', 55, { dueAt: dueIn(0, 23), pinned: true })]),
       bed(17),
       NOW,
     );

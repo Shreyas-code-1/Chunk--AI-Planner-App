@@ -5,7 +5,8 @@
  * React, no Supabase. Everything it needs arrives as arguments.
  */
 
-export type Difficulty = 'easy' | 'medium' | 'hard';
+/** How much the student doesn't want to do it (v3 §1). Sizes the first chunk and the order in a batch. */
+export type Dread = 'fine' | 'meh' | 'dreading';
 export type ChunkLengthPref = 'short' | 'mixed' | 'long';
 export type AssignmentSource = 'typed' | 'photo' | 'voice';
 
@@ -25,7 +26,8 @@ export type Assignment = {
   /** The only required field. Everything else has a fallback. */
   dueAt: Date;
   minutes: number | null;
-  difficulty: Difficulty | null;
+  /** Null means the student hasn't said; DEFAULT_DREAD applies. */
+  dread: Dread | null;
   source: AssignmentSource;
   mode: Mode;
   /** The student's own first step. Null means the mode's default (v2 §3). */
@@ -48,10 +50,10 @@ export type ScheduledChunk = SplitChunk & {
   classId: string | null;
   dueAt: Date;
   mode: Mode;
-  difficulty: Difficulty;
+  dread: Dread;
   firstAction: string;
-  /** Which part of the evening it sits in: the due-today block, the warm-up, or a mode batch. */
-  segment: 'dueToday' | 'warmup' | Mode;
+  /** Which part of the evening it sits in: the due-today block, the opener, or a mode batch. */
+  segment: 'dueToday' | 'opener' | Mode;
 };
 
 /** A scheduled break between chunks (v2 §4). */
@@ -82,11 +84,12 @@ export type Prefs = {
 };
 
 /**
- * Past behaviour, used only to fill in a missing duration. Returns null until
- * a class has enough completions to be worth trusting.
+ * Past behaviour, per mode (v3 §10: per-class calibration is superseded).
+ * Each returns null until there are enough samples to trust.
  */
 export type History = {
-  medianMinutes(classId: string | null): number | null;
+  /** Median total minutes of a task in this mode; fills a missing estimate. */
+  medianTaskMinutes(mode: Mode): number | null;
 };
 
 /** A plan day with its chunks and the load they add up to. */
@@ -137,7 +140,7 @@ export type DoneChunk = SplitChunk & {
   classId: string | null;
   dueAt: Date;
   mode: Mode;
-  difficulty: Difficulty;
+  dread: Dread;
   firstAction: string;
 };
 

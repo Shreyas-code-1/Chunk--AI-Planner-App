@@ -5,39 +5,28 @@
  * plan; one who fills in every field gets a better one. Nothing here blocks.
  */
 
-import { DEFAULT_ASSIGNMENT_MINUTES } from './constants';
-import type { Assignment, Difficulty, History } from './types';
+import { DEFAULT_ASSIGNMENT_MINUTES, DEFAULT_DREAD } from './constants';
+import type { Assignment, Dread, History } from './types';
 
 export type Resolved = {
   minutes: number;
-  difficulty: Difficulty;
+  dread: Dread;
   /** Where the duration came from, so the UI can be honest about a guess. */
-  minutesSource: 'student' | 'class-history' | 'default';
+  minutesSource: 'student' | 'mode-history' | 'default';
 };
-
-/** Difficulty inferred from size, when the student didn't say. */
-function difficultyFromMinutes(minutes: number): Difficulty {
-  if (minutes > 60) return 'hard';
-  if (minutes < 25) return 'easy';
-  return 'medium';
-}
 
 export function resolve(assignment: Assignment, history: History): Resolved {
   let minutes = assignment.minutes;
   let minutesSource: Resolved['minutesSource'] = 'student';
 
   if (minutes == null) {
-    minutes = history.medianMinutes(assignment.classId);
-    minutesSource = 'class-history';
+    minutes = history.medianTaskMinutes(assignment.mode);
+    minutesSource = 'mode-history';
   }
   if (minutes == null) {
     minutes = DEFAULT_ASSIGNMENT_MINUTES;
     minutesSource = 'default';
   }
 
-  return {
-    minutes,
-    minutesSource,
-    difficulty: assignment.difficulty ?? difficultyFromMinutes(minutes),
-  };
+  return { minutes, minutesSource, dread: assignment.dread ?? DEFAULT_DREAD };
 }

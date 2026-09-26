@@ -969,3 +969,36 @@ has no stored identity at all.**
 - In Supabase, `chunk_completions` already holds planned/actual minutes and is
   append-only; migration 0002 adds `started_at`, `mode`, `dread`. `chunks`
   stays disposable and is never the source of truth for what's done.
+
+## 2026-09-26 — Engine v3 step 1: settings block, dread, the ramp
+
+Built: `src/planner/constants.ts` holds every v3 number with its rule and
+whether it is evidence or a guess. `Difficulty` is gone from the planner, the
+store and 3.6 (which now asks "How much are you dreading this?" — Fine / Meh /
+Dreading, on the board's existing three-tile row). `split()` is the ramp.
+Missing estimates now fall back to the per-mode median, not per-class.
+`src/api/types.ts` still says `difficulty` — that row type changes with the
+migration in step 4.
+
+**Superseded:** `TARGET_MINUTES` (short 20 / mixed 30 / long 50),
+`DIFFICULTY_ADJUST`, `DIFFICULTY_SCORE`, `WARMUP_MAX_MINUTES` (10 →
+`OPENER_MAX_MINUTES` 20), `MIN_SAMPLES_FOR_MEDIAN` (3 → `LEARNING_MIN_SAMPLES` 5).
+
+How the ramp is built, since the spec's rules can't all hold at once:
+1. The first chunk is base × dread factor, rounded to 5, then floored.
+2. The rest is an even climb from the first chunk; if that overshoots the top
+   (1.15 × base), the last chunk aims at the top instead.
+3. If no climb fits behind the dread-sized first chunk, it shrinks by 5 at a
+   time down to its floor. Only if that fails too may the last chunk pass the
+   top (up to 55) — this happens in memorizing, where the first chunk and the
+   top are only 5 apart.
+
+Consequences worth knowing:
+- **Fine and meh open the same for problems (20) and memorizing (15)**:
+  25 × 0.85 = 21.25 and 25 × 0.75 = 18.75 both round to 20. Dreading still
+  opens shorter. Rounding to 5 is the cause; changing either factor or the
+  rounding is the fix if this matters.
+- For short tasks the ramp's shape beats the exact opener: a 60-minute meh
+  problem set is 15 / 20 / 25, not 20 / 40.
+- A task kept as one chunk is its real size, even under 12 (a 5-minute task
+  stays 5). The 12 / 10 floors apply to split tasks.

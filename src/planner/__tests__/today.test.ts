@@ -79,7 +79,7 @@ describe('finished chunks', () => {
     const scheduled = result.days.flatMap((d) => d.chunks);
 
     expect(result.done.map((c) => c.index)).toEqual([1]);
-    expect(scheduled.map((c) => c.index)).toEqual([2, 3, 4]);
+    expect(scheduled.map((c) => c.index)).toEqual([2, 3]); // reading 120 → 30, 45, 45
     // The rest starts now, not after a phantom copy of the finished chunk.
     expect(scheduled[0].scheduledStart.getHours()).toBe(17);
     expect(scheduled[0].scheduledStart.getMinutes()).toBe(0);

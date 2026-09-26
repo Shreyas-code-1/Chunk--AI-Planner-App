@@ -21,7 +21,7 @@ const placed = (overrides: Partial<PlacedChunk> = {}): PlacedChunk => ({
   planDate: day(0),
   classId: 'bio',
   mode: 'reading',
-  difficulty: 'medium',
+  dread: 'meh',
   firstAction: 'Read the first page',
   dueAt: dueIn(6),
   pinned: false,

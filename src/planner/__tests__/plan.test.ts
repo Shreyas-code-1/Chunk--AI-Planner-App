@@ -15,26 +15,26 @@ import { NOW, assignment, dueIn, historyFor, noHistory, prefs } from './fixtures
 const allChunks = (p: ReturnType<typeof plan>) => p.days.flatMap((day) => day.chunks);
 
 describe('plan', () => {
-  it('plans an assignment with a duration but no difficulty', () => {
-    const p = plan([assignment({ minutes: 90, difficulty: null })], prefs(), noHistory, NOW);
+  it('plans an assignment with a duration but no dread', () => {
+    const p = plan([assignment({ minutes: 90, dread: null })], prefs(), noHistory, NOW);
     expect(allChunks(p).length).toBeGreaterThan(0);
   });
 
-  it('plans an assignment with a difficulty but no duration', () => {
+  it('plans an assignment with a dread but no duration', () => {
     const p = plan(
-      [assignment({ minutes: null, difficulty: 'hard' })],
+      [assignment({ minutes: null, dread: 'dreading' })],
       prefs(),
-      historyFor('bio', 80),
+      historyFor('reading', 80),
       NOW,
     );
     expect(allChunks(p).length).toBeGreaterThan(0);
   });
 
-  it('plans an assignment with neither, using the class median', () => {
+  it('plans an assignment with neither, using the mode median', () => {
     const p = plan(
-      [assignment({ classId: 'eng', minutes: null, difficulty: null })],
+      [assignment({ classId: 'eng', minutes: null, dread: null })],
       prefs(),
-      historyFor('eng', 60),
+      historyFor('reading', 60),
       NOW,
     );
     expect(allChunks(p).length).toBeGreaterThan(0);

@@ -17,7 +17,7 @@ import { plan } from '../../planner';
 import { chunkKey } from '../../planner/types';
 import {
   DEFAULT_WEEKDAY_FACTORS,
-  MIN_SAMPLES_FOR_MEDIAN,
+  LEARNING_MIN_SAMPLES,
   WEEKDAY_FACTORS,
 } from '../../planner/constants';
 import type {
@@ -25,6 +25,7 @@ import type {
   DayPlan,
   Deferral,
   History,
+  Mode,
   Prefs,
   ScheduledChunk,
   UrgentTriage,
@@ -32,7 +33,7 @@ import type {
 } from '../../planner/types';
 import { DAY_CUTOFF_HOUR, planDateOf } from '../../lib/planDate';
 import { BEST_TIMES, useDraft } from '../onboarding/draft';
-import { toPlannerAssignments, useWork, type Completion } from './store';
+import { toPlannerAssignments, useWork, type Completion, type WorkAssignment } from './store';
 
 /** A chunk plus whether it is finished — the shape every screen wants. */
 export type PlannedChunk = ScheduledChunk & {
@@ -112,20 +113,23 @@ function prefsFrom(draft: ReturnType<typeof useDraft.getState>): Prefs {
   };
 }
 
-/** Median completed minutes per class, once there are enough to trust. */
-function historyFrom(completions: Completion[], classOf: Map<string, string | null>): History {
-  const byClass = new Map<string | null, number[]>();
-  for (const entry of completions) {
-    const className = classOf.get(entry.assignmentId) ?? null;
-    const list = byClass.get(className) ?? [];
-    list.push(entry.minutes);
-    byClass.set(className, list);
+/** Median task minutes per mode, once there are enough to trust (v3 §9, §10). */
+function historyFrom(completions: Completion[], assignments: WorkAssignment[]): History {
+  const perTask = new Map<string, number>();
+  for (const entry of completions)
+    perTask.set(entry.assignmentId, (perTask.get(entry.assignmentId) ?? 0) + entry.minutes);
+  const byMode = new Map<Mode, number[]>();
+  // Only finished tasks count; a half-done one would drag the median down.
+  for (const task of assignments) {
+    const minutes = perTask.get(task.id);
+    if (minutes == null || (task.minutes != null && minutes < task.minutes)) continue;
+    byMode.set(task.mode, [...(byMode.get(task.mode) ?? []), minutes]);
   }
 
   return {
-    medianMinutes(classId) {
-      const list = byClass.get(classId);
-      if (!list || list.length < MIN_SAMPLES_FOR_MEDIAN) return null;
+    medianTaskMinutes(mode) {
+      const list = byMode.get(mode);
+      if (!list || list.length < LEARNING_MIN_SAMPLES) return null;
       const sorted = [...list].sort((a, b) => a - b);
       const middle = Math.floor(sorted.length / 2);
       return sorted.length % 2 === 0
@@ -147,13 +151,12 @@ export function usePlan(now: Date = new Date()): PlanView {
   const bucket = Math.floor(now.getTime() / 300_000);
 
   return useMemo(() => {
-    const classOf = new Map(assignments.map((entry) => [entry.id, entry.className]));
     const finished = new Set(completions.map((entry) => entry.chunkKey));
 
     const result = plan(
       toPlannerAssignments(assignments),
       prefsFrom(draft),
-      historyFrom(completions, classOf),
+      historyFrom(completions, assignments),
       now,
       finished,
     );

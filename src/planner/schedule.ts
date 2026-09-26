@@ -15,14 +15,14 @@ import {
   BREAK_SNAP_MINUTES,
   BUFFER_FRACTION,
   DEFAULT_BEDTIME,
-  DIFFICULTY_SCORE,
+  DREAD_RANK,
   IN_BATCH_BREAK_EVERY,
   IN_BATCH_BREAK_MIN_BATCH,
   LONG_BREAK_AFTER,
   LONG_BREAK_MINUTES,
   MODE_TIE_ORDER,
   SHORT_BREAK_MINUTES,
-  WARMUP_MAX_MINUTES,
+  OPENER_MAX_MINUTES,
 } from './constants';
 import { addDays, daysBetween, planDateOf, startOfPlanDay, type PlanDate } from '../lib/planDate';
 import type { BalancedDay, PlacedChunk } from './balance';
@@ -61,7 +61,7 @@ function byAssignmentThenIndex(a: PlacedChunk, b: PlacedChunk): number {
 /** Hardest task first; then the sooner deadline. */
 function hardestFirst(a: PlacedChunk, b: PlacedChunk): number {
   return (
-    DIFFICULTY_SCORE[b.difficulty] - DIFFICULTY_SCORE[a.difficulty] ||
+    DREAD_RANK[b.dread] - DREAD_RANK[a.dread] ||
     a.dueAt.getTime() - b.dueAt.getTime() ||
     byAssignmentThenIndex(a, b)
   );
@@ -70,7 +70,7 @@ function hardestFirst(a: PlacedChunk, b: PlacedChunk): number {
 /** Sum of difficulty over the batch's distinct tasks. */
 function batchScore(chunks: PlacedChunk[]): number {
   const seen = new Map<string, number>();
-  for (const chunk of chunks) seen.set(chunk.assignmentId, DIFFICULTY_SCORE[chunk.difficulty]);
+  for (const chunk of chunks) seen.set(chunk.assignmentId, DREAD_RANK[chunk.dread]);
   return [...seen.values()].reduce((t, v) => t + v, 0);
 }
 
@@ -85,10 +85,10 @@ export function orderDay(chunks: PlacedChunk[], planDate: PlanDate, prefs: Prefs
 
   // Exactly one warm-up, and none at all when something is due today.
   if (dueToday.length === 0) {
-    const candidates = rest.filter((c) => c.plannedMinutes <= WARMUP_MAX_MINUTES);
+    const candidates = rest.filter((c) => c.plannedMinutes <= OPENER_MAX_MINUTES);
     if (candidates.length > 0) {
       const warmup = candidates.reduce((a, b) => (b.plannedMinutes < a.plannedMinutes ? b : a));
-      segments.push({ kind: 'warmup', chunks: [warmup] });
+      segments.push({ kind: 'opener', chunks: [warmup] });
       rest = rest.filter((c) => c !== warmup);
     }
   }
@@ -149,7 +149,7 @@ function layout(segments: Segment[], start: number): Layout {
       minutes = LONG_BREAK_MINUTES;
     } else if (lastInSegment) {
       // No break straight after the warm-up — it is the run-up, not a block.
-      if (segment.kind !== 'warmup') minutes = SHORT_BREAK_MINUTES;
+      if (segment.kind !== 'opener') minutes = SHORT_BREAK_MINUTES;
     } else if (
       sum(segment.chunks) > IN_BATCH_BREAK_MIN_BATCH &&
       sinceBreak >= IN_BATCH_BREAK_EVERY - BREAK_SNAP_MINUTES
@@ -254,7 +254,7 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
     classId: chunk.classId,
     dueAt: chunk.dueAt,
     mode: chunk.mode,
-    difficulty: chunk.difficulty,
+    dread: chunk.dread,
     firstAction: chunk.firstAction,
     segment,
     scheduledStart: at(slot),

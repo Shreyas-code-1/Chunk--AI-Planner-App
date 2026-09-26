@@ -7,7 +7,7 @@
  */
 
 import { DEFAULT_WEEKDAY_FACTORS } from '../constants';
-import type { Assignment, History, Prefs } from '../types';
+import type { Assignment, History, Mode, Prefs } from '../types';
 
 /** Monday 14 September 2026, 16:00 local. */
 export const NOW = new Date(2026, 8, 14, 16, 0, 0, 0);
@@ -40,7 +40,7 @@ export const assignment = (overrides: Partial<Assignment> = {}): Assignment => (
   title: 'Read chapter 4',
   dueAt: dueIn(5),
   minutes: 60,
-  difficulty: 'medium',
+  dread: 'meh',
   source: 'typed',
   mode: 'reading',
   firstAction: null,
@@ -48,11 +48,11 @@ export const assignment = (overrides: Partial<Assignment> = {}): Assignment => (
 });
 
 /** History that knows nothing, so resolve() falls through to the default. */
-export const noHistory: History = { medianMinutes: () => null };
+export const noHistory: History = { medianTaskMinutes: () => null };
 
-/** History with a median for one class. */
-export const historyFor = (classId: string, minutes: number): History => ({
-  medianMinutes: (id) => (id === classId ? minutes : null),
+/** History with a median for one mode. */
+export const historyFor = (mode: Mode, minutes: number): History => ({
+  medianTaskMinutes: (m) => (m === mode ? minutes : null),
 });
 
 /** Total planned minutes across every day of a plan. */

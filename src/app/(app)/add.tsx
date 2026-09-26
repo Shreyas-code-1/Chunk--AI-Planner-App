@@ -29,14 +29,17 @@ import { useWork } from '../../features/work/store';
 import { addDays, fromDateKey, planDateOf } from '../../lib/planDate';
 import { haptic } from '../../lib/haptics';
 import { inferMode, nextMode } from '../../planner/mode';
-import type { Difficulty, Mode } from '../../planner/types';
+import type { Dread, Mode } from '../../planner/types';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
-/** The board's Easy / Medium / Tough. The planner's third value is `hard`. */
-const DIFFICULTIES: readonly (readonly [Difficulty, string])[] = [
-  ['easy', 'Easy'],
-  ['medium', 'Medium'],
-  ['hard', 'Tough'],
+/**
+ * Engine v3 §1: ask about dread, never difficulty. Same three-tile row the
+ * board draws for Easy / Medium / Tough; only the words changed.
+ */
+const DREADS: readonly (readonly [Dread, string])[] = [
+  ['fine', 'Fine'],
+  ['meh', 'Meh'],
+  ['dreading', 'Dreading'],
 ];
 
 /** "2 hours" on the board. Offered as the set the chunker actually splits well. */
@@ -76,7 +79,7 @@ export default function AddAssignment() {
   const [chosenMode, setChosenMode] = useState<Mode | null>(null);
   const mode = chosenMode ?? inferMode(title, className);
   const [minutes, setMinutes] = useState(120);
-  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+  const [dread, setDread] = useState<Dread>('meh');
   const [notes, setNotes] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -97,7 +100,7 @@ export default function AddAssignment() {
       className,
       dueAt: dueDay,
       minutes,
-      difficulty,
+      dread,
       notes: notes.trim(),
       mode,
       firstAction: null,
@@ -209,10 +212,10 @@ export default function AddAssignment() {
           ))}
         </View>
 
-        <Text style={styles.label}>HOW HARD DOES IT FEEL?</Text>
-        <View style={styles.difficulties}>
-          {DIFFICULTIES.map(([value, label]) => {
-            const selected = difficulty === value;
+        <Text style={styles.label}>HOW MUCH ARE YOU DREADING THIS?</Text>
+        <View style={styles.dreads}>
+          {DREADS.map(([value, label]) => {
+            const selected = dread === value;
             return (
               <Pressable
                 key={value}
@@ -220,15 +223,15 @@ export default function AddAssignment() {
                 accessibilityState={{ checked: selected }}
                 onPress={() => {
                   haptic('select');
-                  setDifficulty(value);
+                  setDread(value);
                 }}
                 style={[
-                  styles.difficulty,
-                  selected ? styles.difficultyOn : styles.difficultyOff,
+                  styles.dread,
+                  selected ? styles.dreadOn : styles.dreadOff,
                   shadows.hardEdge(5),
                 ]}
               >
-                <Text style={[styles.difficultyLabel, selected && styles.difficultyLabelOn]}>
+                <Text style={[styles.dreadLabel, selected && styles.dreadLabelOn]}>
                   {label}
                 </Text>
               </Pressable>
@@ -356,12 +359,12 @@ const styles = StyleSheet.create({
   chipLabel: { fontFamily: fonts.body.extraBold, fontSize: 13, color: colors.muted },
   chipLabelOn: { fontFamily: fonts.body.black, color: colors.white },
 
-  difficulties: { marginTop: 9, flexDirection: 'row', gap: 10 },
-  difficulty: { flex: 1, borderRadius: radii.xl, padding: 14, alignItems: 'center' },
-  difficultyOff: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.cream },
-  difficultyOn: { backgroundColor: colors.amber, borderWidth: 2, borderColor: colors.orange },
-  difficultyLabel: { fontFamily: fonts.body.extraBold, fontSize: 13.5, color: colors.muted },
-  difficultyLabelOn: { fontFamily: fonts.body.black, color: colors.orangeDeep },
+  dreads: { marginTop: 9, flexDirection: 'row', gap: 10 },
+  dread: { flex: 1, borderRadius: radii.xl, padding: 14, alignItems: 'center' },
+  dreadOff: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.cream },
+  dreadOn: { backgroundColor: colors.amber, borderWidth: 2, borderColor: colors.orange },
+  dreadLabel: { fontFamily: fonts.body.extraBold, fontSize: 13.5, color: colors.muted },
+  dreadLabelOn: { fontFamily: fonts.body.black, color: colors.orangeDeep },
 
   problem: {
     marginTop: 14,

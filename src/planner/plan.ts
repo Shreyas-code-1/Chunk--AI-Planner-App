@@ -48,12 +48,12 @@ export function plan(
   for (const assignment of assignments) {
     const chunks = split(assignment, prefs, history);
     const dueDay = planDateOf(assignment.dueAt, prefs.dayCutoffHour);
-    const { difficulty } = resolve(assignment, history);
+    const { dread } = resolve(assignment, history);
     const extra = {
       classId: assignment.classId,
       dueAt: assignment.dueAt,
       mode: assignment.mode,
-      difficulty,
+      dread,
       firstAction: firstActionFor(assignment.mode, assignment.firstAction),
     };
 
@@ -73,7 +73,7 @@ export function plan(
         classId: assignment.classId,
         dueAt: assignment.dueAt,
         mode: assignment.mode,
-        difficulty,
+        dread,
         firstAction: firstActionFor(assignment.mode, assignment.firstAction),
         // Pinned only when there is genuinely nowhere else to put it: the
         // last allowed day (the day before it's due) is today or already past.

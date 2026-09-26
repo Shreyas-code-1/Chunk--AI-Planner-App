@@ -41,7 +41,7 @@ describe('plan — bedtime rolls work to the next day', () => {
     const result = plan(
       [
         assignment({ id: 'x', minutes: 100, dueAt: dueIn(1), mode: 'writing' }),
-        assignment({ id: 'y', minutes: 55, dueAt: dueIn(3), difficulty: 'hard' }),
+        assignment({ id: 'y', minutes: 55, dueAt: dueIn(3), dread: 'dreading' }),
       ],
       prefs({ bedtime: 19 * 60, dailyTargetMinutes: 400 }),
       noHistory,

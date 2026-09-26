@@ -8,7 +8,7 @@
 
 import { addDays, daysBetween, planDateOf, weekdayOf, type PlanDate } from '../lib/planDate';
 import type { DayAssignedChunk } from './spread';
-import type { Difficulty, Mode, Prefs, SplitChunk } from './types';
+import type { Dread, Mode, Prefs, SplitChunk } from './types';
 
 /** A chunk that knows its deadline, which is what decides what may move. */
 export type PlacedChunk = DayAssignedChunk & {
@@ -17,7 +17,7 @@ export type PlacedChunk = DayAssignedChunk & {
   /** Due today or tomorrow: pinned, because there is nowhere else to put it. */
   pinned: boolean;
   mode: Mode;
-  difficulty: Difficulty;
+  dread: Dread;
   /** Already resolved: the student's own line, or the mode's default. */
   firstAction: string;
 };
