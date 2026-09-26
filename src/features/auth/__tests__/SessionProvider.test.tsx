@@ -3,6 +3,8 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { SessionProvider, useSession } from '../SessionProvider';
 import { getSupabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { signInWithGoogle } from '../googleSignIn';
+import { signInWithApple } from '../appleSignIn';
+jest.mock('../appleSignIn', () => ({ signInWithApple: jest.fn() }));
 jest.mock('../googleSignIn', () => ({ signInWithGoogle: jest.fn() }));
 const { act, create } = require('react-test-renderer');
 jest.mock('../../../lib/supabase', () => ({ getSupabase: jest.fn(), isSupabaseConfigured: jest.fn() }));
@@ -42,6 +44,14 @@ test('Google delegates to OAuth and receives its session through the existing au
 test('valid restoration authenticates', async () => {
   await mount(); await act(async () => finish({ data: { session: user }, error: null }));
   expect(latest).toMatchObject({ session: user, status: 'authenticated', loading: false });
+});
+
+test('Apple delegates to OAuth and receives its session through the existing auth listener', async () => {
+  await mount();
+  jest.mocked(signInWithApple).mockImplementation(async () => { event('SIGNED_IN', user); });
+  await act(async () => latest.signInWithApple());
+  expect(signInWithApple).toHaveBeenCalledTimes(1);
+  expect(latest).toMatchObject({ status: 'authenticated', session: user });
 });
 test('error-free empty restoration confirms signed out', async () => {
   await mount(); await act(async () => finish({ data: { session: null }, error: null }));

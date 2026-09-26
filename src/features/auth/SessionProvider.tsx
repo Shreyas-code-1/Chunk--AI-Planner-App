@@ -1,8 +1,7 @@
 /**
  * Auth session.
  *
- * One Supabase user per person. Email and Google create real sessions;
- * Apple remains a stub.
+ * One Supabase user per person. Email, Google, and Apple create real sessions.
  *
  * If the app has not been configured, this provider reports that through
  * `configError` and renders its children anyway. Auth is not a prerequisite
@@ -15,6 +14,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 
 import { getSupabase, isSupabaseConfigured } from '../../lib/supabase';
 import { signInWithGoogle } from './googleSignIn';
+import { signInWithApple } from './appleSignIn';
 
 type SessionState = {
   session: Session | null;
@@ -28,10 +28,6 @@ type SessionState = {
   signInWithApple(): Promise<void>;
   signInWithGoogle(): Promise<void>;
   signOut(): Promise<void>;
-};
-
-const needsDevBuild = (provider: string) => async (): Promise<void> => {
-  throw new Error(`${provider} sign-in needs a development build; it cannot run in Expo Go.`);
 };
 
 const NOT_CONFIGURED =
@@ -117,7 +113,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const { error } = await requireConfig().auth.signUp({ email, password });
         if (error) throw error;
       },
-      signInWithApple: needsDevBuild('Apple'),
+      signInWithApple,
       signInWithGoogle,
       async signOut() {
         // Clears the stored session as well as the server-side one.

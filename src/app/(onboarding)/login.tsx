@@ -4,8 +4,8 @@
  * Reached two ways: forward from the paywall, and back from 2.2's "I already
  * have an account", which was inert until this screen existed.
  *
- * Google uses browser OAuth and returns to this route through chunk://login.
- * Email uses the OTP screens. Apple remains a stub.
+ * Google and Apple use browser OAuth and return through chunk://login.
+ * Email uses the OTP screens.
  *
  * TODO: the Terms and Privacy Policy line is not yet a link — neither document
  * exists, and both are required before submission.
