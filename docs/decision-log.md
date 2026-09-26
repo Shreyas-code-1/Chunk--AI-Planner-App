@@ -1053,3 +1053,16 @@ Built:
 Not wired yet (waits on the identity decision): Focus doesn't publish the
 running chunk, so `Live.active` is supported by the planner but not fed by the
 app. Until then a running chunk's slot follows the clock like the rest.
+
+## 2026-09-26 — Engine v3: identity approved; flagged behaviours confirmed
+
+- **Stable chunk identity approved as proposed** (see the entry above):
+  completions are immutable snapshots, chunks are disposable, remaining work is
+  estimate minus the planned minutes of completions, and starting a chunk takes
+  a snapshot that the Focus timer runs from.
+- **Kept as built:** fine and meh opening at the same length for problems and
+  memorizing (rounding is honest; no fudged factor); dreaded tasks never the
+  opener; the ramp's shape winning over the opener on short tasks; the buffer
+  no longer deferring work on a day within its target (a fix).
+- Standing request for step 5: if a schedule reads badly on screen, say so
+  rather than ship something that only passes tests.
