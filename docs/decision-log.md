@@ -1021,3 +1021,35 @@ Built in `orderDay` (`src/planner/schedule.ts`):
 
 **Superseded:** v2's "hardest batch first, hardest task first" (it ran on
 difficulty, which no longer exists) and the warm-up (shortest chunk ≤ 10 min).
+
+## 2026-09-26 — Engine v3 step 3: clock times, live recalculation, structure hold
+
+Built:
+- Every chunk has `scheduledStart` and `scheduledEnd`; every break has `start`
+  and `end`; chunks over 35 min have `pauseAt` (the midpoint). Each day has
+  `workEnd`, `bufferMinutes` and `finishAt` ("Done at"). `usePlan` exposes
+  `finishAtToday`; finished chunks carry `actualMinutes` and sit at their real
+  times ("4:00 · 22m (said 25)").
+- **The 60-second pause is inside the chunk's time**, not added to it — a
+  40-minute chunk still ends 40 minutes after it starts.
+- **Buffer (Q12):** evening = min(day's target, start → bedtime − 30); buffer =
+  15% of that. `finishAt` = work end + buffer, never past the cutoff unless the
+  work itself is. Consequence: a day whose work fits its target no longer
+  loses work to the buffer — before, the buffer could push a chunk to
+  tomorrow even on a light day.
+- **Live:** `usePlan` re-plans every minute. A chunk finished early pulls
+  everything after it earlier; a running chunk (`Live.active`) stays anchored
+  at its real start and, if it overruns, pushes everything later. The break
+  owed after a finished chunk is kept unless the student has already taken
+  that long.
+- **Structure hold (Shreyas's resolution):** `replan` keeps the previous order
+  and day assignment, re-timed to now, only when (a) the chunks themselves are
+  unchanged — any student edit re-plans at once — and (b) the clock has
+  drifted less than 15 min from the plan made at the student's last change.
+  Measuring from the last change matters: comparing against the previous
+  minute's plan would never accumulate 15 minutes of drift and would hold
+  forever. Moves are reported when a chunk changes day or shifts ≥ 15 min.
+
+Not wired yet (waits on the identity decision): Focus doesn't publish the
+running chunk, so `Live.active` is supported by the planner but not fed by the
+app. Until then a running chunk's slot follows the clock like the rest.

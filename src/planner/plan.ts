@@ -27,6 +27,7 @@ import type {
   DayPlan,
   Deferral,
   History,
+  Live,
   Plan,
   Prefs,
   UrgentTriage,
@@ -39,6 +40,8 @@ export function plan(
   now: Date = new Date(),
   /** Keys (chunkKey) of chunks already finished. They take no time tonight. */
   done: ReadonlySet<string> = new Set(),
+  /** The running chunk and today's finished ones, so times are live (v3 §8). */
+  live: Live = {},
 ): Plan {
   const today = planDateOf(now, prefs.dayCutoffHour);
 
@@ -106,7 +109,7 @@ export function plan(
     const day = pending.get(planDate) as BalancedDay;
     pending.delete(planDate);
 
-    const result = scheduleDay(day, prefs, now);
+    const result = scheduleDay(day, prefs, now, live);
     if (result.day.chunks.length > 0) days.push(result.day);
     if (planDate === today) {
       urgentTriage = result.urgentTriage;

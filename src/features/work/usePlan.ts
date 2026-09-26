@@ -6,14 +6,15 @@
  * is derived — nothing is stored twice.
  *
  * The planner takes `now` as an argument and never reads the clock, so this
- * passes one in. That also means the result is only as fresh as the render;
- * a session that runs past midnight re-derives on the next navigation, which
- * is the same behaviour the 03:00 cutoff already implies.
+ * keeps a clock that ticks once a minute. Every tick re-plans, so times are
+ * live: finish early and everything after moves earlier (v3 §8). The previous
+ * plan is kept so `replan` can hold the evening's order steady against small
+ * drift — times move, the structure doesn't.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { plan } from '../../planner';
+import { plan, replan } from '../../planner';
 import { chunkKey } from '../../planner/types';
 import {
   DEFAULT_WEEKDAY_FACTORS,
@@ -39,6 +40,8 @@ import { toPlannerAssignments, useWork, type Completion, type WorkAssignment } f
 export type PlannedChunk = ScheduledChunk & {
   key: string;
   done: boolean;
+  /** Finished chunks only: how long it really took ("22m (said 25)"). */
+  actualMinutes: number | null;
 };
 
 export type ClassProgress = {
@@ -63,6 +66,8 @@ export type PlanView = {
   allTimeChunks: number;
   classes: ClassProgress[];
   atRiskTitles: string[];
+  /** Today's "Done at" (v3 §8). Null when nothing is left today. */
+  finishAtToday: Date | null;
   /** Engine v2 outputs. TODO(design): none of these has a frame yet. */
   breaksToday: Break[];
   bedtimeOverrunToday: DayPlan['bedtimeOverrun'];
@@ -139,45 +144,112 @@ function historyFrom(completions: Completion[], assignments: WorkAssignment[]): 
   };
 }
 
-export function usePlan(now: Date = new Date()): PlanView {
+/** The current time, re-rendering once a minute on the minute. */
+function useMinuteClock(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const tick = () => setNow(new Date());
+    const align = setTimeout(
+      () => {
+        tick();
+        interval = setInterval(tick, 60_000);
+      },
+      60_000 - (Date.now() % 60_000),
+    );
+    return () => {
+      clearTimeout(align);
+      if (interval) clearInterval(interval);
+    };
+  }, []);
+  return now;
+}
+
+export function usePlan(): PlanView {
   const assignments = useWork((state) => state.assignments);
   const completions = useWork((state) => state.completions);
   const draft = useDraft();
+  const now = useMinuteClock();
 
-  // `now` is a new Date on every render, so the memo keys on a 5-minute
-  // bucket: fresh enough that today's slots start from the real time, without
-  // replanning on every render.
   const todayKey = planDateOf(now);
-  const bucket = Math.floor(now.getTime() / 300_000);
+
+  // What the planner needs besides the clock. Changes only when the student
+  // does something.
+  const inputs = useMemo(() => {
+    const modeOf = new Map(assignments.map((entry) => [entry.id, entry.mode]));
+    const finishedToday = completions
+      .filter((entry) => modeOf.has(entry.assignmentId))
+      .map((entry) => ({
+        endedAt: entry.at,
+        minutes: entry.minutes,
+        mode: modeOf.get(entry.assignmentId) as Mode,
+      }));
+    return {
+      assignments: toPlannerAssignments(assignments),
+      prefs: prefsFrom(draft),
+      history: historyFrom(completions, assignments),
+      done: new Set(completions.map((entry) => entry.chunkKey)),
+      live: { finishedToday },
+    };
+  }, [assignments, completions, draft]);
+
+  // The plan as it stood when the student last changed something. The
+  // structure hold measures drift against this, so drift accumulates: a
+  // chained "previous plan" would be re-timed every minute and never drift.
+  const [baseline, setBaseline] = useState(() => ({ inputs, plannedAt: now }));
+  if (baseline.inputs !== inputs) setBaseline({ inputs, plannedAt: now });
+  const basePlan = useMemo(
+    () =>
+      plan(
+        baseline.inputs.assignments,
+        baseline.inputs.prefs,
+        baseline.inputs.history,
+        baseline.plannedAt,
+        baseline.inputs.done,
+        baseline.inputs.live,
+      ),
+    [baseline],
+  );
 
   return useMemo(() => {
-    const finished = new Set(completions.map((entry) => entry.chunkKey));
-
-    const result = plan(
-      toPlannerAssignments(assignments),
-      prefsFrom(draft),
-      historyFrom(completions, assignments),
+    const { plan: result } = replan(
+      basePlan,
+      inputs.assignments,
+      inputs.prefs,
+      inputs.history,
       now,
-      finished,
+      inputs.done,
+      inputs.live,
     );
 
-    // Finished chunks sit on the day and at the time they were finished.
-    const finishedAt = new Map(completions.map((entry) => [entry.chunkKey, entry.at]));
+    // Finished chunks sit where they really happened: ended when finished,
+    // started their actual length before that.
+    const byKey = new Map(completions.map((entry) => [entry.chunkKey, entry]));
     const doneChunks: PlannedChunk[] = result.done.map((chunk) => {
-      const at = finishedAt.get(chunkKey(chunk)) ?? now;
+      const entry = byKey.get(chunkKey(chunk));
+      const end = entry?.at ?? now;
+      const actual = entry?.minutes ?? chunk.plannedMinutes;
       return {
         ...chunk,
-        planDate: planDateOf(at),
-        scheduledStart: new Date(at.getTime() - chunk.plannedMinutes * 60_000),
+        planDate: planDateOf(end),
+        scheduledStart: new Date(end.getTime() - actual * 60_000),
+        scheduledEnd: end,
+        pauseAt: null,
         segment: chunk.mode,
         key: chunkKey(chunk),
         done: true,
+        actualMinutes: actual,
       };
     });
     const all: PlannedChunk[] = [
       ...doneChunks,
       ...result.days.flatMap((day) =>
-        day.chunks.map((chunk) => ({ ...chunk, key: chunkKey(chunk), done: false })),
+        day.chunks.map((chunk) => ({
+          ...chunk,
+          key: chunkKey(chunk),
+          done: false,
+          actualMinutes: null,
+        })),
       ),
     ].sort((a, b) => a.scheduledStart.getTime() - b.scheduledStart.getTime());
 
@@ -214,12 +286,12 @@ export function usePlan(now: Date = new Date()): PlanView {
         percent: row.total === 0 ? 0 : Math.round((row.done / row.total) * 100),
       })),
       atRiskTitles: result.atRisk.map((entry) => entry.title),
+      finishAtToday: todayPlan?.finishAt ?? null,
       breaksToday: todayPlan?.breaks ?? [],
       bedtimeOverrunToday: todayPlan?.bedtimeOverrun ?? null,
       deferrals: result.deferrals,
       urgentTriage: result.urgentTriage,
       needsSubmitOrder: result.needsSubmitOrder,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignments, completions, draft, todayKey, bucket]);
+  }, [basePlan, inputs, completions, todayKey, now]);
 }

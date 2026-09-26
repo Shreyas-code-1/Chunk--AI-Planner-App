@@ -1,5 +1,6 @@
 /**
- * Step 5 — re-planning, and the 15-minute dead zone.
+ * Step 5 — re-planning. Times are always live; the 15-minute hold protects
+ * only the structure (order and day), per the v3 resolution.
  */
 
 import { plan } from '../plan';
@@ -21,15 +22,19 @@ const startsByKey = (p: ReturnType<typeof plan>) =>
   );
 
 describe('replan', () => {
-  it('leaves the schedule alone when nothing would move more than 15 minutes', () => {
+  it('moves times live but reports nothing when the clock drifts under 15 minutes', () => {
     const assignments = work();
     const before = plan(assignments, prefs(), noHistory, NOW);
 
-    // Five minutes pass. The clock has moved; the plan should not.
+    // Five minutes pass. Times follow the clock; nothing is worth announcing.
     const after = replan(before, assignments, prefs(), noHistory, later(5));
 
     expect(after.moves).toHaveLength(0);
-    expect(startsByKey(after.plan)).toEqual(startsByKey(before));
+    const was = startsByKey(before);
+    for (const [key, start] of startsByKey(after.plan)) {
+      if (new Date(start).getDate() === NOW.getDate())
+        expect(start - (was.get(key) ?? 0)).toBe(5 * 60_000);
+    }
   });
 
   it('moves the rest of the evening when a chunk runs long, and drops nothing', () => {

@@ -24,10 +24,21 @@ import {
   MODE_TIE_ORDER,
   SHORT_BREAK_MINUTES,
   OPENER_MAX_MINUTES,
+  PAUSE_OVER_MINUTES,
 } from './constants';
 import { addDays, daysBetween, planDateOf, startOfPlanDay, type PlanDate } from '../lib/planDate';
 import type { BalancedDay, PlacedChunk } from './balance';
-import type { Break, DayPlan, Mode, Prefs, ScheduledChunk, UrgentTriage } from './types';
+import { chunkKey } from './types';
+import type {
+  Break,
+  DayPlan,
+  FinishedToday,
+  Live,
+  Mode,
+  Prefs,
+  ScheduledChunk,
+  UrgentTriage,
+} from './types';
 
 type Segment = { kind: ScheduledChunk['segment']; chunks: PlacedChunk[] };
 
@@ -149,34 +160,104 @@ function bedtimeOf(prefs: Prefs): number {
   return bedtime < 12 * 60 ? bedtime + 24 * 60 : bedtime;
 }
 
+/** Minutes from the plan day's midnight; after-midnight times run past 1440. */
+function minutesInto(planDate: PlanDate, date: Date): number {
+  return (date.getTime() - startOfPlanDay(planDate).getTime()) / 60_000;
+}
+
 /** Today starts from now if the usual start time has already passed. */
 function firstSlotMinutes(planDate: PlanDate, prefs: Prefs, now: Date): number {
   if (planDate !== planDateOf(now, prefs.dayCutoffHour)) return prefs.availableStart;
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  // After midnight but before the cutoff hour still belongs to the previous plan day.
-  const sinceMidnight = now.getHours() < prefs.dayCutoffHour ? nowMinutes + 24 * 60 : nowMinutes;
-  return Math.max(prefs.availableStart, sinceMidnight);
+  return Math.max(prefs.availableStart, Math.floor(minutesInto(planDate, now)));
+}
+
+/** Where the evening already stands: work since the last breaks, and the last chunk's end. */
+type Seam = {
+  sinceBreak: number;
+  sinceLong: number;
+  lastEnd: number | null;
+  lastMode: Mode | null;
+  /** A running chunk can't be delayed by a break; the seam only resets counters. */
+  anchored: boolean;
+  /** The running chunk ends at the later of its planned end and this. */
+  activeEnd: number | null;
+};
+
+const FRESH: Seam = {
+  sinceBreak: 0,
+  sinceLong: 0,
+  lastEnd: null,
+  lastMode: null,
+  anchored: false,
+  activeEnd: null,
+};
+
+/** Read today's finished chunks back to the last real break (v3 §6, §8). */
+function seamOf(planDate: PlanDate, finished: FinishedToday[], before: number): Seam {
+  const done = finished
+    .map((f) => ({ end: minutesInto(planDate, f.endedAt), minutes: f.minutes, mode: f.mode }))
+    .filter((f) => f.end <= before)
+    .sort((a, b) => a.end - b.end);
+  if (done.length === 0) return FRESH;
+
+  const last = done[done.length - 1];
+  const seam = { ...FRESH, lastEnd: last.end, lastMode: last.mode };
+  let short = true;
+  let long = true;
+  for (let i = done.length - 1; i >= 0 && (short || long); i--) {
+    if (short) seam.sinceBreak += done[i].minutes;
+    if (long) seam.sinceLong += done[i].minutes;
+    const gap = i > 0 ? done[i].end - done[i].minutes - done[i - 1].end : Infinity;
+    short = short && gap < SHORT_BREAK_MINUTES;
+    long = long && gap < LONG_BREAK_MINUTES;
+  }
+  return seam;
 }
 
 type Layout = {
-  chunks: { chunk: PlacedChunk; slot: number; segment: Segment['kind'] }[];
+  chunks: { chunk: PlacedChunk; slot: number; end: number; segment: Segment['kind'] }[];
   breaks: { slot: number; minutes: number }[];
   end: number;
 };
 
-function layout(segments: Segment[], start: number): Layout {
+function layout(segments: Segment[], start: number, seam: Seam = FRESH): Layout {
   const out: Layout = { chunks: [], breaks: [], end: start };
   const all = segments.flatMap((s) => s.chunks.map((chunk, i) => ({ chunk, segment: s, i })));
 
   let slot = start;
-  let sinceBreak = 0;
-  let sinceLong = 0;
+  let { sinceBreak, sinceLong } = seam;
+
+  // The break owed after what was already finished today. If the student has
+  // already taken that long, nothing is owed.
+  if (seam.lastEnd != null && all.length > 0) {
+    const gap = start - seam.lastEnd;
+    let owed = 0;
+    if (sinceLong >= LONG_BREAK_AFTER - BREAK_SNAP_MINUTES) owed = LONG_BREAK_MINUTES;
+    else if (
+      all[0].chunk.mode !== seam.lastMode ||
+      sinceBreak >= IN_BATCH_BREAK_EVERY - BREAK_SNAP_MINUTES
+    )
+      owed = SHORT_BREAK_MINUTES;
+
+    if (!seam.anchored && gap < owed) {
+      out.breaks.push({ slot: seam.lastEnd, minutes: owed });
+      slot = seam.lastEnd + owed;
+      sinceBreak = 0;
+      if (owed === LONG_BREAK_MINUTES) sinceLong = 0;
+    } else {
+      if (gap >= SHORT_BREAK_MINUTES) sinceBreak = 0;
+      if (gap >= LONG_BREAK_MINUTES) sinceLong = 0;
+    }
+  }
 
   all.forEach(({ chunk, segment, i }, n) => {
-    out.chunks.push({ chunk, slot, segment: segment.kind });
-    slot += chunk.plannedMinutes;
-    sinceBreak += chunk.plannedMinutes;
-    sinceLong += chunk.plannedMinutes;
+    const planned = slot + chunk.plannedMinutes;
+    // A running chunk that overruns pushes everything after it (v3 §8).
+    const end = n === 0 && seam.activeEnd != null ? Math.max(planned, seam.activeEnd) : planned;
+    out.chunks.push({ chunk, slot, end, segment: segment.kind });
+    sinceBreak += end - slot;
+    sinceLong += end - slot;
+    slot = end;
     if (n === all.length - 1) return;
 
     const lastInSegment = i === segment.chunks.length - 1;
@@ -205,35 +286,91 @@ function layout(segments: Segment[], start: number): Layout {
   return out;
 }
 
-export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResult {
-  const start = firstSlotMinutes(day.planDate, prefs, now);
+/** A day's order from an earlier plan, kept by the re-plan structure hold. */
+export type HeldSegment = { kind: Segment['kind']; keys: string[] };
+
+export function scheduleDay(
+  day: BalancedDay,
+  prefs: Prefs,
+  now: Date,
+  live: Live = {},
+  held: HeldSegment[] | null = null,
+): DayResult {
+  const isToday = day.planDate === planDateOf(now, prefs.dayCutoffHour);
+  const running = isToday ? (live.active ?? null) : null;
+  const active = running
+    ? (day.chunks.find(
+        (c) => c.assignmentId === running.assignmentId && c.index === running.index,
+      ) ?? null)
+    : null;
+
+  const start =
+    running && active
+      ? minutesInto(day.planDate, running.startedAt)
+      : firstSlotMinutes(day.planDate, prefs, now);
+  const seam: Seam = isToday
+    ? {
+        ...seamOf(day.planDate, live.finishedToday ?? [], start),
+        anchored: active != null,
+        activeEnd: active ? minutesInto(day.planDate, now) : null,
+      }
+    : FRESH;
+
   const bedtime = bedtimeOf(prefs);
   const cutoff = bedtime - BEDTIME_MARGIN_MINUTES;
 
   let chunks = [...day.chunks];
   const anyDueToday = chunks.some((c) => isDueToday(c, day.planDate, prefs));
-  // The buffer is spent when something is due today.
-  const limit = anyDueToday ? cutoff : start + Math.max(0, cutoff - start) * (1 - BUFFER_FRACTION);
+  // 15% of the evening, which is the smaller of the day's target and the
+  // bedtime window. Work within the target is never deferred for it (v3 Q12).
+  const evening = Math.min(day.targetMinutes, Math.max(0, cutoff - start));
+  const buffer = anyDueToday ? 0 : Math.round(evening * BUFFER_FRACTION);
+  const limit = anyDueToday || sum(chunks) <= day.targetMinutes ? cutoff : cutoff - buffer;
 
-  let segments = orderDay(chunks, day.planDate, prefs);
-  let result = layout(segments, start);
+  const fromHeld = (list: PlacedChunk[]): Segment[] | null => {
+    if (!held) return null;
+    const byKey = new Map(list.map((c) => [chunkKey(c), c]));
+    const segments = held.map((h) => ({
+      kind: h.kind,
+      chunks: h.keys.map((k) => byKey.get(k)).filter((c): c is PlacedChunk => c != null),
+    }));
+    const count = segments.reduce((t, seg) => t + seg.chunks.length, 0);
+    return count === list.length ? segments.filter((seg) => seg.chunks.length > 0) : null;
+  };
+
+  // The running chunk goes first whatever the rules say: it has started. It
+  // leads its own segment, so it keeps that segment's breaks.
+  const arrange = (list: PlacedChunk[]): Segment[] => {
+    const base = fromHeld(list) ?? orderDay(list, day.planDate, prefs);
+    const home = active ? base.find((seg) => seg.chunks.includes(active)) : undefined;
+    if (!active || !home) return base;
+    const lead = { ...home, chunks: [active, ...home.chunks.filter((c) => c !== active)] };
+    return [lead, ...base.filter((seg) => seg !== home)];
+  };
+  // A held structure never moves work off the day or suggests letting it go.
+  const holding = fromHeld(chunks) != null;
+
+  let segments = arrange(chunks);
+  let result = layout(segments, start, seam);
 
   // 1. Defer movable work, latest deadline first. Work due tomorrow goes
   // last of all: it breaks the day-early rule and lands on its due day, which
   // beats pushing tonight past bedtime. Only work due today may bend bedtime.
   const deferred: PlacedChunk[] = [];
-  while (result.end > limit) {
-    const free = chunks.filter((c) => !mustBeTonight(c, day.planDate, prefs));
+  while (!holding && result.end > limit) {
+    const free = chunks.filter((c) => c !== active && !mustBeTonight(c, day.planDate, prefs));
     const movable =
-      free.length > 0 ? free : chunks.filter((c) => !isDueToday(c, day.planDate, prefs));
+      free.length > 0
+        ? free
+        : chunks.filter((c) => c !== active && !isDueToday(c, day.planDate, prefs));
     if (movable.length === 0) break;
     const latest = movable.reduce((a, b) =>
       b.dueAt > a.dueAt || (b.dueAt.getTime() === a.dueAt.getTime() && b.index > a.index) ? b : a,
     );
     chunks = chunks.filter((c) => c !== latest);
     deferred.push(latest);
-    segments = orderDay(chunks, day.planDate, prefs);
-    result = layout(segments, start);
+    segments = arrange(chunks);
+    result = layout(segments, start, seam);
   }
 
   // 2. Must-do-tonight work that still doesn't fit: suggest letting the
@@ -241,19 +378,21 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
   // until the student answers — it never silently disappears.
   let urgentTriage: UrgentTriage | null = null;
   const hardLimit = bedtime + BEDTIME_BEND_MAX_MINUTES;
-  if (result.end > hardLimit) {
+  if (!holding && result.end > hardLimit) {
     const needMinutes = sum(chunks);
     const everything = chunks;
     const letGo: string[] = [];
-    while (result.end > hardLimit && chunks.length > 0) {
+    const keep = (c: PlacedChunk) => c === active || !letGo.includes(c.assignmentId);
+    while (result.end > hardLimit && chunks.some((c) => c !== active)) {
       const perTask = new Map<string, number>();
       for (const c of chunks)
-        perTask.set(c.assignmentId, (perTask.get(c.assignmentId) ?? 0) + c.plannedMinutes);
+        if (c !== active)
+          perTask.set(c.assignmentId, (perTask.get(c.assignmentId) ?? 0) + c.plannedMinutes);
       const [largest] = [...perTask.entries()].reduce((a, b) => (b[1] > a[1] ? b : a));
       letGo.push(largest);
-      chunks = chunks.filter((c) => c.assignmentId !== largest);
-      segments = orderDay(chunks, day.planDate, prefs);
-      result = layout(segments, start);
+      chunks = everything.filter(keep);
+      segments = arrange(chunks);
+      result = layout(segments, start, seam);
     }
     urgentTriage = {
       planDate: day.planDate,
@@ -262,28 +401,22 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
       letGo,
     };
 
-    const suggested = everything
-      .filter((c) => letGo.includes(c.assignmentId))
-      .sort(byAssignmentThenIndex);
+    const suggested = everything.filter((c) => !keep(c)).sort(byAssignmentThenIndex);
     chunks = everything;
     segments = [
-      ...orderDay(
-        everything.filter((c) => !letGo.includes(c.assignmentId)),
-        day.planDate,
-        prefs,
-      ),
+      ...arrange(everything.filter(keep)),
       {
         kind: isDueToday(suggested[0], day.planDate, prefs) ? 'dueToday' : suggested[0].mode,
         chunks: suggested,
       },
     ];
-    result = layout(segments, start);
+    result = layout(segments, start, seam);
   }
 
   const dayStart = startOfPlanDay(day.planDate).getTime();
   const at = (slot: number) => new Date(dayStart + slot * 60_000);
 
-  const scheduled: ScheduledChunk[] = result.chunks.map(({ chunk, slot, segment }) => ({
+  const scheduled: ScheduledChunk[] = result.chunks.map(({ chunk, slot, end, segment }) => ({
     assignmentId: chunk.assignmentId,
     index: chunk.index,
     title: chunk.title,
@@ -296,10 +429,13 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
     firstAction: chunk.firstAction,
     segment,
     scheduledStart: at(slot),
+    scheduledEnd: at(end),
+    pauseAt: chunk.plannedMinutes > PAUSE_OVER_MINUTES ? at(slot + chunk.plannedMinutes / 2) : null,
   }));
 
   const breaks: Break[] = result.breaks.map((b) => ({
     start: at(b.slot),
+    end: at(b.slot + b.minutes),
     minutes: b.minutes,
     kind: b.minutes === LONG_BREAK_MINUTES ? 'long' : 'short',
   }));
@@ -314,6 +450,9 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
     )
     .map(([id]) => id);
 
+  // The buffer never carries "done at" past the cutoff; only the work itself can.
+  const finish = Math.max(result.end, Math.min(result.end + buffer, cutoff));
+
   const loadMinutes = sum(chunks);
   return {
     day: {
@@ -323,6 +462,9 @@ export function scheduleDay(day: BalancedDay, prefs: Prefs, now: Date): DayResul
       targetMinutes: day.targetMinutes,
       overTargetReason: loadMinutes > day.targetMinutes ? day.overTargetReason : null,
       breaks,
+      workEnd: at(result.end),
+      bufferMinutes: finish - result.end,
+      finishAt: at(finish),
       bedtimeOverrun:
         result.end > cutoff
           ? {

@@ -36,14 +36,15 @@ describe('first actions', () => {
 
 describe('plan — bedtime rolls work to the next day', () => {
   it('defers movable work and reports it', () => {
-    // 4 PM start, bedtime 7 PM: 150 min to the cutoff, ~128 after the buffer.
+    // 4 PM start, bedtime 6:45 PM: 135 min to the cutoff. x is 30 + 35 + 35
+    // with breaks, ending 17:50; y's first chunk would end past 18:15.
     // x (105 min, due tomorrow) must stay tonight; y's chunk can move.
     const result = plan(
       [
         assignment({ id: 'x', minutes: 100, dueAt: dueIn(1), mode: 'writing' }),
         assignment({ id: 'y', minutes: 55, dueAt: dueIn(3), dread: 'dreading' }),
       ],
-      prefs({ bedtime: 19 * 60, dailyTargetMinutes: 400 }),
+      prefs({ bedtime: 18 * 60 + 45, dailyTargetMinutes: 400 }),
       noHistory,
       NOW,
     );
