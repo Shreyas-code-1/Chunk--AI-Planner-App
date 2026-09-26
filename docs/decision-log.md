@@ -1066,3 +1066,38 @@ app. Until then a running chunk's slot follows the clock like the rest.
   no longer deferring work on a day within its target (a fix).
 - Standing request for step 5: if a schedule reads badly on screen, say so
   rather than ship something that only passes tests.
+
+## 2026-09-26 — Engine v3 step 4: stable identity, learning (dormant), migration 0002
+
+Built as approved:
+- **Completions are snapshots** (`CompletedChunk`: own id, planned and actual
+  minutes, start and end, mode, dread, first-chunk flag). `plan()` takes these
+  instead of done keys. Each task's remaining work = estimate − Σ planned
+  minutes of its completions, re-ramped from the base with no second
+  dread-sized opener. A dread or mode change re-cuts only what's left; a test
+  covers exactly that.
+- **Running chunk:** opening Focus calls `startChunk`, which snapshots the
+  chunk. Focus runs from the snapshot; FINISH writes the completion from it
+  (once — the snapshot is cleared in the same update); the X abandons it and
+  the chunk returns to the plan. Starting a different task abandons the one
+  running. The planner places the snapshot first tonight, anchored at its
+  start, and never re-cuts it.
+- **Unfinished chunks' keys** (`assignmentId:n`) are display-only; nothing is
+  stored against them.
+- **§9 learning, dormant** (`src/planner/learning.ts`, `LEARNING_ENABLED =
+  false`): median actual chunk minutes per mode (5+ samples) and a dreaded
+  first-chunk factor that eases by 0.1 when ≥ 80% of dreaded first chunks
+  started are finished, deepens by 0.1 at ≤ 50%, clamped 0.40–0.75. All
+  guesses. Abandoned starts are logged for it. **Gap:** a dreaded chunk that is
+  never opened at all leaves no record, so "never starts it" is only seen as
+  abandoning it.
+- **`supabase/migrations/0002_engine_v3.sql`** — written, **not applied**: it
+  has to be run by hand from the dashboard like 0001. Adds `dread` and `mode`
+  enums; assignments gain `dread`, `mode`, `first_action` (mode and first
+  action never reached the schema in v2) with the one-time easy→fine,
+  medium→meh, hard→dreading mapping, then `difficulty` is dropped; chunks gain
+  `scheduled_end`, `pause_at`, `first_action`; completions gain `started_at`,
+  `mode`, `dread`, `first_chunk`; new append-only `chunk_abandonments` with
+  RLS; preferences gain `bedtime`. `src/api/types.ts` updated to match.
+- Data still lives in the memory store (no sign-in), so no real rows exist to
+  migrate.

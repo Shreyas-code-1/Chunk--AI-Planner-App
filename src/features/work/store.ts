@@ -18,7 +18,9 @@
 
 import { create } from 'zustand';
 
-import type { Assignment, Dread, Mode } from '../../planner/types';
+import { DEFAULT_DREAD } from '../../planner/constants';
+import type { AbandonedChunk } from '../../planner/learning';
+import type { Assignment, CompletedChunk, Dread, Mode, RunningChunk } from '../../planner/types';
 
 export type WorkAssignment = {
   id: string;
@@ -36,17 +38,25 @@ export type WorkAssignment = {
   addedAt: Date;
 };
 
-export type Completion = {
-  assignmentId: string;
-  /** `${assignmentId}:${index}`, matching the planner's chunk identity. */
-  chunkKey: string;
-  minutes: number;
-  at: Date;
+/**
+ * A finished chunk: an immutable snapshot, never a position (decision log
+ * 2026-09-26). The planner derives what's left of a task by subtracting these.
+ */
+export type Completion = CompletedChunk;
+
+/** The chunk on the timer, snapshotted at start. Focus runs from this, not the plan. */
+export type ActiveChunk = RunningChunk & {
+  mode: Mode;
+  dread: Dread;
+  firstChunk: boolean;
 };
 
 type WorkState = {
   assignments: WorkAssignment[];
   completions: Completion[];
+  active: ActiveChunk | null;
+  /** Started and left unfinished; append-only, for §9 learning. */
+  abandoned: AbandonedChunk[];
   /** Chunk keys whose 5.4 urgent card the student chose to keep at its planned time. */
   keptForLater: string[];
   keepForLater(chunkKey: string): void;
@@ -55,16 +65,23 @@ type WorkState = {
   setMode(id: string, mode: Mode): void;
   setDread(id: string, dread: Dread): void;
   setFirstAction(id: string, firstAction: string | null): void;
-  completeChunk(entry: Omit<Completion, 'at'>): void;
+  /** Snapshot a chunk onto the timer. Starting another abandons the one running. */
+  startChunk(chunk: { assignmentId: string; title: string; plannedMinutes: number }): void;
+  /** Record the running chunk as done. Append-only; a no-op if nothing is running. */
+  finishActive(actualMinutes: number): Completion | null;
+  /** Leave the running chunk; it goes back on the plan. */
+  abandonActive(): void;
   reset(): void;
 };
 
 /** Good enough for a memory store; the database generates the real ones. */
 const newId = () => `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
-export const useWork = create<WorkState>((set) => ({
+export const useWork = create<WorkState>((set, get) => ({
   assignments: [],
   completions: [],
+  active: null,
+  abandoned: [],
   keptForLater: [],
 
   keepForLater(chunkKey) {
@@ -85,6 +102,7 @@ export const useWork = create<WorkState>((set) => ({
     set((state) => ({
       assignments: state.assignments.filter((entry) => entry.id !== id),
       completions: state.completions.filter((entry) => entry.assignmentId !== id),
+      active: state.active?.assignmentId === id ? null : state.active,
     }));
   },
 
@@ -106,19 +124,64 @@ export const useWork = create<WorkState>((set) => ({
     }));
   },
 
-  completeChunk(entry) {
-    set((state) =>
-      // Append-only, and idempotent: finishing the same chunk twice must not
-      // inflate the lifetime count, which is the whole point of the policy on
-      // `chunk_completions`.
-      state.completions.some((done) => done.chunkKey === entry.chunkKey)
-        ? state
-        : { completions: [...state.completions, { ...entry, at: new Date() }] },
-    );
+  startChunk(chunk) {
+    const state = get();
+    if (state.active?.assignmentId === chunk.assignmentId) return; // already running
+    const task = state.assignments.find((a) => a.id === chunk.assignmentId);
+    if (!task) return;
+    if (state.active) state.abandonActive();
+    set((s) => ({
+      active: {
+        ...chunk,
+        startedAt: new Date(),
+        mode: task.mode,
+        dread: task.dread ?? DEFAULT_DREAD,
+        firstChunk: !s.completions.some((c) => c.assignmentId === chunk.assignmentId),
+      },
+    }));
+  },
+
+  finishActive(actualMinutes) {
+    const { active } = get();
+    if (!active) return null;
+    // Append-only, and exactly once: the snapshot is cleared in the same
+    // update, so finishing twice can't inflate the lifetime count — the whole
+    // point of the policy on `chunk_completions`.
+    const completion: Completion = {
+      id: newId(),
+      assignmentId: active.assignmentId,
+      title: active.title,
+      plannedMinutes: active.plannedMinutes,
+      actualMinutes,
+      startedAt: active.startedAt,
+      endedAt: new Date(),
+      mode: active.mode,
+      dread: active.dread,
+      firstChunk: active.firstChunk,
+    };
+    set((s) => ({ completions: [...s.completions, completion], active: null }));
+    return completion;
+  },
+
+  abandonActive() {
+    const { active } = get();
+    if (!active) return;
+    set((s) => ({
+      active: null,
+      abandoned: [
+        ...s.abandoned,
+        {
+          assignmentId: active.assignmentId,
+          dread: active.dread,
+          firstChunk: active.firstChunk,
+          startedAt: active.startedAt,
+        },
+      ],
+    }));
   },
 
   reset() {
-    set({ assignments: [], completions: [], keptForLater: [] });
+    set({ assignments: [], completions: [], active: null, abandoned: [], keptForLater: [] });
   },
 }));
 

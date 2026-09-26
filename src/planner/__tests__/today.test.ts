@@ -4,7 +4,8 @@
 
 import { plan } from '../plan';
 import { toDateKey } from '../../lib/planDate';
-import { assignment, noHistory, NOW, prefs } from './fixtures';
+import { assignment, completedFrom, noHistory, NOW, prefs } from './fixtures';
+import type { Plan } from '../types';
 
 const endOfDay = (days: number) => {
   const d = new Date(NOW.getTime());
@@ -69,20 +70,47 @@ describe('never silently dropped', () => {
   });
 });
 
-describe('finished chunks', () => {
-  it('take no time tonight and keep their identity', () => {
-    const work = [assignment({ id: 'x', minutes: 120, dueAt: endOfDay(0) })];
-    const later = new Date(NOW.getTime());
-    later.setHours(17, 0, 0, 0);
+describe('finished chunks — stable identity', () => {
+  const later = new Date(NOW.getTime());
+  later.setHours(17, 0, 0, 0);
+  const work = (dread: 'meh' | 'dreading' = 'meh') => [
+    assignment({ id: 'x', minutes: 120, dueAt: endOfDay(0), dread }),
+  ];
+  const first = plan(work(), appPrefs, noHistory, NOW).days[0].chunks[0];
+  const done = completedFrom(first, later);
+  const sum = (p: Plan) =>
+    p.days.flatMap((d) => d.chunks).reduce((t, c) => t + c.plannedMinutes, 0);
 
-    const result = plan(work, appPrefs, noHistory, later, new Set(['x:1']));
+  it('take no time tonight: what is left is the estimate minus what was completed', () => {
+    const result = plan(work(), appPrefs, noHistory, later, [done]);
+    expect(result.done.map((c) => c.completion.id)).toEqual([done.id]);
+    expect(sum(result)).toBe(120 - first.plannedMinutes);
     const scheduled = result.days.flatMap((d) => d.chunks);
-
-    expect(result.done.map((c) => c.index)).toEqual([1]);
-    expect(scheduled.map((c) => c.index)).toEqual([2, 3]); // reading 120 → 30, 45, 45
+    expect(scheduled[0].index).toBe(2);
     // The rest starts now, not after a phantom copy of the finished chunk.
     expect(scheduled[0].scheduledStart.getHours()).toBe(17);
-    expect(scheduled[0].scheduledStart.getMinutes()).toBe(0);
+  });
+
+  it('stay attached to what was actually done when the task is re-cut', () => {
+    // Changing dread re-cuts the task. The completion is a record, not a
+    // position, so it keeps its own minutes and the remainder follows it.
+    const result = plan(work('dreading'), appPrefs, noHistory, later, [done]);
+    expect(result.done).toHaveLength(1);
+    expect(result.done[0].plannedMinutes).toBe(first.plannedMinutes);
+    expect(sum(result)).toBe(120 - first.plannedMinutes);
+  });
+
+  it('leave nothing to schedule once completions cover the estimate', () => {
+    const big = { ...done, plannedMinutes: 120 };
+    expect(plan(work(), appPrefs, noHistory, later, [big]).days).toHaveLength(0);
+  });
+
+  it('keep the running chunk as snapshotted, first tonight, through a re-cut', () => {
+    const running = { assignmentId: 'x', title: 'Snapshot', plannedMinutes: 25, startedAt: later };
+    const result = plan(work('dreading'), appPrefs, noHistory, later, [], running);
+    const tonight = result.days[0].chunks;
+    expect(tonight[0]).toMatchObject({ title: 'Snapshot', plannedMinutes: 25, index: 1 });
+    expect(sum(result)).toBe(120);
   });
 });
 

@@ -7,7 +7,7 @@
  */
 
 import { DEFAULT_WEEKDAY_FACTORS } from '../constants';
-import type { Assignment, History, Mode, Prefs } from '../types';
+import type { Assignment, CompletedChunk, History, Mode, Prefs, ScheduledChunk } from '../types';
 
 /** Monday 14 September 2026, 16:00 local. */
 export const NOW = new Date(2026, 8, 14, 16, 0, 0, 0);
@@ -58,3 +58,21 @@ export const historyFor = (mode: Mode, minutes: number): History => ({
 /** Total planned minutes across every day of a plan. */
 export const totalMinutes = (days: { chunks: { plannedMinutes: number }[] }[]): number =>
   days.reduce((sum, day) => sum + day.chunks.reduce((s, c) => s + c.plannedMinutes, 0), 0);
+
+/** The completion record for a planned chunk, finished at `endedAt`. */
+export const completedFrom = (
+  chunk: ScheduledChunk,
+  endedAt: Date,
+  actualMinutes = chunk.plannedMinutes,
+): CompletedChunk => ({
+  id: `done-${chunk.assignmentId}-${chunk.index}`,
+  assignmentId: chunk.assignmentId,
+  title: chunk.title,
+  plannedMinutes: chunk.plannedMinutes,
+  actualMinutes,
+  startedAt: new Date(endedAt.getTime() - actualMinutes * 60_000),
+  endedAt,
+  mode: chunk.mode,
+  dread: chunk.dread,
+  firstChunk: chunk.index === 1,
+});

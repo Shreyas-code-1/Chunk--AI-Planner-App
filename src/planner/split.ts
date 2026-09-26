@@ -9,6 +9,7 @@
 import {
   CHUNK_LENGTH_FACTOR,
   DREAD_FIRST_CHUNK_FACTOR,
+  LEARNING_ENABLED,
   MAX_CHUNKS_PER_ASSIGNMENT,
   MAX_CHUNK_MINUTES,
   MIN_CHUNK_MINUTES,
@@ -133,20 +134,54 @@ function titleFor(assignment: Assignment, index: number, count: number): string 
   return `${assignment.title} · Part ${index} of ${count}`;
 }
 
-export function split(assignment: Assignment, prefs: Prefs, history: History): SplitChunk[] {
-  const { minutes, dread } = resolve(assignment, history);
-  const base = baseMinutes(assignment.mode, prefs);
-  const lengths = ramp({
-    total: minutes,
-    base,
-    firstTarget: base * DREAD_FIRST_CHUNK_FACTOR[dread],
-    firstFloor: dread === 'dreading' ? MIN_DREADED_FIRST_CHUNK_MINUTES : MIN_CHUNK_MINUTES,
-  });
+/** What of a task is already finished or on the timer. */
+export type Progress = {
+  /** Planned minutes of its completions — planned, not actual: a 25-minute chunk done in 22 did 25 minutes' worth. */
+  doneMinutes: number;
+  doneCount: number;
+  /** Planned minutes of the chunk on the timer, if it's this task's. */
+  runningMinutes: number | null;
+};
 
+export const NO_PROGRESS: Progress = { doneMinutes: 0, doneCount: 0, runningMinutes: null };
+
+/**
+ * The chunks still to schedule. Finished chunks and the running one are not
+ * re-cut; only what's left is ramped, and once the task has started there is
+ * no second dread-sized opener (v3 Q9) — it climbs from the base instead.
+ */
+export function split(
+  assignment: Assignment,
+  prefs: Prefs,
+  history: History,
+  progress: Progress = NO_PROGRESS,
+): SplitChunk[] {
+  const { minutes, dread } = resolve(assignment, history);
+  const learned = LEARNING_ENABLED ? history.learnedChunkMinutes?.(assignment.mode) : null;
+  const base = learned ?? baseMinutes(assignment.mode, prefs);
+  const dreadFactor =
+    (dread === 'dreading' && LEARNING_ENABLED ? history.learnedDreadedFirstFactor?.() : null) ??
+    DREAD_FIRST_CHUNK_FACTOR[dread];
+
+  const before = progress.doneCount + (progress.runningMinutes == null ? 0 : 1);
+  const left = minutes - progress.doneMinutes - (progress.runningMinutes ?? 0);
+  if (left <= 0) return [];
+
+  const lengths =
+    before === 0
+      ? ramp({
+          total: left,
+          base,
+          firstTarget: base * dreadFactor,
+          firstFloor: dread === 'dreading' ? MIN_DREADED_FIRST_CHUNK_MINUTES : MIN_CHUNK_MINUTES,
+        })
+      : ramp({ total: left, base, firstTarget: base, firstFloor: MIN_CHUNK_MINUTES });
+
+  const count = before + lengths.length;
   return lengths.map((plannedMinutes, i) => ({
     assignmentId: assignment.id,
-    index: i + 1,
-    title: titleFor(assignment, i + 1, lengths.length),
+    index: before + i + 1,
+    title: titleFor(assignment, before + i + 1, count),
     plannedMinutes,
   }));
 }

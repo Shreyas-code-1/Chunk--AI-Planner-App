@@ -19,10 +19,19 @@
 import { addDays, daysBetween, planDateOf } from '../lib/planDate';
 import type { BalancedDay } from './balance';
 import { REPLAN_MIN_SHIFT_MINUTES } from './constants';
-import { plan } from './plan';
+import { dayLiveOf, plan } from './plan';
 import { scheduleDay, type HeldSegment } from './schedule';
 import { chunkKey } from './types';
-import type { Assignment, History, Live, Plan, Prefs, ScheduledChunk } from './types';
+import type {
+  Assignment,
+  CompletedChunk,
+  DayLive,
+  History,
+  Plan,
+  Prefs,
+  RunningChunk,
+  ScheduledChunk,
+} from './types';
 
 export type Move = {
   chunk: ScheduledChunk;
@@ -69,13 +78,11 @@ function keepStructure(
   fresh: Plan,
   prefs: Prefs,
   now: Date,
-  done: ReadonlySet<string>,
-  live: Live,
+  live: DayLive,
 ): Plan | null {
-  const remaining = current.days
-    .map((day) => ({ ...day, chunks: day.chunks.filter((c) => !done.has(chunkKey(c))) }))
-    .filter((day) => day.chunks.length > 0);
-  const kept: Plan = { ...current, days: remaining };
+  // Finishing or starting a chunk changes the contents, so the plan being
+  // held is always one made from the same completions as this one.
+  const kept = current;
 
   if (contents(chunksOf(kept)) !== contents(chunksOf(fresh))) return null; // the student changed something
   if (structure(kept) === structure(fresh)) return null; // nothing to protect
@@ -110,11 +117,12 @@ export function replan(
   prefs: Prefs,
   history: History,
   now: Date = new Date(),
-  done: ReadonlySet<string> = new Set(),
-  live: Live = {},
+  completed: CompletedChunk[] = [],
+  running: RunningChunk | null = null,
 ): Replan {
-  const fresh = plan(assignments, prefs, history, now, done, live);
-  const next = keepStructure(current, fresh, prefs, now, done, live) ?? fresh;
+  const fresh = plan(assignments, prefs, history, now, completed, running);
+  const live = dayLiveOf(completed, running, now, prefs);
+  const next = keepStructure(current, fresh, prefs, now, live) ?? fresh;
 
   const previous = new Map(chunksOf(current).map((c) => [chunkKey(c), c]));
   const moves: Move[] = [];

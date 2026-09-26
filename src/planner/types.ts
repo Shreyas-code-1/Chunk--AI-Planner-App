@@ -95,6 +95,10 @@ export type Prefs = {
 export type History = {
   /** Median total minutes of a task in this mode; fills a missing estimate. */
   medianTaskMinutes(mode: Mode): number | null;
+  /** Median actual minutes of a chunk in this mode; replaces the base (§9, dormant). */
+  learnedChunkMinutes?(mode: Mode): number | null;
+  /** This student's dreaded-first-chunk factor, in place of 0.55 (§9, dormant). */
+  learnedDreadedFirstFactor?(): number | null;
 };
 
 /** A plan day with its chunks and the load they add up to. */
@@ -146,10 +150,33 @@ export type UrgentTriage = {
   letGo: string[];
 };
 
-/** The chunk on the timer right now. It is anchored at its real start. */
-export type ActiveChunk = {
+/**
+ * A finished chunk, as recorded when it finished. Immutable: it never refers
+ * back to a chunk by position, so re-cutting a task can't reattach it to a
+ * different chunk (decision log 2026-09-26, stable identity).
+ */
+export type CompletedChunk = {
+  id: string;
   assignmentId: string;
-  index: number;
+  title: string;
+  plannedMinutes: number;
+  actualMinutes: number;
+  startedAt: Date;
+  endedAt: Date;
+  mode: Mode;
+  dread: Dread;
+  /** It was the task's first chunk — the one sized by dread (for §9 learning). */
+  firstChunk: boolean;
+};
+
+/**
+ * The chunk on the timer, snapshotted when it started. The plan anchors it at
+ * `startedAt` and never re-cuts it; only the rest of the task is re-ramped.
+ */
+export type RunningChunk = {
+  assignmentId: string;
+  title: string;
+  plannedMinutes: number;
   startedAt: Date;
 };
 
@@ -160,14 +187,15 @@ export type FinishedToday = {
   mode: Mode;
 };
 
-/** What is happening right now, beyond the assignments themselves. */
-export type Live = {
-  active?: ActiveChunk | null;
+/** What scheduleDay needs about right now. Built by plan(). */
+export type DayLive = {
+  active?: { assignmentId: string; index: number; startedAt: Date } | null;
   finishedToday?: FinishedToday[];
 };
 
-/** A finished chunk: it keeps its identity but no longer has a slot. */
+/** A finished chunk shown on the plan: the completion plus its task's details. */
 export type DoneChunk = SplitChunk & {
+  completion: CompletedChunk;
   classId: string | null;
   dueAt: Date;
   mode: Mode;
@@ -175,7 +203,10 @@ export type DoneChunk = SplitChunk & {
   firstAction: string;
 };
 
-/** The one chunk identity used by completions, the plan and the screens. */
+/**
+ * Display key for an unfinished chunk. Nothing is ever stored against it: it
+ * only has to be stable between renders, and it may change on any re-cut.
+ */
 export const chunkKey = (chunk: { assignmentId: string; index: number }): string =>
   `${chunk.assignmentId}:${chunk.index}`;
 

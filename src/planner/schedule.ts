@@ -33,7 +33,7 @@ import type {
   Break,
   DayPlan,
   FinishedToday,
-  Live,
+  DayLive,
   Mode,
   Prefs,
   ScheduledChunk,
@@ -293,7 +293,7 @@ export function scheduleDay(
   day: BalancedDay,
   prefs: Prefs,
   now: Date,
-  live: Live = {},
+  live: DayLive = {},
   held: HeldSegment[] | null = null,
 ): DayResult {
   const isToday = day.planDate === planDateOf(now, prefs.dayCutoffHour);

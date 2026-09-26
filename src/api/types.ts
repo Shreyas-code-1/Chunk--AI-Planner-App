@@ -1,7 +1,7 @@
 /**
  * Row types for the database.
  *
- * Hand-written to mirror supabase/migrations/0001_init.sql, because the
+ * Hand-written to mirror supabase/migrations/0001_init.sql and 0002_engine_v3.sql, because the
  * migration has not been applied yet and `supabase gen types` needs a live
  * project. Once it is applied these are replaced by the generated types and
  * this file becomes a re-export — see docs/decision-log.md.
@@ -14,7 +14,8 @@ export type Goal =
   | 'study_for_tests'
   | 'focus_longer';
 
-export type Difficulty = 'easy' | 'medium' | 'hard';
+export type Dread = 'fine' | 'meh' | 'dreading';
+export type Mode = 'problems' | 'writing' | 'reading' | 'memorizing';
 export type AssignmentSource = 'typed' | 'photo' | 'voice';
 export type ChunkStatus = 'pending' | 'done' | 'skipped';
 export type ChunkLengthPref = 'short' | 'mixed' | 'long';
@@ -41,6 +42,8 @@ export type PreferencesRow = {
   /** Sunday..Saturday multipliers on daily_target_minutes. */
   weekday_factors: number[];
   haptics_enabled: boolean;
+  /** Minutes from midnight; null uses the planner's default. */
+  bedtime: number | null;
   updated_at: string;
 };
 
@@ -63,7 +66,9 @@ export type AssignmentRow = {
   title: string;
   due_at: string;
   estimated_minutes: number | null;
-  difficulty: Difficulty | null;
+  dread: Dread | null;
+  mode: Mode;
+  first_action: string | null;
   source: AssignmentSource;
   notes: string | null;
   deleted_at: string | null;
@@ -79,6 +84,9 @@ export type ChunkRow = {
   title: string;
   planned_minutes: number;
   scheduled_start: string | null;
+  scheduled_end: string | null;
+  pause_at: string | null;
+  first_action: string | null;
   status: ChunkStatus;
   created_at: string;
 };
@@ -97,6 +105,21 @@ export type ChunkCompletionRow = {
   completed_at: string;
   /** The 03:00-local plan day this completion counts toward. */
   plan_date: string;
+  started_at: string | null;
+  mode: Mode | null;
+  dread: Dread | null;
+  first_chunk: boolean;
+};
+
+/** Append-only: a started chunk left unfinished (v3 §9). */
+export type ChunkAbandonmentRow = {
+  id: string;
+  user_id: string;
+  assignment_id: string | null;
+  dread: Dread;
+  first_chunk: boolean;
+  started_at: string;
+  abandoned_at: string;
 };
 
 export type StreakRow = {

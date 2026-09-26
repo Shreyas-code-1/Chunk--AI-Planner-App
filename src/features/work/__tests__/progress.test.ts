@@ -1,6 +1,20 @@
 import { badges, clockLabel, hoursLabel, week, weekStart } from '../progress';
+import type { Completion } from '../store';
 
 const at = (y: number, m: number, d: number, h = 18) => new Date(y, m - 1, d, h);
+
+const done = (id: string, minutes: number, endedAt: Date): Completion => ({
+  id,
+  assignmentId: 'a',
+  title: 'Task',
+  plannedMinutes: minutes,
+  actualMinutes: minutes,
+  startedAt: new Date(endedAt.getTime() - minutes * 60_000),
+  endedAt,
+  mode: 'reading',
+  dread: 'meh',
+  firstChunk: false,
+});
 
 describe('progress', () => {
   it('starts the week on Monday', () => {
@@ -11,8 +25,8 @@ describe('progress', () => {
   it('sums minutes per day and marks today and the future', () => {
     const days = week(
       [
-        { assignmentId: 'a', chunkKey: 'a:1', minutes: 30, at: at(2026, 9, 21) },
-        { assignmentId: 'a', chunkKey: 'a:2', minutes: 20, at: at(2026, 9, 21) },
+        done('c1', 30, at(2026, 9, 21)),
+        done('c2', 20, at(2026, 9, 21)),
       ],
       '2026-09-22',
     );

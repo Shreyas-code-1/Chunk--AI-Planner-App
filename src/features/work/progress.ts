@@ -30,8 +30,8 @@ export function weekStart(today: PlanDate): PlanDate {
 export function minutesByDay(completions: Completion[]): Map<PlanDate, number> {
   const map = new Map<PlanDate, number>();
   for (const entry of completions) {
-    const day = planDateOf(entry.at);
-    map.set(day, (map.get(day) ?? 0) + entry.minutes);
+    const day = planDateOf(entry.endedAt);
+    map.set(day, (map.get(day) ?? 0) + entry.actualMinutes);
   }
   return map;
 }
@@ -54,10 +54,10 @@ export function weekTotal(completions: Completion[], monday: PlanDate): number {
   const end = addDays(monday, 7);
   return completions
     .filter((entry) => {
-      const day = planDateOf(entry.at);
+      const day = planDateOf(entry.endedAt);
       return day >= monday && day < end;
     })
-    .reduce((total, entry) => total + entry.minutes, 0);
+    .reduce((total, entry) => total + entry.actualMinutes, 0);
 }
 
 /** Focused minutes per class name. */
@@ -69,7 +69,7 @@ export function minutesByClass(
   const map = new Map<string, number>();
   for (const entry of completions) {
     const name = classOf.get(entry.assignmentId) ?? 'Other';
-    map.set(name, (map.get(name) ?? 0) + entry.minutes);
+    map.set(name, (map.get(name) ?? 0) + entry.actualMinutes);
   }
   return map;
 }
@@ -82,7 +82,7 @@ export function onTimeCount(
 ): number {
   return assignments.filter((a) => {
     const total = chunkCounts.get(a.id) ?? 0;
-    const done = completions.filter((c) => c.assignmentId === a.id && c.at <= a.dueAt);
+    const done = completions.filter((c) => c.assignmentId === a.id && c.endedAt <= a.dueAt);
     return total > 0 && done.length >= total;
   }).length;
 }

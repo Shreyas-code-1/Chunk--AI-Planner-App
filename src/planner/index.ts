@@ -17,3 +17,4 @@ export { inferMode, firstActionFor, nextMode, isMathFamily, FIRST_ACTIONS } from
 export { triage, type Triage } from './triage';
 export * from './constants';
 export type * from './types';
+export { learn, type AbandonedChunk, type Learned } from './learning';

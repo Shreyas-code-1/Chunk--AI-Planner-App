@@ -34,12 +34,16 @@ import type {
 } from '../../planner/types';
 import { DAY_CUTOFF_HOUR, planDateOf } from '../../lib/planDate';
 import { BEST_TIMES, useDraft } from '../onboarding/draft';
+import type { AbandonedChunk } from '../../planner/learning';
+import { learn } from '../../planner/learning';
 import { toPlannerAssignments, useWork, type Completion, type WorkAssignment } from './store';
 
 /** A chunk plus whether it is finished — the shape every screen wants. */
 export type PlannedChunk = ScheduledChunk & {
   key: string;
   done: boolean;
+  /** On the timer right now. */
+  running: boolean;
   /** Finished chunks only: how long it really took ("22m (said 25)"). */
   actualMinutes: number | null;
 };
@@ -118,18 +122,27 @@ function prefsFrom(draft: ReturnType<typeof useDraft.getState>): Prefs {
   };
 }
 
-/** Median task minutes per mode, once there are enough to trust (v3 §9, §10). */
-function historyFrom(completions: Completion[], assignments: WorkAssignment[]): History {
-  const perTask = new Map<string, number>();
-  for (const entry of completions)
-    perTask.set(entry.assignmentId, (perTask.get(entry.assignmentId) ?? 0) + entry.minutes);
+/**
+ * What the student's history says (v3 §9, §10): median task minutes per mode
+ * fills missing estimates now; the learned chunk length and dread factor are
+ * computed but only used once LEARNING_ENABLED is on.
+ */
+function historyFrom(
+  completions: Completion[],
+  abandoned: AbandonedChunk[],
+  assignments: WorkAssignment[],
+): History {
   const byMode = new Map<Mode, number[]>();
   // Only finished tasks count; a half-done one would drag the median down.
   for (const task of assignments) {
-    const minutes = perTask.get(task.id);
-    if (minutes == null || (task.minutes != null && minutes < task.minutes)) continue;
-    byMode.set(task.mode, [...(byMode.get(task.mode) ?? []), minutes]);
+    const mine = completions.filter((c) => c.assignmentId === task.id);
+    if (mine.length === 0) continue;
+    const planned = mine.reduce((t, c) => t + c.plannedMinutes, 0);
+    if (task.minutes != null && planned < task.minutes) continue;
+    const actual = mine.reduce((t, c) => t + c.actualMinutes, 0);
+    byMode.set(task.mode, [...(byMode.get(task.mode) ?? []), actual]);
   }
+  const learned = learn(completions, abandoned);
 
   return {
     medianTaskMinutes(mode) {
@@ -141,6 +154,8 @@ function historyFrom(completions: Completion[], assignments: WorkAssignment[]): 
         ? Math.round((sorted[middle - 1] + sorted[middle]) / 2)
         : sorted[middle];
     },
+    learnedChunkMinutes: learned.chunkMinutes,
+    learnedDreadedFirstFactor: learned.dreadedFirstFactor,
   };
 }
 
@@ -168,6 +183,8 @@ function useMinuteClock(): Date {
 export function usePlan(): PlanView {
   const assignments = useWork((state) => state.assignments);
   const completions = useWork((state) => state.completions);
+  const abandoned = useWork((state) => state.abandoned);
+  const active = useWork((state) => state.active);
   const draft = useDraft();
   const now = useMinuteClock();
 
@@ -175,41 +192,26 @@ export function usePlan(): PlanView {
 
   // What the planner needs besides the clock. Changes only when the student
   // does something.
-  const inputs = useMemo(() => {
-    const modeOf = new Map(assignments.map((entry) => [entry.id, entry.mode]));
-    const finishedToday = completions
-      .filter((entry) => modeOf.has(entry.assignmentId))
-      .map((entry) => ({
-        endedAt: entry.at,
-        minutes: entry.minutes,
-        mode: modeOf.get(entry.assignmentId) as Mode,
-      }));
-    return {
+  const inputs = useMemo(
+    () => ({
       assignments: toPlannerAssignments(assignments),
       prefs: prefsFrom(draft),
-      history: historyFrom(completions, assignments),
-      done: new Set(completions.map((entry) => entry.chunkKey)),
-      live: { finishedToday },
-    };
-  }, [assignments, completions, draft]);
+      history: historyFrom(completions, abandoned, assignments),
+      completions,
+      active,
+    }),
+    [assignments, completions, abandoned, active, draft],
+  );
 
   // The plan as it stood when the student last changed something. The
   // structure hold measures drift against this, so drift accumulates: a
   // chained "previous plan" would be re-timed every minute and never drift.
   const [baseline, setBaseline] = useState(() => ({ inputs, plannedAt: now }));
   if (baseline.inputs !== inputs) setBaseline({ inputs, plannedAt: now });
-  const basePlan = useMemo(
-    () =>
-      plan(
-        baseline.inputs.assignments,
-        baseline.inputs.prefs,
-        baseline.inputs.history,
-        baseline.plannedAt,
-        baseline.inputs.done,
-        baseline.inputs.live,
-      ),
-    [baseline],
-  );
+  const basePlan = useMemo(() => {
+    const b = baseline.inputs;
+    return plan(b.assignments, b.prefs, b.history, baseline.plannedAt, b.completions, b.active);
+  }, [baseline]);
 
   return useMemo(() => {
     const { plan: result } = replan(
@@ -218,29 +220,29 @@ export function usePlan(): PlanView {
       inputs.prefs,
       inputs.history,
       now,
-      inputs.done,
-      inputs.live,
+      inputs.completions,
+      inputs.active,
     );
 
-    // Finished chunks sit where they really happened: ended when finished,
-    // started their actual length before that.
-    const byKey = new Map(completions.map((entry) => [entry.chunkKey, entry]));
-    const doneChunks: PlannedChunk[] = result.done.map((chunk) => {
-      const entry = byKey.get(chunkKey(chunk));
-      const end = entry?.at ?? now;
-      const actual = entry?.minutes ?? chunk.plannedMinutes;
-      return {
-        ...chunk,
-        planDate: planDateOf(end),
-        scheduledStart: new Date(end.getTime() - actual * 60_000),
-        scheduledEnd: end,
-        pauseAt: null,
-        segment: chunk.mode,
-        key: chunkKey(chunk),
-        done: true,
-        actualMinutes: actual,
-      };
-    });
+    // Finished chunks sit where they really happened, keyed by their own record.
+    const doneChunks: PlannedChunk[] = result.done.map((chunk) => ({
+      ...chunk,
+      planDate: planDateOf(chunk.completion.endedAt),
+      scheduledStart: chunk.completion.startedAt,
+      scheduledEnd: chunk.completion.endedAt,
+      pauseAt: null,
+      segment: chunk.mode,
+      key: chunk.completion.id,
+      done: true,
+      running: false,
+      actualMinutes: chunk.completion.actualMinutes,
+    }));
+    const runningKey = active
+      ? chunkKey({
+          assignmentId: active.assignmentId,
+          index: completions.filter((c) => c.assignmentId === active.assignmentId).length + 1,
+        })
+      : null;
     const all: PlannedChunk[] = [
       ...doneChunks,
       ...result.days.flatMap((day) =>
@@ -248,6 +250,7 @@ export function usePlan(): PlanView {
           ...chunk,
           key: chunkKey(chunk),
           done: false,
+          running: chunkKey(chunk) === runningKey,
           actualMinutes: null,
         })),
       ),
@@ -258,8 +261,8 @@ export function usePlan(): PlanView {
     const doneToday = today.filter((chunk) => chunk.done).length;
 
     const focusedToday = completions
-      .filter((entry) => planDateOf(entry.at) === todayKey)
-      .reduce((total, entry) => total + entry.minutes, 0);
+      .filter((entry) => planDateOf(entry.endedAt) === todayKey)
+      .reduce((total, entry) => total + entry.actualMinutes, 0);
 
     const byClass = new Map<string, { total: number; done: number }>();
     for (const chunk of all) {
@@ -293,5 +296,5 @@ export function usePlan(): PlanView {
       urgentTriage: result.urgentTriage,
       needsSubmitOrder: result.needsSubmitOrder,
     };
-  }, [basePlan, inputs, completions, todayKey, now]);
+  }, [basePlan, inputs, completions, active, todayKey, now]);
 }

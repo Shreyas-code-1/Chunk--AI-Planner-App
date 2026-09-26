@@ -13,10 +13,12 @@
  * TODO(design): the board draws no paused state, only PAUSE as a label.
  * TODO(batch 7): the music card does nothing. `expo-audio` is installed but
  * there is no track, no picker and no answer about where audio comes from.
- * Finishing records a completion against the chunk's key, which is what makes
- * 3.1's counters, 3.2's path and 3.5's progress move. That write is
- * append-only and idempotent for the same reason the `chunk_completions`
- * policy is: the lifetime count depends on it.
+ * Opening it snapshots the chunk onto the timer (`startChunk`), and the timer
+ * runs from that snapshot, not from the plan — a dread tap or a re-cut while
+ * it runs can't change what's being timed. Finishing writes the completion
+ * from the snapshot; leaving abandons it and the chunk goes back on the plan.
+ * The completion is append-only and written once, for the same reason the
+ * `chunk_completions` policy is: the lifetime count depends on it.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -54,12 +56,30 @@ export default function Focus() {
     index?: string;
     total?: string;
   }>();
-  const completeChunk = useWork((state) => state.completeChunk);
+  const active = useWork((state) => state.active);
+  const startChunk = useWork((state) => state.startChunk);
+  const finishActive = useWork((state) => state.finishActive);
+  const abandonActive = useWork((state) => state.abandonActive);
 
-  const minutes = Number(params.minutes ?? 0);
+  // Re-opening the chunk that's already running picks up its snapshot.
+  const snapshot = active?.assignmentId === params.assignment ? active : null;
+  const minutes = snapshot?.plannedMinutes ?? Number(params.minutes ?? 0);
+  const title = snapshot?.title ?? params.title;
   const totalSeconds = Math.max(0, Math.round(minutes * 60));
 
-  const [remaining, setRemaining] = useState(totalSeconds);
+  useEffect(() => {
+    if (params.assignment && params.title && minutes > 0) {
+      startChunk({ assignmentId: params.assignment, title: params.title, plannedMinutes: minutes });
+    }
+    // Once, on arrival: the snapshot is taken when the chunk starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [remaining, setRemaining] = useState(() => {
+    if (!snapshot) return totalSeconds;
+    const elapsed = Math.floor((Date.now() - snapshot.startedAt.getTime()) / 1000);
+    return Math.max(0, totalSeconds - elapsed);
+  });
   const [running, setRunning] = useState(totalSeconds > 0);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -96,6 +116,7 @@ export default function Focus() {
             accessibilityLabel="Leave the session"
             onPress={() => {
               haptic('select');
+              abandonActive();
               router.back();
             }}
             style={styles.headerButton}
@@ -134,10 +155,10 @@ export default function Focus() {
 
         <View style={[styles.chunkCard, shadows.hardEdge(6, 'rgba(0,0,0,0.12)')]}>
           <Text style={styles.chunkLabel}>THIS CHUNK</Text>
-          <Text style={styles.chunkTitle}>{params.title ?? 'No chunk selected'}</Text>
+          <Text style={styles.chunkTitle}>{title ?? 'No chunk selected'}</Text>
           {params.assignment ? <FirstActionLine assignmentId={params.assignment} /> : null}
           <Text style={styles.chunkHint}>
-            {params.title
+            {title
               ? 'Mark the cycles as you go.'
               : 'Start a chunk from your path and it will run here.'}
           </Text>
@@ -193,13 +214,7 @@ export default function Focus() {
                 haptic('press');
                 const focused = Math.max(1, Math.round((totalSeconds - remaining) / 60));
 
-                if (params.chunk && params.assignment) {
-                  completeChunk({
-                    chunkKey: params.chunk,
-                    assignmentId: params.assignment,
-                    minutes: focused,
-                  });
-                }
+                finishActive(focused);
 
                 router.replace({
                   pathname: '/chunk-complete',

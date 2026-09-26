@@ -46,7 +46,7 @@ export default function You() {
     allTimeChunks,
     streak,
     onTime: onTimeCount(assignments, completions, chunkCounts),
-    longestMinutes: Math.max(0, ...completions.map((c) => c.minutes)),
+    longestMinutes: Math.max(0, ...completions.map((c) => c.actualMinutes)),
   });
 
   const initials = displayName

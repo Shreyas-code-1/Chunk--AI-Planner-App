@@ -46,7 +46,7 @@ export default function Progress() {
   const days = week(completions, today);
   const thisWeek = weekTotal(completions, monday);
   const lastWeek = weekTotal(completions, addDays(monday, -7));
-  const doneThisWeek = completions.filter((c) => planDateOf(c.at) >= monday).length;
+  const doneThisWeek = completions.filter((c) => planDateOf(c.endedAt) >= monday).length;
 
   // A chunk counts once its whole slot has passed, not the moment it starts.
   const due = all.filter(

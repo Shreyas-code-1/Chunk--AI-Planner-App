@@ -7,8 +7,10 @@
  * engine v2 rules (docs/scheduling-engine-v2.md). Work that doesn't fit before
  * bedtime rolls to the next day, and the move is reported.
  *
- * Pure and cheap — run it on the client whenever a chunk finishes, is skipped,
- * or an assignment is added. Use replan() rather than plan() when a schedule
+ * Finished chunks arrive as completion records, not positions: each task's
+ * remaining work is its estimate minus what's been completed, and only that is
+ * cut into chunks. Pure and cheap — run it on the client whenever a chunk
+ * finishes, is skipped, or an assignment is added. Use replan() rather than plan() when a schedule
  * already exists, so the student's day doesn't rearrange itself under them.
  */
 
@@ -20,36 +22,62 @@ import { scheduleDay } from './schedule';
 import { split } from './split';
 import { spread } from './spread';
 import { triage } from './triage';
-import { chunkKey } from './types';
 import type {
-  DoneChunk,
   Assignment,
+  CompletedChunk,
+  DayLive,
+  DoneChunk,
   DayPlan,
   Deferral,
   History,
-  Live,
   Plan,
   Prefs,
+  RunningChunk,
   UrgentTriage,
 } from './types';
+
+/**
+ * Right now, as scheduleDay needs it: the running chunk (numbered after its
+ * task's completions, matching split) and what was finished today.
+ */
+export function dayLiveOf(
+  completed: CompletedChunk[],
+  running: RunningChunk | null,
+  now: Date,
+  prefs: Prefs,
+): DayLive {
+  const today = planDateOf(now, prefs.dayCutoffHour);
+  return {
+    active: running
+      ? {
+          assignmentId: running.assignmentId,
+          index: completed.filter((c) => c.assignmentId === running.assignmentId).length + 1,
+          startedAt: running.startedAt,
+        }
+      : null,
+    finishedToday: completed
+      .filter((c) => planDateOf(c.endedAt, prefs.dayCutoffHour) === today)
+      .map((c) => ({ endedAt: c.endedAt, minutes: c.actualMinutes, mode: c.mode })),
+  };
+}
 
 export function plan(
   assignments: Assignment[],
   prefs: Prefs,
   history: History,
   now: Date = new Date(),
-  /** Keys (chunkKey) of chunks already finished. They take no time tonight. */
-  done: ReadonlySet<string> = new Set(),
-  /** The running chunk and today's finished ones, so times are live (v3 §8). */
-  live: Live = {},
+  /** Every finished chunk, as recorded. They take no time and are never re-cut. */
+  completed: CompletedChunk[] = [],
+  /** The chunk on the timer, anchored at its real start (v3 §8). */
+  running: RunningChunk | null = null,
 ): Plan {
   const today = planDateOf(now, prefs.dayCutoffHour);
 
   const placed: PlacedChunk[] = [];
   const finished: DoneChunk[] = [];
   const remainingMinutes = new Map<string, number>();
+
   for (const assignment of assignments) {
-    const chunks = split(assignment, prefs, history);
     const dueDay = planDateOf(assignment.dueAt, prefs.dayCutoffHour);
     const { dread } = resolve(assignment, history);
     const extra = {
@@ -59,32 +87,55 @@ export function plan(
       dread,
       firstAction: firstActionFor(assignment.mode, assignment.firstAction),
     };
+    // Pinned only when there is genuinely nowhere else to put it: the last
+    // allowed day (the day before it's due) is today or already past. A chunk
+    // that merely happens to sit on today can still be moved.
+    const pinned = daysBetween(today, addDays(dueDay, -1)) <= 0;
 
-    // Chunk identity comes from the full split, so finishing one never
-    // renumbers the rest. Only what's left gets a day and a time.
-    const left = chunks.filter((chunk) => !done.has(chunkKey(chunk)));
-    for (const chunk of chunks)
-      if (done.has(chunkKey(chunk))) finished.push({ ...chunk, ...extra });
+    const mine = completed
+      .filter((c) => c.assignmentId === assignment.id)
+      .sort((a, b) => a.endedAt.getTime() - b.endedAt.getTime());
+    mine.forEach((completion, i) =>
+      finished.push({
+        assignmentId: assignment.id,
+        index: i + 1,
+        title: completion.title,
+        plannedMinutes: completion.plannedMinutes,
+        completion,
+        ...extra,
+      }),
+    );
+
+    const isRunning = running?.assignmentId === assignment.id;
+    const left = split(assignment, prefs, history, {
+      doneMinutes: mine.reduce((t, c) => t + c.plannedMinutes, 0),
+      doneCount: mine.length,
+      runningMinutes: isRunning && running ? running.plannedMinutes : null,
+    });
+
+    // The running chunk is the snapshot, on today, whatever the split says.
+    if (isRunning && running) {
+      const index = mine.length + 1;
+      placed.push({
+        assignmentId: assignment.id,
+        index,
+        title: running.title,
+        plannedMinutes: running.plannedMinutes,
+        planDate: today,
+        pinned: true,
+        ...extra,
+      });
+    }
+
     remainingMinutes.set(
       assignment.id,
       left.reduce((t, c) => t + c.plannedMinutes, 0),
     );
-
-    for (const chunk of spread(assignment, left, prefs, now)) {
-      placed.push({
-        ...chunk,
-        classId: assignment.classId,
-        dueAt: assignment.dueAt,
-        mode: assignment.mode,
-        dread,
-        firstAction: firstActionFor(assignment.mode, assignment.firstAction),
-        // Pinned only when there is genuinely nowhere else to put it: the
-        // last allowed day (the day before it's due) is today or already past.
-        // A chunk that merely happens to sit on today can still be moved.
-        pinned: daysBetween(today, addDays(dueDay, -1)) <= 0,
-      });
-    }
+    for (const chunk of spread(assignment, left, prefs, now))
+      placed.push({ ...chunk, ...extra, pinned });
   }
+
+  const live = dayLiveOf(completed, running, now, prefs);
 
   // Triage names what is at risk, but nothing leaves the plan until the
   // student decides: dropping it here would make it silently vanish.

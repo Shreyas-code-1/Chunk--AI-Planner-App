@@ -7,7 +7,7 @@ import { plan } from '../plan';
 import { replan } from '../replan';
 import { chunkKey } from '../types';
 import type { Assignment, Plan } from '../types';
-import { NOW, assignment, dueIn, noHistory, prefs } from './fixtures';
+import { NOW, assignment, completedFrom, dueIn, noHistory, prefs } from './fixtures';
 
 const at = (minutes: number) => new Date(NOW.getTime() + minutes * 60_000);
 const clock = (d: Date) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -71,9 +71,9 @@ describe('live recalculation', () => {
   it('moves every later time earlier, finish included, when a chunk finishes early', () => {
     // Planned 16:00 → first.plannedMinutes; finished 10 minutes early.
     const endedAt = at(first.plannedMinutes - 10);
-    const after = plan(evening(), roomy, noHistory, endedAt, new Set([chunkKey(first)]), {
-      finishedToday: [{ endedAt, minutes: first.plannedMinutes - 10, mode: first.mode }],
-    });
+    const after = plan(evening(), roomy, noHistory, endedAt, [
+      completedFrom(first, endedAt, first.plannedMinutes - 10),
+    ]);
 
     const was = new Map(today(before).chunks.map((c) => [chunkKey(c), c.scheduledStart]));
     for (const c of today(after).chunks) {
@@ -85,8 +85,11 @@ describe('live recalculation', () => {
 
   it('moves every later time later when the running chunk runs over', () => {
     const now = at(first.plannedMinutes + 10);
-    const after = plan(evening(), roomy, noHistory, now, new Set(), {
-      active: { assignmentId: first.assignmentId, index: first.index, startedAt: NOW },
+    const after = plan(evening(), roomy, noHistory, now, [], {
+      assignmentId: first.assignmentId,
+      title: first.title,
+      plannedMinutes: first.plannedMinutes,
+      startedAt: NOW,
     });
 
     const running = today(after).chunks[0];
@@ -104,18 +107,14 @@ describe('live recalculation', () => {
     // Finished exactly on time; the plan had a break before the next chunk.
     const endedAt = first.scheduledEnd;
     const next = today(before).chunks[1];
-    const after = plan(evening(), roomy, noHistory, endedAt, new Set([chunkKey(first)]), {
-      finishedToday: [{ endedAt, minutes: first.plannedMinutes, mode: first.mode }],
-    });
+    const after = plan(evening(), roomy, noHistory, endedAt, [completedFrom(first, endedAt)]);
     expect(today(after).chunks[0].scheduledStart).toEqual(next.scheduledStart);
   });
 
   it('owes no break once the student has already taken one', () => {
     const endedAt = first.scheduledEnd;
     const now = new Date(endedAt.getTime() + 10 * 60_000);
-    const after = plan(evening(), roomy, noHistory, now, new Set([chunkKey(first)]), {
-      finishedToday: [{ endedAt, minutes: first.plannedMinutes, mode: first.mode }],
-    });
+    const after = plan(evening(), roomy, noHistory, now, [completedFrom(first, endedAt)]);
     expect(today(after).chunks[0].scheduledStart).toEqual(now);
   });
 });

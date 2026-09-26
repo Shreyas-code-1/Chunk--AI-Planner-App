@@ -79,6 +79,23 @@ export const OPENER_MAX_MINUTES = 20;
  */
 export const LEARNING_MIN_SAMPLES = 5;
 
+/**
+ * §9 is built but dormant: the data is recorded and the learned values are
+ * computed, but the planner ignores them until this is turned on.
+ */
+export const LEARNING_ENABLED = false;
+
+/**
+ * Dread learning (§9). If the student finishes at least this share of the
+ * dreaded first chunks they start, the shrink eases by the step; if they
+ * finish no more than the lower share, it deepens. All GUESSES.
+ */
+export const DREAD_LEARN_EASE_AT = 0.8;
+export const DREAD_LEARN_DEEPEN_AT = 0.5;
+export const DREAD_LEARN_STEP = 0.1;
+export const DREAD_LEARN_MIN_FACTOR = 0.4;
+export const DREAD_LEARN_MAX_FACTOR = 0.75;
+
 /** Most chunks an assignment can be cut into, however large it is. */
 export const MAX_CHUNKS_PER_ASSIGNMENT = 12;
 
