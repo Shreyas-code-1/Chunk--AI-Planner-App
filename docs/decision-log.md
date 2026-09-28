@@ -1136,3 +1136,25 @@ path ("2:04 · 1m (said 15)"). Not seen on screen: the All Work chips (the test
 session had no classes, so All Work wasn't reachable) and the pause state on
 Focus (the timer doesn't pause at the midpoint yet — `pauseAt` is computed and
 shown on the path, but 3.3 has no frame for the pause).
+
+## 2026-09-27 — Auth audit: is there real Supabase sign-in?
+
+Checked because a partner reported building real Supabase auth. **Not in the
+repo.** Every commit on every branch is by Shreyas-code-1; GitHub has only
+`main` and `revenuecat-integration` (one PNG upload, not merged), and no pull
+requests. `codex/functional-mobile-web` was deleted on GitHub; its one commit
+(12 Sep, author "Codex") is a standalone HTML mock with no Supabase.
+
+On `main`:
+- Real: `src/lib/supabase.ts` (lazy client, session in SecureStore, auto
+  refresh) and `SessionProvider` (session restore, email+password
+  sign-in/sign-up, sign-out). `src/app/index.tsx` routes on the session.
+- Fake: 2.18 EMAIL sends nothing; 2.19 VERIFY accepts any six digits and never
+  creates a session. Nothing calls `signInWithEmail`/`signUpWithEmail`, and
+  the app uses a one-time code rather than a password.
+- Stubbed: Apple and Google throw "needs a development build".
+- No persistence: work (`features/work/store.ts`) and the onboarding draft are
+  in memory only. `getProfile`/`getPreferences` exist but nothing calls them;
+  there are no write endpoints.
+
+Auth is on hold until the partner's code is pushed or ruled out.
