@@ -78,7 +78,7 @@ test('loading blocks button and keyboard duplicate submissions before and after 
   const press = button().props.onPress;
   const keyboard = input().props.onSubmitEditing;
   let pending!: Promise<void>;
-  act(() => { pending = press(); void press(); void keyboard(); });
+  await act(async () => { pending = press(); void press(); void keyboard(); });
   expect(requestEmailOtp).toHaveBeenCalledTimes(1);
   expect(button().props.label).toBe('SENDING…');
   expect(button().props.disabled).toBe(true);
@@ -119,7 +119,7 @@ test('leaving the screen ignores a late successful request', async () => {
   jest.mocked(requestEmailOtp).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
   edit('person@example.com');
   let pending!: Promise<void>;
-  act(() => { pending = button().props.onPress(); });
+  await act(async () => { pending = button().props.onPress(); });
   act(() => mockBlur?.());
   await act(async () => { finish({ status: 'requested' }); await pending; });
   expect(mockPush).not.toHaveBeenCalled();
