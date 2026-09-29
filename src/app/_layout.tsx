@@ -1,11 +1,3 @@
-/**
- * Root layout: providers, fonts and the error boundary.
- *
- * No screen chrome is set here yet — headers, backgrounds and transitions come
- * from the board, and the board's values are not in the code until the design
- * foundation (0c) is built.
- */
-
 import {
   Baloo2_400Regular,
   Baloo2_600SemiBold,
@@ -21,10 +13,10 @@ import {
   Nunito_900Black,
 } from '@expo-google-fonts/nunito';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { SessionProvider } from '../features/auth/SessionProvider';
@@ -32,11 +24,13 @@ import { initializeRevenueCat } from '../features/billing/initialize';
 import { RevenueCatIdentitySync } from '../features/billing/RevenueCatIdentitySync';
 import { queryClient } from '../lib/queryClient';
 
-// Screen 2.1 is a real splash with its own minimum duration; the native splash
-// stays up until the fonts are ready so nothing renders in a fallback face.
+// Keep the native splash until fonts and the destination route are ready.
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const pathname = usePathname();
+  const [laidOut, setLaidOut] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   useEffect(() => {
     void initializeRevenueCat().catch(() => {
       console.error('RevenueCat initialization failed. Check the local billing configuration.');
@@ -56,31 +50,32 @@ export default function RootLayout() {
     Nunito_900Black,
   });
 
+  const fontsReady = fontsLoaded || !!fontError;
   useEffect(() => {
-    // A font that fails to load is not a reason to hold the app hostage; the
-    // system face is wrong but usable, and the failure is visible.
-    if (fontsLoaded || fontError) void SplashScreen.hideAsync();
-  }, [fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) return null;
+    // Effects run after the destination has committed. Index is only a routing
+    // gate; never reveal it. Direct links can render without awaiting auth.
+    if (!fontsReady || !laidOut || pathname === '/' || revealed) return;
+    void SplashScreen.hideAsync();
+    setRevealed(true);
+  }, [fontsReady, laidOut, pathname, revealed]);
 
   return (
     // GestureHandlerRootView must wrap everything that uses a gesture, and
     // the Slider does.
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FFFFFF' }} onLayout={() => setLaidOut(true)}>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
             <RevenueCatIdentitySync />
-            <Stack
+            {fontsReady && <Stack
               screenOptions={{
                 headerShown: false,
-                // The groups set their own; this covers the splash handing
-                // over to whichever group comes next.
-                animation: 'fade',
+                // No animated intermediate screen on initial routing.
+                animation: revealed ? 'fade' : 'none',
+                contentStyle: { backgroundColor: '#FFFFFF' },
                 animationDuration: 180,
               }}
-            />
+            />}
           </SessionProvider>
         </QueryClientProvider>
       </ErrorBoundary>
