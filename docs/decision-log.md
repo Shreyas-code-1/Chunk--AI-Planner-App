@@ -1193,3 +1193,13 @@ Supersedes the entry above for two values:
   let the size go up.
 - **Minimum hold 800 ms → 1500 ms** (`SPLASH_MIN_MS`). The 300 ms fade and 3 s
   maximum are unchanged.
+
+## 2026-09-29 — Expo Go never shows the app.json splash
+
+Expo's SDK 57 splash-screen docs: "Expo Go will show your app icon instead of
+the splash screen, and the splash screen on development builds will not
+reflect all properties set in the config plugin." So in Expo Go the first
+thing on screen is Expo Go's own loading screen with `assets/images/icon.png`,
+which our code can't change. Only after that does `StartupSplash` (169 pt,
+contain) appear. The native splash (`app.json`, `imageWidth: 169`, `contain`)
+can only be checked in a release build.
