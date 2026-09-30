@@ -25,7 +25,7 @@ import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HighlightChip } from '../../components/ui/StrokedText';
 import { Check, ChevronLeft } from '../../components/icons';
@@ -65,33 +65,43 @@ export default function Paywall() {
     setPlan(next);
   };
 
+  const insets = useSafeAreaInsets();
+
   const cardEdge = (selected: boolean) =>
     selected ? shadows.hardEdge(7, colors.goldEdge) : shadows.hardEdge(5, colors.edgeSand);
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
+    // One scrolling page, header and buttons included, so nothing is cut off
+    // at a fixed edge mid-screen.
+    <View style={styles.screen}>
       <StatusBar style="dark" />
 
-      <View style={styles.headerRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={8}
-          onPress={() => {
-            haptic('select');
-            router.back();
-          }}
-          style={styles.back}
-        >
-          <ChevronLeft size={18} color={colors.ink} strokeWidth={2.8} />
-        </Pressable>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top, paddingBottom: insets.bottom },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={8}
+            onPress={() => {
+              haptic('select');
+              router.back();
+            }}
+            style={styles.back}
+          >
+            <ChevronLeft size={18} color={colors.ink} strokeWidth={2.8} />
+          </Pressable>
 
-        <View style={[styles.proBadge, shadows.hardEdge(4, colors.goldEdge)]}>
-          <Text style={styles.proLabel}>PRO</Text>
+          <View style={[styles.proBadge, shadows.hardEdge(4, colors.goldEdge)]}>
+            <Text style={styles.proLabel}>PRO</Text>
+          </View>
         </View>
-      </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Image source={mascot.paywall} style={styles.art} resizeMode="contain" />
 
         <View style={styles.headlineBlock}>
@@ -163,28 +173,28 @@ export default function Paywall() {
             </View>
           ))}
         </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footnote}>Cancel anytime in the App Store</Text>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              haptic('press');
+              // TODO(batch 8): `plan` is the product RevenueCat gets asked for here.
+              onwards();
+            }}
+            style={[styles.cta, shadows.hardEdge(6)]}
+          >
+            <Text style={styles.ctaLabel}>START MY FREE WEEK</Text>
+          </Pressable>
+
+          <Pressable accessibilityRole="button" onPress={onwards} style={styles.decline}>
+            <Text style={styles.declineLabel}>NO THANKS</Text>
+          </Pressable>
+        </View>
       </ScrollView>
-
-      <View style={styles.footer}>
-        <Text style={styles.footnote}>Cancel anytime in the App Store</Text>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            haptic('press');
-            // TODO(batch 8): `plan` is the product RevenueCat gets asked for here.
-            onwards();
-          }}
-          style={[styles.cta, shadows.hardEdge(6)]}
-        >
-          <Text style={styles.ctaLabel}>START MY FREE WEEK</Text>
-        </Pressable>
-
-        <Pressable accessibilityRole="button" onPress={onwards} style={styles.decline}>
-          <Text style={styles.declineLabel}>NO THANKS</Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -220,7 +230,8 @@ const styles = StyleSheet.create({
     letterSpacing: 16 * 0.04,
     color: colors.ink,
   },
-  scroll: { paddingBottom: 8 },
+  // flexGrow keeps the buttons at the bottom when everything fits.
+  scroll: { flexGrow: 1 },
   art: { width: '100%', height: 200 },
   headlineBlock: { alignItems: 'center', paddingHorizontal: 24, marginTop: 16 },
   headlineRow: { flexDirection: 'row', alignItems: 'center' },
@@ -324,7 +335,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ink,
   },
-  footer: { paddingHorizontal: 24, paddingBottom: 26 },
+  footer: { marginTop: 'auto', paddingTop: 24, paddingHorizontal: 24, paddingBottom: 26 },
   footnote: {
     textAlign: 'center',
     fontFamily: fonts.body.bold,

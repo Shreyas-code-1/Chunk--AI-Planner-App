@@ -1309,3 +1309,12 @@ Read as 2.15 YOUR FIRST PLAN ("Your week is ready.") and the onboarding
 chunking animation before it, 2.14 BUILDING PLAN. 3.7 THE CHUNKING MOMENT,
 shown after adding an assignment, is kept. Onboarding is now 2.12 PROGRESS
 CURVE → 2.16 PAYWALL. Their mascot poses stay in `mascot.ts`, unused.
+
+## 2026-09-29 — Paywall scrolls as one page
+
+Shreyas: content was cut off partway down the screen when scrolling. Cause: the
+back/PRO row and the footer (START MY FREE WEEK, NO THANKS) were pinned, and
+only the middle scrolled between two hard edges. Now the whole screen is one
+`ScrollView` with safe-area padding. On a tall screen the footer still sits at
+the bottom (`flexGrow` + `marginTop: 'auto'`); on a short one it scrolls with
+everything else. Nothing in the design changed.
