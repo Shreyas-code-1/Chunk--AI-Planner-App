@@ -14,18 +14,18 @@ import {
 } from '@expo-google-fonts/nunito';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, usePathname } from 'expo-router';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { SessionProvider } from '../features/auth/SessionProvider';
 import { queryClient } from '../lib/queryClient';
-import { ExpoGoStartupPreview } from '../features/startup/ExpoGoStartupPreview';
+import { StartupSplash } from '../features/startup/StartupSplash';
 
-// Keep the native splash until fonts and the destination route are ready.
+// Keep the native splash up until StartupSplash has drawn its copy over it.
 void SplashScreen.preventAutoHideAsync();
+const startedAt = Date.now();
 
 export default function RootLayout() {
   const pathname = usePathname();
@@ -46,13 +46,10 @@ export default function RootLayout() {
   });
 
   const fontsReady = fontsLoaded || !!fontError;
-  useEffect(() => {
-    // Effects run after the destination has committed. Index is only a routing
-    // gate; never reveal it. Direct links can render without awaiting auth.
-    if (!fontsReady || !laidOut || pathname === '/' || revealed) return;
-    void SplashScreen.hideAsync();
-    setRevealed(true);
-  }, [fontsReady, laidOut, pathname, revealed]);
+  // Index is only a routing gate, so leaving it means session and route are
+  // settled. Direct links skip it.
+  const ready = fontsReady && laidOut && pathname !== '/';
+  if (ready && !revealed) setRevealed(true);
 
   return (
     // GestureHandlerRootView must wrap everything that uses a gesture, and
@@ -70,9 +67,7 @@ export default function RootLayout() {
                 animationDuration: 180,
               }}
             />}
-            {Constants.executionEnvironment === ExecutionEnvironment.StoreClient && (
-              <ExpoGoStartupPreview fontsReady={fontsReady} pathname={pathname} />
-            )}
+            <StartupSplash ready={ready} startedAt={startedAt} />
           </SessionProvider>
         </QueryClientProvider>
       </ErrorBoundary>

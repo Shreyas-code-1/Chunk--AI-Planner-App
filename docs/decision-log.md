@@ -1158,3 +1158,24 @@ On `main`:
   there are no write endpoints.
 
 Auth is on hold until the partner's code is pushed or ruled out.
+
+## 2026-09-29 — Splash screen: why it was skipped, and the fix
+
+Merged `codex/splash-startup-only` (partner's beaver splash), then fixed it
+being skipped. Design unchanged.
+
+Cause:
+- **Expo Go ignores the `app.json` splash**, and the in-app copy only rendered
+  while fonts or the session were still loading. Cached fonts and an instant
+  session meant it rendered for zero frames. Its tests asserted "never adds a
+  minimum duration".
+- **In a native build** the splash hid the instant the first route committed,
+  with no minimum and no fade.
+- The in-app copy drew the portrait (508×763) image in a 240×240 box, so it
+  was 160 wide where the native splash is 240 — a visible jump.
+
+Fix: `src/features/startup/StartupSplash.tsx` replaces `ExpoGoStartupPreview`
+and runs in every environment. It covers the native splash on its first
+layout, holds until fonts are loaded and the index gate has routed (session
+resolved), shows for at least 800 ms and at most 3 s, then fades over 300 ms.
+All three values are provisional, in the constants block at the top of that file.
