@@ -29,9 +29,9 @@ remove it. Write the answer next to the item.
 | 11 | 2.16 Paywall | Plan buttons | Move on without charging (real on partner branch) | |
 | 12 | 2.17 Log In | Continue with Apple / Google | Show an error in Expo Go (real on partner branch) | |
 | 13 | 2.17 Log In | "Terms and Privacy Policy" | Plain text, not a link: neither document exists | |
-| 14 | 2.18 Email | CONTINUE | Sends no email (real on partner branch) | |
-| 15 | 2.19 Verify | VERIFY | Accepts any six digits (real on partner branch) | |
-| 16 | 2.19 Verify | Resend code | Nothing is sent | |
+| 14 | 2.18 Email | CONTINUE | Sends no email (real on partner branch) |**Works now** (29 Sep, from the partner branch) |
+| 15 | 2.19 Verify | VERIFY | Accepts any six digits (real on partner branch) |**Works now** (29 Sep, from the partner branch) |
+| 16 | 2.19 Verify | Resend code | Only says "go back to the email screen" to get another code | |
 | 17 | AI consent | Privacy policy | Opens a placeholder URL (example.com) | |
 
 ## Look tappable but are display only

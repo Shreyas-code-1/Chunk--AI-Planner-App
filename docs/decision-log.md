@@ -1326,3 +1326,23 @@ from "When you scan a worksheet or use your voice, Chunk sends it to
 Anthropic, an AI company, to find your assignments." to "When Chunk uses AI,
 it sends your work to Anthropic, an AI company." The Profile row "Scan and
 voice" is now "AI features". Lines 2–3 and both buttons are unchanged.
+
+## 2026-09-29 — Email sign-in brought in from the partner's branch
+
+With Shreyas's OK, only the email sign-in was cherry-picked from
+`origin/codex/revenuecat-auth-integration` (with `-x`, so each commit names
+its source): `dea93d5`, `86de6c0`, `b87a480`, `65e0969`, `147374d`. Eight
+files, all email-only: `requestEmailOtp.ts`, `verifyEmailOtp.ts`, 2.18
+`email.tsx`, 2.19 `verify.tsx`, and their tests. It's a 6-digit code
+(`signInWithOtp`, then `verifyOtp` with `type: 'email'`), pure Supabase, so it
+runs in Expo Go. A correct code goes to Home.
+
+Left out on purpose: RevenueCat, Apple/Google, EAS config, splash, the
+branch's SessionProvider rework (`c51c692`; `main`'s `onAuthStateChange`
+already picks up the new session), and its RevenueCat env key.
+
+Needs, in the Supabase dashboard: the sign-in email template must contain
+`{{ .Token }}` so a code is sent rather than a link. The built-in email
+sender only allows a few emails an hour.
+
+230 tests pass (up from 163), typecheck is clean, and the iOS bundle builds.
