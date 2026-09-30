@@ -1249,3 +1249,14 @@ Replaces the beaver-only splash (supersedes 169 pt and `#FCF1DC` above).
   2.1 background), so the tile's edge can't show.
 - `splash-beaver.png` removed; nothing else used it. The 1.5 s hold and 300 ms
   fade are unchanged.
+
+## 2026-09-29 — Splash matches the board's 2.1 exactly
+
+Shreyas asked for the 2.1 frame ("CHUNK Board v3-New Splash Screen.png")
+recreated exactly, minus the status bar. The frame is a 2× export of a
+390×844 pt screen, so the logo tile is **190 pt** wide (supersedes 126 pt),
+in both `app.json` and `StartupSplash.tsx`, on `#FBF1DB`. The board sits the
+logo 4.5 pt above centre. Both splashes keep it exactly centred, because the
+native splash can't be offset and moving only one would cause a jump.
+Trade-off accepted: the 380 px source is stretched 1.5× on 3× screens, so it's
+slightly soft until a larger export arrives.

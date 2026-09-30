@@ -11,8 +11,9 @@ export const SPLASH_FADE_MS = 300;
 // native splash is invisible.
 // The logo tile's own cream, so its edge can't show.
 const BACKGROUND = '#FBF1DB';
-// 126 pt = 378 px at 3x: the widest the 380 px source stays sharp. Raise with a bigger export.
-const IMAGE_WIDTH = 126;
+// The board's 2.1 size (380 px tile in a 2x, 390 pt frame). Soft on 3x screens
+// until a larger export replaces the 380 px source.
+const IMAGE_WIDTH = 190;
 const IMAGE_ASPECT = 380 / 346;
 
 /**

@@ -26,7 +26,7 @@
         {
           "backgroundColor": "#FBF1DB",
           "image": "./assets/images/splash-logo.png",
-          "imageWidth": 126,
+          "imageWidth": 190,
           "resizeMode": "contain"
         }
       ],
