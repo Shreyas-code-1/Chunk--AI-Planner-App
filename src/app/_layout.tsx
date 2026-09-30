@@ -14,6 +14,7 @@ import {
 } from '@expo-google-fonts/nunito';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, usePathname } from 'expo-router';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
@@ -23,6 +24,7 @@ import { SessionProvider } from '../features/auth/SessionProvider';
 import { initializeRevenueCat } from '../features/billing/initialize';
 import { RevenueCatIdentitySync } from '../features/billing/RevenueCatIdentitySync';
 import { queryClient } from '../lib/queryClient';
+import { ExpoGoStartupPreview } from '../features/startup/ExpoGoStartupPreview';
 
 // Keep the native splash until fonts and the destination route are ready.
 void SplashScreen.preventAutoHideAsync();
@@ -76,6 +78,9 @@ export default function RootLayout() {
                 animationDuration: 180,
               }}
             />}
+            {Constants.executionEnvironment === ExecutionEnvironment.StoreClient && (
+              <ExpoGoStartupPreview fontsReady={fontsReady} pathname={pathname} />
+            )}
           </SessionProvider>
         </QueryClientProvider>
       </ErrorBoundary>

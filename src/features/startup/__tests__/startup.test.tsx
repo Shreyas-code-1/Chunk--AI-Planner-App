@@ -1,3 +1,6 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { Image, StyleSheet } from 'react-native';
+jest.mock('expo-constants', () => ({ __esModule: true, default: { executionEnvironment: 'bare' }, ExecutionEnvironment: { StoreClient: 'storeClient', Bare: 'bare', Standalone: 'standalone' } }));
 import React from 'react';
 import RootLayout from '../../../app/_layout';
 import Startup from '../../../app/index';
@@ -28,6 +31,8 @@ function updateRoot() { act(() => tree.update(<RootLayout />)); }
 function layout() { act(() => tree.root.findByType(GestureHandlerRootView).props.onLayout()); }
 beforeEach(() => {
   jest.clearAllMocks(); fonts(true); path('/');
+  Constants.executionEnvironment = ExecutionEnvironment.Bare;
+  jest.mocked(useSession).mockReturnValue({ status: 'unresolved', session: null } as ReturnType<typeof useSession>);
   jest.mocked(initializeRevenueCat).mockReturnValue(new Promise(() => {}));
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); tree = undefined; });
@@ -76,4 +81,50 @@ test.each([
   act(() => { tree = create(<Startup />); });
   if (destination) expect(tree.root.findByType(Redirect).props.href).toBe(destination);
   else expect(tree.toJSON()).toBeNull();
+});
+
+const preview = () => tree.root.findAllByProps({ testID: 'expo-go-startup-preview' });
+function go() { Constants.executionEnvironment = ExecutionEnvironment.StoreClient; }
+function resolved(status: 'signed-out' | 'authenticated' | 'error') {
+  jest.mocked(useSession).mockReturnValue({ status, session: status === 'authenticated' ? { user: { id: 'test-user' } } : null } as ReturnType<typeof useSession>);
+}
+test('Expo Go shows artwork on first render before fonts and session resolve', () => {
+  go(); fonts(false); renderRoot();
+  expect(preview().length).toBeGreaterThan(0);
+  expect(StyleSheet.flatten(preview()[0].props.style).backgroundColor).toBe('#FCF1DC');
+  const image = tree.root.findByType(Image);
+  expect(image.props.source).toEqual(require('../../../../assets/images/splash-beaver.png'));
+  expect(image.props.resizeMode).toBe('contain');
+  act(() => preview()[0].props.onLayout());
+  expect(SplashScreen.hideAsync).toHaveBeenCalledTimes(1);
+});
+test.each(['signed-out', 'authenticated', 'error'] as const)('Expo Go removes preview immediately when fonts and session resolve: %s', status => {
+  go(); fonts(false); renderRoot();
+  resolved(status); updateRoot();
+  expect(preview().length).toBeGreaterThan(0);
+  fonts(true); updateRoot();
+  expect(preview()).toHaveLength(0);
+});
+test('Expo Go waits for pending session after fonts, but never adds a minimum duration', () => {
+  go(); renderRoot(); expect(preview().length).toBeGreaterThan(0);
+  resolved('signed-out'); updateRoot(); expect(preview()).toHaveLength(0);
+});
+test('Expo Go font error releases preview when session resolves', () => {
+  go(); fonts(false); resolved('signed-out'); renderRoot();
+  fonts(false, new Error('font unavailable')); updateRoot();
+  expect(preview()).toHaveLength(0);
+});
+test('Expo Go never displays preview when startup is already ready', () => {
+  go(); resolved('signed-out'); renderRoot(); expect(preview()).toHaveLength(0);
+});
+test('Expo Go direct OAuth link is not blocked by pending auth', () => {
+  go(); path('/login'); renderRoot(); layout();
+  expect(preview()).toHaveLength(0);
+  expect(SplashScreen.hideAsync).toHaveBeenCalledTimes(1);
+});
+test.each([ExecutionEnvironment.Bare, ExecutionEnvironment.Standalone])('native %s never renders the preview even while startup is pending', environment => {
+  Constants.executionEnvironment = environment;
+  fonts(false); renderRoot(); layout();
+  expect(preview()).toHaveLength(0);
+  expect(SplashScreen.hideAsync).not.toHaveBeenCalled();
 });
