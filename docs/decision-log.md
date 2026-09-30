@@ -1318,3 +1318,11 @@ only the middle scrolled between two hard edges. Now the whole screen is one
 `ScrollView` with safe-area padding. On a tall screen the footer still sits at
 the bottom (`flexGrow` + `marginTop: 'auto'`); on a short one it scrolls with
 everything else. Nothing in the design changed.
+
+## 2026-09-29 — AI consent copy no longer mentions photos or voice
+
+Photo and voice input aren't in the app (2.13 was removed). First line changed
+from "When you scan a worksheet or use your voice, Chunk sends it to
+Anthropic, an AI company, to find your assignments." to "When Chunk uses AI,
+it sends your work to Anthropic, an AI company." The Profile row "Scan and
+voice" is now "AI features". Lines 2–3 and both buttons are unchanged.

@@ -4,7 +4,7 @@
  * TODO(design): not on the board. Built from existing components and styles
  * at Shreyas's request (29 Sep); copy to be reviewed before launch.
  *
- * Either answer continues onboarding. Declining hides photo and voice input
+ * Either answer continues onboarding. Declining keeps AI features off
  * until AI is switched on from Profile.
  */
 
@@ -19,7 +19,7 @@ import { PRIVACY_POLICY_URL, useAiConsent } from '../../features/ai/consent';
 import { colors, displayLine, fonts } from '../../theme/tokens';
 
 const LINES = [
-  'When you scan a worksheet or use your voice, Chunk sends it to Anthropic, an AI company, to find your assignments.',
+  'When Chunk uses AI, it sends your work to Anthropic, an AI company.',
   "Anthropic doesn't use it to train its AI by default.",
   'You can always type everything yourself instead.',
 ];

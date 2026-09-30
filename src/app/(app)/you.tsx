@@ -107,12 +107,12 @@ export default function You() {
         <Text style={styles.section}>AI</Text>
         <View style={[styles.card, styles.connection, styles.aiRow, shadows.hardEdge(5)]}>
           <View style={styles.flex}>
-            <Text style={styles.connName}>Scan and voice</Text>
+            <Text style={styles.connName}>AI features</Text>
             <Text style={styles.connMeta}>
               {aiEnabled ? 'On · sent to Anthropic' : "Off · you'll type everything"}
             </Text>
           </View>
-          <Toggle value={aiEnabled} onChange={chooseAi} accessibilityLabel="Scan and voice" />
+          <Toggle value={aiEnabled} onChange={chooseAi} accessibilityLabel="AI features" />
         </View>
 
         <View style={[styles.row, styles.links]}>

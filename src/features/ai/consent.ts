@@ -1,5 +1,5 @@
 /**
- * AI consent: whether the student lets Chunk send photos and voice to the AI
+ * AI consent: whether the student lets Chunk send their work to the AI
  * provider.
  *
  * The choice is made before sign-in (right after 2.2), so it is kept on the
@@ -55,7 +55,7 @@ export const useAiConsent = create<AiConsentState>()(
   ),
 );
 
-/** Photo and voice input show only when the student has said yes. */
+/** AI features show only when the student has said yes. */
 export function useAiEnabled(): boolean {
   return useAiConsent((s) => s.choice?.granted === true);
 }
