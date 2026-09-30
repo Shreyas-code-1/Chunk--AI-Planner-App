@@ -36,9 +36,9 @@ afterEach(() => { if (tree) act(() => tree.unmount()); tree = undefined; jest.us
 test('splash renders the design and takes over from the native splash', () => {
   renderRoot();
   expect(splash().length).toBeGreaterThan(0);
-  expect(StyleSheet.flatten(splash()[0].props.style).backgroundColor).toBe('#FCF1DC');
+  expect(StyleSheet.flatten(splash()[0].props.style).backgroundColor).toBe('#FBF1DB');
   const image = tree.root.findByType(Image);
-  expect(image.props.source).toEqual(require('../../../../assets/images/splash-beaver.png'));
+  expect(image.props.source).toEqual(require('../../../../assets/images/splash-logo.png'));
   expect(image.props.resizeMode).toBe('contain');
   act(() => splash()[0].props.onLayout());
   expect(SplashScreen.hideAsync).toHaveBeenCalledTimes(1);

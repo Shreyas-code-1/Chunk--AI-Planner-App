@@ -9,10 +9,11 @@ export const SPLASH_FADE_MS = 300;
 
 // Must match the expo-splash-screen entry in app.json so the hand-off from the
 // native splash is invisible.
-const BACKGROUND = '#FCF1DC';
-// 169 pt = 507 px at 3x: the widest the 508 px source stays sharp. Raise with a bigger export.
-const IMAGE_WIDTH = 169;
-const IMAGE_ASPECT = 508 / 763;
+// The logo tile's own cream, so its edge can't show.
+const BACKGROUND = '#FBF1DB';
+// 126 pt = 378 px at 3x: the widest the 380 px source stays sharp. Raise with a bigger export.
+const IMAGE_WIDTH = 126;
+const IMAGE_ASPECT = 380 / 346;
 
 /**
  * In-app copy of the native splash. It takes over from the native splash on
@@ -50,7 +51,7 @@ export function StartupSplash({ ready, startedAt }: { ready: boolean; startedAt:
     >
       <Image
         accessibilityLabel="Chunk"
-        source={require('../../../assets/images/splash-beaver.png')}
+        source={require('../../../assets/images/splash-logo.png')}
         resizeMode="contain"
         style={styles.artwork}
       />

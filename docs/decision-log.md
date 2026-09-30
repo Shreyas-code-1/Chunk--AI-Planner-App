@@ -1233,3 +1233,19 @@ it's marked `TODO(design)`.
   it by hand after 0002.
 - Provisional: `AI_POLICY_VERSION = '2026-09-29-draft'` and the placeholder
   privacy URL, both in `consent.ts`.
+
+## 2026-09-29 — New splash artwork: beaver on the "chunk" log
+
+Replaces the beaver-only splash (supersedes 169 pt and `#FCF1DC` above).
+- **Source:** `~/Downloads/CHUNK Board v3-New Splash Screen 1.png` (780×1612,
+  the logo on an opaque cream tile in a transparent canvas). The tile was cut
+  out to `assets/images/splash-logo.png`, 380×346. The other export, "New
+  Splash Screen.png", was a screenshot of the 2.1 frame with a status bar and
+  phone outline, so it wasn't usable.
+- **Size 169 → 126 pt**, in both `app.json` and `StartupSplash.tsx`, using
+  `contain`. 126 pt is 378 px at 3×, the largest the 380 px source stays sharp.
+  Not upscaled. A larger export would let it grow.
+- **Background `#FCF1DC` → `#FBF1DB`**, the tile's own cream (and the board's
+  2.1 background), so the tile's edge can't show.
+- `splash-beaver.png` removed; nothing else used it. The 1.5 s hold and 300 ms
+  fade are unchanged.
