@@ -1301,3 +1301,11 @@ Shreyas's decisions on `docs/dead-buttons.md` items 1–3 and 5:
   for 4.1.
 - **3.3 FOCUS:** the mascot and the "No track" music card are gone. An empty
   spacer keeps PAUSE and FINISH CHUNK at the bottom of the screen.
+
+## 2026-09-29 — 2.14 Building Plan and 2.15 Your First Plan removed
+
+By request ("remove your week is ready screen and also chunking screen").
+Read as 2.15 YOUR FIRST PLAN ("Your week is ready.") and the onboarding
+chunking animation before it, 2.14 BUILDING PLAN. 3.7 THE CHUNKING MOMENT,
+shown after adding an assignment, is kept. Onboarding is now 2.12 PROGRESS
+CURVE → 2.16 PAYWALL. Their mascot poses stay in `mascot.ts`, unused.
