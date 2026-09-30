@@ -1179,3 +1179,17 @@ and runs in every environment. It covers the native splash on its first
 layout, holds until fonts are loaded and the index gate has routed (session
 resolved), shows for at least 800 ms and at most 3 s, then fades over 300 ms.
 All three values are provisional, in the constants block at the top of that file.
+
+## 2026-09-29 — Splash: sharper beaver, 1.5 s hold
+
+Supersedes the entry above for two values:
+- **Beaver width 240 → 169 pt**, in both `app.json` (`imageWidth`) and
+  `StartupSplash.tsx`, so there's no jump between them. At 240 pt the 508 px source was
+  stretched to 720 px on a 3x screen, which is why it looked blurry. 169 pt is
+  507 px at 3x, the largest size that stays sharp. It's fixed rather than 40% of
+  the screen because the native splash can't size by percentage; 169 pt is
+  about 40–45% of an iPhone's width. No @2x/@3x files were made: the source is
+  under the agreed ~1200 px, and upscaling adds no detail. A larger export will
+  let the size go up.
+- **Minimum hold 800 ms → 1500 ms** (`SPLASH_MIN_MS`). The 300 ms fade and 3 s
+  maximum are unchanged.

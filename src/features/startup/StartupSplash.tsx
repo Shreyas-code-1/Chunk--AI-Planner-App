@@ -3,14 +3,15 @@ import { Animated, Image, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Splash timing. Provisional — tune on a real device.
-export const SPLASH_MIN_MS = 800;
+export const SPLASH_MIN_MS = 1500;
 export const SPLASH_MAX_MS = 3000;
 export const SPLASH_FADE_MS = 300;
 
 // Must match the expo-splash-screen entry in app.json so the hand-off from the
 // native splash is invisible.
 const BACKGROUND = '#FCF1DC';
-const IMAGE_WIDTH = 240;
+// 169 pt = 507 px at 3x: the widest the 508 px source stays sharp. Raise with a bigger export.
+const IMAGE_WIDTH = 169;
 const IMAGE_ASPECT = 508 / 763;
 
 /**

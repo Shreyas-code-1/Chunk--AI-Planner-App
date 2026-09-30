@@ -26,7 +26,7 @@
         {
           "backgroundColor": "#FCF1DC",
           "image": "./assets/images/splash-beaver.png",
-          "imageWidth": 240,
+          "imageWidth": 169,
           "resizeMode": "contain"
         }
       ],
