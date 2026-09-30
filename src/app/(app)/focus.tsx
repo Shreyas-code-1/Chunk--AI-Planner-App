@@ -11,8 +11,7 @@
  * way the board's 18:42 of 24 min is.
  *
  * TODO(design): the board draws no paused state, only PAUSE as a label.
- * TODO(batch 7): the music card does nothing. `expo-audio` is installed but
- * there is no track, no picker and no answer about where audio comes from.
+ * The mascot and the music card are removed by request (29 Sep).
  * Opening it snapshots the chunk onto the timer (`startChunk`), and the timer
  * runs from that snapshot, not from the plan — a dread tap or a re-cut while
  * it runs can't change what's being timed. Finishing writes the completion
@@ -22,7 +21,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,8 +31,7 @@ import { useWork } from '../../features/work/store';
 import { FirstActionLine } from '../../features/work/FirstActionLine';
 import { usePlan } from '../../features/work/usePlan';
 import { timeLabel } from '../../lib/clock';
-import { Close, MoreVertical, MusicNote } from '../../components/icons';
-import { mascot } from '../../components/mascot';
+import { Close, MoreVertical } from '../../components/icons';
 import { haptic } from '../../lib/haptics';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
@@ -189,21 +187,10 @@ export default function Focus() {
           </View>
         </View>
 
-        <View style={styles.art}>
-          <Image source={mascot.focus} style={styles.mascot} resizeMode="contain" />
-        </View>
+        {/* Keeps the buttons at the bottom. */}
+        <View style={styles.spacer} />
 
         <View style={styles.footer}>
-          <View style={styles.music}>
-            <View style={styles.musicIcon}>
-              <MusicNote size={18} color={colors.white} strokeWidth={2.4} />
-            </View>
-            <View style={styles.musicText}>
-              <Text style={styles.musicTitle}>No track</Text>
-              <Text style={styles.musicMeta}>Audio is not wired up yet</Text>
-            </View>
-          </View>
-
           <View style={styles.buttons}>
             <Pressable
               accessibilityRole="button"
@@ -328,31 +315,9 @@ const styles = StyleSheet.create({
   cycleNow: { backgroundColor: colors.orange },
   cycleTodo: { backgroundColor: colors.track },
 
-  art: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 6 },
-  mascot: { height: 130, width: 130 },
+  spacer: { flex: 1 },
 
   footer: { paddingTop: 10, paddingBottom: 6, gap: 10 },
-  music: {
-    backgroundColor: colors.ink,
-    borderRadius: radii.chip - 2,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  musicIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  musicText: { flex: 1 },
-  musicTitle: { fontFamily: fonts.body.extraBold, fontSize: 13.5, color: colors.white },
-  musicMeta: { fontFamily: fonts.body.regular, fontSize: 11.5, color: colors.mutedLight },
-
   buttons: { flexDirection: 'row', gap: 12 },
   pause: {
     flex: 1,

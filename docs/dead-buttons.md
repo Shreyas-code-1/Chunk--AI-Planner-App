@@ -8,11 +8,11 @@ remove it. Write the answer next to the item.
 ## Do nothing at all
 | # | Screen | Button | Now | Decision |
 |---|---|---|---|---|
-| 1 | 2.13 Import Work | "Take a picture" card | Nothing (4.1 Scan isn't built) | |
-| 2 | 2.13 Import Work | "Say it out loud" card | Nothing (no voice screen exists) | |
-| 3 | 2.13 Import Work | "Type it in" card | Nothing, though 3.6 Add Assignment exists | |
+| 1 | 2.13 Import Work | "Take a picture" card | Nothing (4.1 Scan isn't built) |**Removed:** whole screen deleted (29 Sep) |
+| 2 | 2.13 Import Work | "Say it out loud" card | Nothing (no voice screen exists) |**Removed:** whole screen deleted (29 Sep) |
+| 3 | 2.13 Import Work | "Type it in" card | Nothing, though 3.6 Add Assignment exists |**Removed:** whole screen deleted (29 Sep) |
 | 4 | 3.3 Focus | ⋮ menu (top right) | Nothing | |
-| 5 | 3.3 Focus | Music card ("No track") | Nothing: no audio source decided | |
+| 5 | 3.3 Focus | Music card ("No track") | Nothing: no audio source decided |**Removed** (29 Sep), along with the Focus mascot |
 | 6 | 5.2 Profile | Preferences | Nothing: no screen behind it | |
 | 7 | 5.2 Profile | Reminders | Nothing: notifications not built | |
 

@@ -1289,3 +1289,15 @@ out 185 pt either way. The in-app splash now sets an explicit height as well as
 its width.
 Confirmed on Shreyas's iPhone in Expo Go the same evening: the logo now shows
 at the right size.
+
+## 2026-09-29 — Import Work removed; Focus loses mascot and music card
+
+Shreyas's decisions on `docs/dead-buttons.md` items 1–3 and 5:
+- **2.13 IMPORT WORK deleted.** None of its three cards did anything. 2.12
+  PROGRESS CURVE's CONTINUE now goes straight to 2.14 BUILDING PLAN, and the
+  onboarding progress bar is 10 steps instead of 11, so 2.12 fills it.
+  Photo and voice input now appear nowhere, so the AI consent choice
+  (see the entry above) has nothing to hide for now. It's still saved, ready
+  for 4.1.
+- **3.3 FOCUS:** the mascot and the "No track" music card are gone. An empty
+  spacer keeps PAUSE and FINISH CHUNK at the bottom of the screen.

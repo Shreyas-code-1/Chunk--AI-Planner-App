@@ -88,7 +88,7 @@ export default function ProgressCurve() {
         </View>
 
         <View style={styles.spacer} />
-        <Button label="CONTINUE" onPress={() => router.push('/import-work')} />
+        <Button label="CONTINUE" onPress={() => router.push('/building-plan')} />
       </View>
     </SafeAreaView>
   );
