@@ -9,11 +9,12 @@ export const SPLASH_FADE_MS = 300;
 
 // Must match app.json's splash, whose image is splash-logo.png centred on a
 // transparent 390x844 pt canvas (Expo Go stretches that image to the screen).
-// The board's 2.1 cream.
-const BACKGROUND = '#FBF1DB';
-// The board's 2.1 size. The 1227 px source stays sharp at 3x.
-const IMAGE_WIDTH = 185;
-const IMAGE_ASPECT = 1227 / 1051;
+// The button orange (colors.orange), by request instead of the board's cream.
+const BACKGROUND = '#FA7814';
+// The beaver at the board's 2.1 size, plus its cream outline. The 1308 px
+// source stays sharp at 3x.
+const IMAGE_WIDTH = 197;
+const IMAGE_ASPECT = 1308 / 1089;
 
 /**
  * In-app copy of the native splash. It takes over from the native splash on

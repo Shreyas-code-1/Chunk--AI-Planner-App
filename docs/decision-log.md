@@ -1354,3 +1354,18 @@ PROFILE, under Preferences and Reminders. It calls Supabase `signOut`, then
 goes to 2.2 WELCOME. If that fails (e.g. offline), an alert says so and the
 student stays signed in. Not on the board, so it's marked `TODO(design)`.
 Account deletion is still to do.
+
+## 2026-09-30 — Splash on the button orange, with an outlined logo
+
+At Shreyas's request the splash departs from the board's cream 2.1:
+- **Background `#FBF1DB` → `#FA7814`** (`colors.orange`, the button orange), in
+  `app.json` and `StartupSplash.tsx`.
+- **New source:** `Chunk Splash Screen Logo Part 2.png` (1352×1163), the same
+  art with a thick cream sticker outline, so the beaver doesn't blend into
+  the orange. Checked clean: one piece, no stray specks, soft pixels within
+  4 px of the edge. Yesterday's colour correction was re-applied (the fur was
+  the darker `#CC672A` again); the outline is untouched. Cropped to
+  1308×1089 as `assets/images/splash-logo.png`.
+- **Width 185 → 197 pt**, so the beaver itself stays at the board's size, with
+  the outline added around it. `splash-native.png` was regenerated (a
+  transparent 1170×2532 canvas with the logo 591 px wide).
