@@ -1346,3 +1346,11 @@ Needs, in the Supabase dashboard: the sign-in email template must contain
 sender only allows a few emails an hour.
 
 230 tests pass (up from 163), typecheck is clean, and the iOS bundle builds.
+
+## 2026-09-29 — Log out button on Profile
+
+A LOG OUT button (the standard secondary `Button`) sits at the bottom of 5.2
+PROFILE, under Preferences and Reminders. It calls Supabase `signOut`, then
+goes to 2.2 WELCOME. If that fails (e.g. offline), an alert says so and the
+student stays signed in. Not on the board, so it's marked `TODO(design)`.
+Account deletion is still to do.

@@ -11,12 +11,14 @@
  * docs/v2-and-remaining-screens-questions.md.
  */
 
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomDock, Toggle } from '../../components/ui';
+import { BottomDock, Button, Toggle } from '../../components/ui';
 import { useAiConsent, useAiEnabled } from '../../features/ai/consent';
+import { useSession } from '../../features/auth/SessionProvider';
 import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { useDraft } from '../../features/onboarding/draft';
 import { BadgeTile } from '../../features/work/BadgeTile';
@@ -32,6 +34,8 @@ const CONNECTIONS = [
 
 export default function You() {
   const dock = useDockNavigation('profile');
+  const router = useRouter();
+  const { signOut } = useSession();
   const aiEnabled = useAiEnabled();
   const chooseAi = useAiConsent((s) => s.choose);
   const displayName = useDraft((s) => s.displayName);
@@ -51,6 +55,15 @@ export default function You() {
     onTime: onTimeCount(assignments, completions, chunkCounts),
     longestMinutes: Math.max(0, ...completions.map((c) => c.actualMinutes)),
   });
+
+  const logOut = async () => {
+    try {
+      await signOut();
+      router.replace('/welcome');
+    } catch {
+      Alert.alert("Couldn't log out", 'Check your connection and try again.');
+    }
+  };
 
   const initials = displayName
     .split(' ')
@@ -122,6 +135,9 @@ export default function You() {
             </View>
           ))}
         </View>
+
+        {/* TODO(design): not on the board; the standard secondary button. */}
+        <Button label="LOG OUT" variant="secondary" onPress={logOut} style={styles.logOut} />
       </ScrollView>
 
       <BottomDock active="profile" style={styles.dock} {...dock} />
@@ -207,6 +223,8 @@ const styles = StyleSheet.create({
   links: { marginTop: 12, paddingBottom: 10 },
   link: { flex: 1, borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14 },
   linkLabel: { fontFamily: fonts.body.extraBold, fontSize: 13.5, color: colors.ink },
+
+  logOut: { marginTop: 6, marginBottom: 10 },
 
   dock: { marginHorizontal: 20, marginBottom: 10 },
 });
