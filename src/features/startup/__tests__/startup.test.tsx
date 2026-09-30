@@ -17,6 +17,7 @@ jest.mock('react-native-gesture-handler', () => ({ GestureHandlerRootView: ({ ch
 jest.mock('@tanstack/react-query', () => ({ QueryClientProvider: ({ children }: any) => children }));
 jest.mock('../../../lib/queryClient', () => ({ queryClient: {} }));
 jest.mock('../../../components/ErrorBoundary', () => ({ ErrorBoundary: ({ children }: any) => children }));
+jest.mock('../../ai/AiConsentSync', () => ({ AiConsentSync: () => null }));
 jest.mock('../../auth/SessionProvider', () => ({ SessionProvider: ({ children }: any) => children, useSession: jest.fn() }));
 let tree: any;
 const fonts = (ready: boolean, error: Error | null = null) => jest.mocked(useFonts).mockReturnValue([ready, error]);

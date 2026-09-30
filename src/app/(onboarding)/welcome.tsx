@@ -2,7 +2,7 @@
  * 2.2 WELCOME.
  *
  * The first screen with a decision on it. Two buttons: GET STARTED begins
- * onboarding, and "I ALREADY HAVE AN ACCOUNT" goes to sign-in.
+ * onboarding (via the AI consent screen), and "I ALREADY HAVE AN ACCOUNT" goes to sign-in.
  *
  * Both buttons work. "I ALREADY HAVE AN ACCOUNT" was inert while sign-in had
  * no design; the current board draws it as 2.17, so the App Completeness gap
@@ -49,7 +49,7 @@ export default function Welcome() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label="GET STARTED" onPress={() => router.push('/goals')} />
+        <Button label="GET STARTED" onPress={() => router.push('/ai-consent')} />
         <Button
           label="I ALREADY HAVE AN ACCOUNT"
           variant="secondary"

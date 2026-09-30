@@ -4,6 +4,11 @@ Snapshot 2026-09-29, from `main` at `b38d3dc`. Open questions stay numbered as
 in `v2-and-remaining-screens-questions.md` (Q1–Q17).
 
 ## Blockers (the app can't ship without these)
+**Update 29 Sep:** the partner's branch `origin/codex/revenuecat-auth-integration`
+has real email sign-in, Apple/Google sign-in, the EAS build setup, and
+RevenueCat purchase and restore. It's not merged into `main` yet. `usePro()`
+still always returns false there.
+
 1. **Real sign-in** (Q3). 2.18/2.19 are fake: no email is sent and any code
    passes. Waiting on the partner's auth code: push it or rule it out.
 2. **Persistence.** Work and onboarding answers live only in memory, so a
@@ -18,8 +23,8 @@ in `v2-and-remaining-screens-questions.md` (Q1–Q17).
 7. **Sign out and account deletion** (Q2). Apple requires in-app deletion.
 
 ## Features not built
-8. **Section 4, AI tutor (4.1–4.5)**, plus an AI consent screen that has no
-   frame (Q5). Needs 1 and a server function.
+8. **Section 4, AI tutor (4.1–4.5).** Needs 1 and a server function. The AI
+   consent screen is built (29 Sep); see the decision log.
 9. **Notifications/reminders.** `expo-notifications` is installed but not used;
    the Reminders button on 5.2 does nothing (Q1).
 10. **Preferences screen** (Q1), which also has no frame.

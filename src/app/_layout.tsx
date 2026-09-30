@@ -19,6 +19,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
 
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { AiConsentSync } from '../features/ai/AiConsentSync';
 import { SessionProvider } from '../features/auth/SessionProvider';
 import { queryClient } from '../lib/queryClient';
 import { StartupSplash } from '../features/startup/StartupSplash';
@@ -58,6 +59,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
+            <AiConsentSync />
             {fontsReady && <Stack
               screenOptions={{
                 headerShown: false,

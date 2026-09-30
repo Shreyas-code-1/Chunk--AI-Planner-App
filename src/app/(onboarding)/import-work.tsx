@@ -9,6 +9,8 @@
  * to 4.1 SCAN TO CHUNK, typing to 3.6 ADD ASSIGNMENT, and voice capture has no
  * frame of its own yet. They are inert rather than wired somewhere wrong.
  * SKIP FOR NOW works, which is the path that has somewhere to go.
+ *
+ * Photo and voice are hidden unless the student gave AI consent.
  */
 
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -19,6 +21,7 @@ import type { ReactNode } from 'react';
 
 import { Button } from '../../components/ui';
 import { Camera, ListLines, Mic } from '../../components/icons';
+import { useAiEnabled } from '../../features/ai/consent';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
@@ -27,11 +30,14 @@ type Route = {
   detail: string;
   icon: ReactNode;
   primary?: boolean;
+  /** Sent to the AI provider, so shown only with AI consent. */
+  ai?: boolean;
   wellColor: string;
 };
 
 export default function ImportWork() {
   const router = useRouter();
+  const aiEnabled = useAiEnabled();
 
   const ROUTES: Route[] = [
     {
@@ -39,12 +45,14 @@ export default function ImportWork() {
       detail: 'A syllabus, a worksheet, the board.',
       icon: <Camera size={25} color={colors.white} strokeWidth={2.3} />,
       primary: true,
+      ai: true,
       wellColor: 'rgba(255,255,255,0.22)',
     },
     {
       title: 'Say it out loud',
       detail: '"Bio quiz Friday, chapters 4 and 5."',
       icon: <Mic size={25} color={colors.orangeDeep} strokeWidth={2.3} />,
+      ai: true,
       wellColor: colors.amber,
     },
     {
@@ -53,7 +61,7 @@ export default function ImportWork() {
       icon: <ListLines size={25} color={colors.tealDeep} strokeWidth={2.3} />,
       wellColor: colors.teal,
     },
-  ];
+  ].filter((route) => aiEnabled || !route.ai);
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -63,7 +71,9 @@ export default function ImportWork() {
 
         <Text style={styles.headline}>{'How do you want\nto add work?'}</Text>
         <Text style={styles.sub}>
-          Show it, say it, or type it. Chunk turns any of them into a plan.
+          {aiEnabled
+            ? 'Show it, say it, or type it. Chunk turns any of them into a plan.'
+            : 'Type it in. Chunk turns it into a plan.'}
         </Text>
 
         <ScrollView contentContainerStyle={styles.routes} showsVerticalScrollIndicator={false}>

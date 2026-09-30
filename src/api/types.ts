@@ -143,5 +143,8 @@ export type AiConsentRow = {
   user_id: string;
   provider: string;
   policy_version: string;
-  accepted_at: string;
+  /** False when the student chose to type everything, or turned AI off. */
+  granted: boolean;
+  /** When they tapped, which can be before they signed in. */
+  decided_at: string;
 };

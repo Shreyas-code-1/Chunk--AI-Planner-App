@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomDock, Toggle } from '../../components/ui';
+import { useAiConsent, useAiEnabled } from '../../features/ai/consent';
 import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { useDraft } from '../../features/onboarding/draft';
 import { BadgeTile } from '../../features/work/BadgeTile';
@@ -31,6 +32,8 @@ const CONNECTIONS = [
 
 export default function You() {
   const dock = useDockNavigation('profile');
+  const aiEnabled = useAiEnabled();
+  const chooseAi = useAiConsent((s) => s.choose);
   const displayName = useDraft((s) => s.displayName);
   const grade = useDraft((s) => s.grade);
   const assignments = useWork((s) => s.assignments);
@@ -98,6 +101,18 @@ export default function You() {
               <Toggle value={false} onChange={() => {}} disabled accessibilityLabel={c.name} />
             </View>
           ))}
+        </View>
+
+        {/* TODO(design): not on the board; built from the CONNECTED row. */}
+        <Text style={styles.section}>AI</Text>
+        <View style={[styles.card, styles.connection, styles.aiRow, shadows.hardEdge(5)]}>
+          <View style={styles.flex}>
+            <Text style={styles.connName}>Scan and voice</Text>
+            <Text style={styles.connMeta}>
+              {aiEnabled ? 'On · sent to Anthropic' : "Off · you'll type everything"}
+            </Text>
+          </View>
+          <Toggle value={aiEnabled} onChange={chooseAi} accessibilityLabel="Scan and voice" />
         </View>
 
         <View style={[styles.row, styles.links]}>
@@ -184,6 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  aiRow: { marginTop: 10 },
   connIcon: { width: 38, height: 38, borderRadius: 14 },
   connName: { fontFamily: fonts.body.extraBold, fontSize: 14.5, color: colors.ink },
   connMeta: { marginTop: 1, fontFamily: fonts.body.bold, fontSize: 12, color: colors.muted },

@@ -1203,3 +1203,33 @@ thing on screen is Expo Go's own loading screen with `assets/images/icon.png`,
 which our code can't change. Only after that does `StartupSplash` (169 pt,
 contain) appear. The native splash (`app.json`, `imageWidth: 169`, `contain`)
 can only be checked in a release build.
+
+## 2026-09-29 — AI consent screen
+
+Built at Shreyas's request from existing components. It isn't on the board, so
+it's marked `TODO(design)`.
+- **Where:** `/ai-consent`, between 2.2 WELCOME (GET STARTED) and 2.3 GOALS.
+  No progress header, like 2.2. The mascot is pose 05, the calm one with a
+  question bubble, which 2.4 also uses. The board has no calm pose of its own.
+- **Copy:** Shreyas's three lines as given. The button reads "SOUNDS GOOD" in
+  capitals to match every other `Button`. "I'll type everything" is a text
+  button, and "Privacy policy" opens a placeholder URL (`PRIVACY_POLICY_URL`).
+- **Either answer continues onboarding.** Saying no hides "Take a picture" and
+  "Say it out loud" on 2.13 IMPORT WORK, whose subtitle then reads "Type it in.
+  Chunk turns it into a plan." so it only describes what's shown. Focus has no
+  photo or voice input (its `expo-audio` use is the music card), so nothing
+  changed there. 5.3's "SCAN A SYLLABUS" was already disabled.
+- **Profile toggle:** an "AI" section on 5.2 with a "Scan and voice" row, built
+  from the CONNECTED row and the existing `Toggle`. It changes the same choice.
+- **Saving:** kept on the phone in SecureStore (`src/features/ai/consent.ts`)
+  and written to `ai_consents` by `AiConsentSync` once a session exists. The
+  row uses the time they tapped. If they change their mind before signing in,
+  only the latest choice is written. A failed write is retried on the next
+  launch. On `main` sign-in is still fake, so nothing is written until the
+  partner's auth branch is merged.
+- **Schema:** `supabase/migrations/0003_ai_consent_choice.sql` adds `granted`
+  (declines and switching off are recorded too, and the newest row is the
+  current state) and renames `accepted_at` → `decided_at`. **Not applied:** run
+  it by hand after 0002.
+- Provisional: `AI_POLICY_VERSION = '2026-09-29-draft'` and the placeholder
+  privacy URL, both in `consent.ts`.

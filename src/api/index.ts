@@ -10,6 +10,7 @@
  */
 
 import { getSupabase } from '../lib/supabase';
+import { AI_POLICY_VERSION, AI_PROVIDER } from '../features/ai/consent';
 import type { PreferencesRow, ProfileRow } from './types';
 
 export * from './types';
@@ -40,4 +41,19 @@ export async function getPreferences(): Promise<PreferencesRow | null> {
     .maybeSingle();
   if (error) throw error;
   return data as PreferencesRow | null;
+}
+
+/** Appends one AI consent choice. The newest row is the current state. */
+export async function recordAiConsent(granted: boolean, decidedAt: string): Promise<void> {
+  const id = await userId();
+  if (!id) throw new Error('recordAiConsent needs a signed-in user');
+
+  const { error } = await getSupabase().from('ai_consents').insert({
+    user_id: id,
+    provider: AI_PROVIDER,
+    policy_version: AI_POLICY_VERSION,
+    granted,
+    decided_at: decidedAt,
+  });
+  if (error) throw error;
 }

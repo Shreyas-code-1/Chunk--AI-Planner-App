@@ -29,7 +29,7 @@ Each item below gives the provisional choice currently in the code.
    toggles are disabled.
 
 ## Section 4 (AI tutor)
-5. 4.1–4.5 are on the board but need the AI server function, which needs real
+5. **AI consent: built 29 Sep** (see the decision log). 4.1–4.5 are on the board but need the AI server function, which needs real
    sign-in (item 3). They also need the **AI consent** screen, which has no
    frame. *Now:* not built. "SCAN A SYLLABUS" on 5.3 is disabled.
 
