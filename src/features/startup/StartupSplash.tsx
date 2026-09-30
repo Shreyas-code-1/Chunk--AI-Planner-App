@@ -7,8 +7,8 @@ export const SPLASH_MIN_MS = 1500;
 export const SPLASH_MAX_MS = 3000;
 export const SPLASH_FADE_MS = 300;
 
-// Must match the expo-splash-screen entry in app.json so the hand-off from the
-// native splash is invisible.
+// Must match app.json's splash, whose image is splash-logo.png centred on a
+// transparent 390x844 pt canvas (Expo Go stretches that image to the screen).
 // The board's 2.1 cream.
 const BACKGROUND = '#FBF1DB';
 // The board's 2.1 size. The 1227 px source stays sharp at 3x.
@@ -61,5 +61,5 @@ export function StartupSplash({ ready, startedAt }: { ready: boolean; startedAt:
 
 const styles = StyleSheet.create({
   screen: { ...StyleSheet.absoluteFill, backgroundColor: BACKGROUND, alignItems: 'center', justifyContent: 'center' },
-  artwork: { width: IMAGE_WIDTH, aspectRatio: IMAGE_ASPECT },
+  artwork: { width: IMAGE_WIDTH, height: IMAGE_WIDTH / IMAGE_ASPECT },
 });

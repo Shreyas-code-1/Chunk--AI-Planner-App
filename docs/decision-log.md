@@ -1275,3 +1275,15 @@ outlines were left alone. After the change: fur `#EE741D`, log `#A44825` /
 - Background stays `#FBF1DB`. The image is transparent, so there's no tile edge.
 - The other export (`CHUNK Board v3-Splash Screen Logo.png`) is broken: the
   design tool saved a missing-image placeholder. It isn't used.
+
+## 2026-09-29 — Splash logo filled the screen in Expo Go
+
+Shreyas saw the logo at the size of the screen. The in-app splash sets 185 pt,
+so the likely cause is Expo Go drawing the `app.json` splash image stretched to
+the screen width and ignoring `imageWidth`. The earlier "large and blurry"
+beaver fits the same cause. Fix: `app.json` now points at
+`assets/images/splash-native.png`, a transparent 1170×2532 canvas (a
+390×844 pt screen at 3×) with the logo at 555 px (185 pt) in the middle, and
+`imageWidth: 390`. Stretched to the screen or drawn at 390 pt, the logo comes
+out 185 pt either way. The in-app splash now sets an explicit height as well as
+its width.
