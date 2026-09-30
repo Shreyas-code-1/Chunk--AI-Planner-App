@@ -1260,3 +1260,18 @@ logo 4.5 pt above centre. Both splashes keep it exactly centred, because the
 native splash can't be offset and moving only one would cause a jump.
 Trade-off accepted: the 380 px source is stretched 1.5× on 3× screens, so it's
 slightly soft until a larger export arrives.
+
+## 2026-09-29 — Splash logo: sharp source, colour matched to the board
+
+Shreyas uploaded `Chunk Splash Screen Logo.png` (1352×1163, transparent, logo
+only). Its oranges and log browns were darker than the board's 2.1 (fur
+`#D06624` vs `#F5781F`), so they were brightened to match. Creams, eyes and
+outlines were left alone. After the change: fur `#EE741D`, log `#A44825` /
+`#974020` against the board's `#9D4421` / `#974020`. Cropped to the artwork
+(1227×1051) as `assets/images/splash-logo.png`.
+- **Width 190 → 185 pt**, the artwork's exact width on the board, in both
+  `app.json` and `StartupSplash.tsx`. That needs 555 px at 3×, so the 1227 px
+  source is never stretched. This supersedes the "slightly soft" trade-off above.
+- Background stays `#FBF1DB`. The image is transparent, so there's no tile edge.
+- The other export (`CHUNK Board v3-Splash Screen Logo.png`) is broken: the
+  design tool saved a missing-image placeholder. It isn't used.

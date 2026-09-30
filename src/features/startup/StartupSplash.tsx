@@ -9,12 +9,11 @@ export const SPLASH_FADE_MS = 300;
 
 // Must match the expo-splash-screen entry in app.json so the hand-off from the
 // native splash is invisible.
-// The logo tile's own cream, so its edge can't show.
+// The board's 2.1 cream.
 const BACKGROUND = '#FBF1DB';
-// The board's 2.1 size (380 px tile in a 2x, 390 pt frame). Soft on 3x screens
-// until a larger export replaces the 380 px source.
-const IMAGE_WIDTH = 190;
-const IMAGE_ASPECT = 380 / 346;
+// The board's 2.1 size. The 1227 px source stays sharp at 3x.
+const IMAGE_WIDTH = 185;
+const IMAGE_ASPECT = 1227 / 1051;
 
 /**
  * In-app copy of the native splash. It takes over from the native splash on
