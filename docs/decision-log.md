@@ -1279,7 +1279,7 @@ outlines were left alone. After the change: fur `#EE741D`, log `#A44825` /
 ## 2026-09-29 — Splash logo filled the screen in Expo Go
 
 Shreyas saw the logo at the size of the screen. The in-app splash sets 185 pt,
-so the likely cause is Expo Go drawing the `app.json` splash image stretched to
+so the cause is Expo Go drawing the `app.json` splash image stretched to
 the screen width and ignoring `imageWidth`. The earlier "large and blurry"
 beaver fits the same cause. Fix: `app.json` now points at
 `assets/images/splash-native.png`, a transparent 1170×2532 canvas (a
@@ -1287,3 +1287,5 @@ beaver fits the same cause. Fix: `app.json` now points at
 `imageWidth: 390`. Stretched to the screen or drawn at 390 pt, the logo comes
 out 185 pt either way. The in-app splash now sets an explicit height as well as
 its width.
+Confirmed on Shreyas's iPhone in Expo Go the same evening: the logo now shows
+at the right size.
