@@ -79,3 +79,11 @@ Each item below gives the provisional choice currently in the code.
 20. **Home placement.** A fourth stat tile makes all four narrower. *Alternative:*
     a log pill beside the streak pill in the header.
 21. **Logs move to Supabase** with the rest of the user data (batch 6).
+
+## 3.2 Today Path — open (2026-09-30)
+22. **Week strip and WEEK pill.** Both are display only right now. The board
+    draws a highlighted "selected" day and a WEEK pill, but no frame for
+    another day's path or for a week view, and the brief only says "the week
+    strip with the selected day". *Proposal:* tapping a day shows that day's
+    planned chunks (read-only for future days); WEEK opens 5.1 Progress, or
+    is removed. Waiting on Shreyas.
