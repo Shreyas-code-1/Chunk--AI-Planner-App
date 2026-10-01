@@ -33,7 +33,7 @@ export default function Welcome() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <AppImage source={mascot.waving} style={styles.mascot} resizeMode="contain" />
+        <AppImage source={mascot.welcome} style={styles.mascot} resizeMode="contain" />
 
         <View style={styles.copy}>
           {/* The board breaks this line itself: "Let's [chunk]" then

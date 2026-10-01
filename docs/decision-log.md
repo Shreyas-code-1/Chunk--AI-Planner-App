@@ -1469,3 +1469,10 @@ screen.png" (sunglasses, flame behind), trimmed and saved as
 `design/assets/mascot-chunk-complete.png` at 600×600 for its 200pt slot.
 **Supersedes the board's `design/mascot/17-chunk-cheering.png` on 3.4.**
 It is preloaded at startup like the other mascots.
+
+## 2026-09-30 — New Welcome mascot
+
+2.2 WELCOME (the first screen) now uses Shreyas's "Initial screen Mascot.png",
+saved as `design/assets/mascot-welcome.png` (708×708 for the 236pt slot).
+**Supersedes `design/mascot/03-chunk-mascot-waving.png` on 2.2**; the waving
+pose stays only in the dev gallery. Preloaded at startup with the others.
