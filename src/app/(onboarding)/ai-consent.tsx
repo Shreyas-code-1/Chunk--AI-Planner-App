@@ -63,7 +63,7 @@ export default function AiConsent() {
           </Pressable>
           <Pressable
             accessibilityRole="link"
-            onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+            onPress={() => void Linking.openURL(PRIVACY_POLICY_URL).catch(() => console.warn('[links] privacy-open-failed'))}
           >
             <Text style={styles.link}>Privacy policy</Text>
           </Pressable>

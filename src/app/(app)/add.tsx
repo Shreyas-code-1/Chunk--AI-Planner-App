@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 3.6 ADD ASSIGNMENT.
  *
@@ -125,7 +126,7 @@ export default function AddAssignment() {
             hitSlop={8}
             onPress={() => {
               haptic('select');
-              router.back();
+              safeBack(router, '/home');
             }}
             style={styles.back}
           >

@@ -1,3 +1,4 @@
+jest.mock('expo-crypto', () => ({ randomUUID: () => require('crypto').randomUUID() }));
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { LOGS_PER_MINUTE, logsForRunSeconds } from '../config';

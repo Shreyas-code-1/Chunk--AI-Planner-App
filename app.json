@@ -13,7 +13,8 @@
         "backgroundColor": "#FF9934",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.caidenn2.chunk"
     },
     "web": {
       "output": "static",
@@ -32,11 +33,19 @@
       ],
       "expo-secure-store",
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "caidenn2",
+    "extra": {
+      "eas": {
+        "projectId": "805f0a5f-067f-4fbd-a278-935eebb94a1e"
+      }
     }
   }
 }

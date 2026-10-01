@@ -1,3 +1,5 @@
+import { useDraft } from '../../features/onboarding/draft';
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 2.16 PAYWALL.
  *
@@ -59,7 +61,7 @@ const BENEFITS = [
 
 export default function Paywall() {
   const router = useRouter();
-  const onwards = () => router.replace('/login');
+  const onwards = () => { useDraft.getState().complete(); router.replace('/login'); };
 
   const [plan, setPlan] = useState<PlanId>('yearly');
   const choose = (next: PlanId) => {
@@ -92,7 +94,7 @@ export default function Paywall() {
             hitSlop={8}
             onPress={() => {
               haptic('select');
-              router.back();
+              safeBack(router, '/progress-curve');
             }}
             style={styles.back}
           >

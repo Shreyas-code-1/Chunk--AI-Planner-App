@@ -7,7 +7,8 @@
  * this phone.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { serializedStorage } from '../persistence/serializedStorage';
+import { z } from 'zod';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -41,7 +42,15 @@ export const useUsername = create<UsernameState>()(
     }),
     {
       name: 'chunk.username',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => serializedStorage),
+      skipHydration: true,
+      merge: (saved, current) => {
+        if (saved === undefined) return current;
+        const parsed = z.object({ username: z.string().regex(USERNAME_RULE).nullable() }).safeParse(saved);
+        if (!parsed.success) { console.warn('[local-data] invalid-username'); return current; }
+        return { ...current, ...parsed.data };
+      },
+      onRehydrateStorage: () => (_state, error) => { if (error) console.warn('[local-data] auxiliary-read-failed'); },
       partialize: (s) => ({ username: s.username }),
     },
   ),

@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 2.17 LOG IN.
  *
@@ -58,7 +59,7 @@ export default function Login() {
             hitSlop={8}
             onPress={() => {
               haptic('select');
-              router.back();
+              safeBack(router, '/welcome');
             }}
             style={styles.back}
           >

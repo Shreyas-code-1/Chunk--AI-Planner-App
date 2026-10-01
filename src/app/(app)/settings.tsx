@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 5.2a SETTINGS — reached from the gear on 5.2 PROFILE (design/v3/settings.png).
  *
@@ -58,7 +59,7 @@ export default function Settings() {
             accessibilityRole="button"
             accessibilityLabel="Back"
             onPressIn={() => haptic('select')}
-            onPress={() => router.back()}
+            onPress={() => safeBack(router, '/you')}
             style={styles.back}
           >
             <ChevronLeft size={22} color={colors.ink} strokeWidth={2.8} />

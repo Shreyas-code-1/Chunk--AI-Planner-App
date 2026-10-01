@@ -9,7 +9,8 @@
  * in Supabase yet either. TODO(batch 6): move with the work store.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { serializedStorage } from '../persistence/serializedStorage';
+import { z } from 'zod';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -34,7 +35,15 @@ export const useLogs = create<LogsState>()(
     }),
     {
       name: LOGS_STORAGE_KEY,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => serializedStorage),
+      skipHydration: true,
+      merge: (saved, current) => {
+        if (saved === undefined) return current;
+        const parsed = z.object({ balance: z.number().int().nonnegative(), lifetimeEarned: z.number().int().nonnegative() }).safeParse(saved);
+        if (!parsed.success) { console.warn('[local-data] invalid-logs'); return current; }
+        return { ...current, ...parsed.data };
+      },
+      onRehydrateStorage: () => (_state, error) => { if (error) console.warn('[local-data] auxiliary-read-failed'); },
       partialize: (s) => ({ balance: s.balance, lifetimeEarned: s.lifetimeEarned }),
     },
   ),

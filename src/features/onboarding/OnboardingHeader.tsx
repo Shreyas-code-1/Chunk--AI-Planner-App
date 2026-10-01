@@ -1,3 +1,4 @@
+import { safeBack, QUESTION_ROUTES, backDestination } from '../navigation/safeBack';
 /**
  * The header every onboarding question screen shares: a back button and a
  * progress bar, side by side.
@@ -36,7 +37,7 @@ export function OnboardingHeader({ step }: { step: number }) {
         hitSlop={8}
         onPress={() => {
           haptic('select');
-          router.back();
+          safeBack(router, backDestination(QUESTION_ROUTES[step - 1] ?? '/goals'));
         }}
         style={styles.back}
       >

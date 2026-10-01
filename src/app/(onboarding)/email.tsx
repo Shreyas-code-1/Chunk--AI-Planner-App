@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 2.18 LOG IN — EMAIL.
  *
@@ -97,7 +98,7 @@ export default function EmailSignIn() {
           hitSlop={8}
           onPress={() => {
             haptic('select');
-            router.back();
+            safeBack(router, '/login');
           }}
           style={styles.back}
         >
@@ -150,7 +151,7 @@ export default function EmailSignIn() {
           accessibilityRole="button"
           onPress={() => {
             haptic('select');
-            router.back();
+            safeBack(router, '/login');
           }}
           style={styles.alternative}
         >

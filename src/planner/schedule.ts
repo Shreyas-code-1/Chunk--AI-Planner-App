@@ -404,23 +404,27 @@ export function scheduleDay(
       segments = arrange(chunks);
       result = layout(segments, start, seam);
     }
-    urgentTriage = {
-      planDate: day.planDate,
-      needMinutes,
-      haveMinutes: Math.max(0, bedtime - start),
-      letGo,
-    };
+    // Only the running chunk is left (e.g. a late-night session): there is
+    // nothing to suggest letting go, so there is no triage to report.
+    if (letGo.length > 0) {
+      urgentTriage = {
+        planDate: day.planDate,
+        needMinutes,
+        haveMinutes: Math.max(0, bedtime - start),
+        letGo,
+      };
 
-    const suggested = everything.filter((c) => !keep(c)).sort(byAssignmentThenIndex);
-    chunks = everything;
-    segments = [
-      ...arrange(everything.filter(keep)),
-      {
-        kind: isDueToday(suggested[0], day.planDate, prefs) ? 'dueToday' : suggested[0].mode,
-        chunks: suggested,
-      },
-    ];
-    result = layout(segments, start, seam);
+      const suggested = everything.filter((c) => !keep(c)).sort(byAssignmentThenIndex);
+      chunks = everything;
+      segments = [
+        ...arrange(everything.filter(keep)),
+        {
+          kind: isDueToday(suggested[0], day.planDate, prefs) ? 'dueToday' : suggested[0].mode,
+          chunks: suggested,
+        },
+      ];
+      result = layout(segments, start, seam);
+    }
   }
 
   const dayStart = startOfPlanDay(day.planDate).getTime();

@@ -1476,3 +1476,26 @@ It is preloaded at startup like the other mascots.
 saved as `design/assets/mascot-welcome.png` (708×708 for the 236pt slot).
 **Supersedes `design/mascot/03-chunk-mascot-waving.png` on 2.2**; the waving
 pose stays only in the dev gallery. Preloaded at startup with the others.
+
+## 2026-10-01 — Merged codex/local-persistence (teammate)
+
+Shreyas asked to merge all branches. This one (one commit, "Integrate latest
+UI, persistence, startup, and navigation fixes") was a snapshot of the v3
+redesign plus: a local data layer (work, onboarding draft and progress, logs,
+username, AI consent all saved on the phone with schema checks), resume
+onboarding at the last step, safe Back fallbacks, Android back, Focus guards
+(no fake completions; leaving abandons once), package bumps, `eas.json` and the
+teammate's EAS project/Android package in `app.json`.
+
+Two of its changes were **not** taken, because they reverted agreed decisions:
+- **Splash stays orange with the outlined logo** (30 Sep decision), not the
+  branch's cream `#FCF1DC` + `splash-beaver.png`. Kept their Expo Go startup
+  preview structure, drawn with our splash.
+- **Startup still waits for images** (30 Sep blank-image fix), now capped at
+  1.5 s (`IMAGE_WAIT_MAX_MS` in `src/app/_layout.tsx`) — the branch had made
+  it background-only.
+
+Also fixed while merging: a planner crash (`schedule.ts`) when the only chunk
+left is the running one and it runs past bedtime + bend — the let-go list was
+empty and read anyway. Showed up late at night (their Focus flow tests failed
+after ~midnight). Regression test in `schedule.test.ts`.

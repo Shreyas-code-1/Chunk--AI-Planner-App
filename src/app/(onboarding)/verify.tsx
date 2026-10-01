@@ -1,3 +1,5 @@
+import { useDraft } from '../../features/onboarding/draft';
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 2.19 LOG IN — VERIFY.
  *
@@ -67,6 +69,7 @@ export default function Verify() {
       if (!active.current || current !== generation.current) return;
       if (result.status === 'verified') {
         active.current = false;
+        useDraft.getState().complete();
         router.replace('/home');
       } else if (result.status === 'invalid-or-expired') {
         setProblem('That code is invalid or has expired. Please check it and try again.');
@@ -96,7 +99,7 @@ export default function Verify() {
           hitSlop={8}
           onPress={() => {
             haptic('select');
-            router.back();
+            safeBack(router, '/email');
           }}
           style={styles.back}
         >

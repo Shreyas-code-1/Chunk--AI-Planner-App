@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 3.3 FOCUS — RUNNING.
  *
@@ -21,10 +22,10 @@
  * `chunk_completions` policy is: the lifetime count depends on it.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OrangeGradient, ProgressRing, ScreenScroll } from '../../components/ui';
@@ -69,7 +70,11 @@ export default function Focus() {
 
   // Re-opening the chunk that's already running picks up its snapshot.
   const snapshot = active?.assignmentId === params.assignment ? active : null;
-  const minutes = snapshot?.plannedMinutes ?? Number(params.minutes ?? 0);
+  const suppliedMinutes = Number(params.minutes ?? 0);
+  const minutes = snapshot?.plannedMinutes ?? (Number.isFinite(suppliedMinutes) && suppliedMinutes > 0 ? Math.min(suppliedMinutes, 600) : 0);
+  useFocusEffect(useCallback(() => () => {
+    if (useWork.getState().active?.assignmentId === params.assignment) useWork.getState().abandonActive();
+  }, [params.assignment]));
   const title = snapshot?.title ?? params.title;
   const totalSeconds = Math.max(0, Math.round(minutes * 60));
 
@@ -116,7 +121,7 @@ export default function Focus() {
               onPress={() => {
                 haptic('select');
                 abandonActive();
-                router.back();
+                safeBack(router, '/today');
               }}
               style={styles.headerButton}
             >
@@ -203,7 +208,7 @@ export default function Focus() {
                   if (running) pauseActive();
                   else resumeActive();
                 }}
-                disabled={totalSeconds === 0}
+                disabled={!snapshot || totalSeconds === 0}
                 style={styles.pause}
               >
                 <Text style={styles.pauseLabel}>{running ? 'PAUSE' : 'RESUME'}</Text>
@@ -213,9 +218,10 @@ export default function Focus() {
                 accessibilityRole="button"
                 onPress={() => {
                   haptic('press');
-                  const focused = Math.max(1, Math.round(runSeconds / 60));
+                  const focused = Math.max(0, Math.round(runSeconds / 60));
 
                   const finished = finishActive(focused);
+                  if (!finished) return;
 
                   router.replace({
                     pathname: '/chunk-complete',
@@ -227,6 +233,7 @@ export default function Focus() {
                     },
                   });
                 }}
+                disabled={!snapshot}
                 style={[styles.finish, shadows.hardEdge(6, 'rgba(0,0,0,0.14)')]}
               >
                 <Text style={styles.finishLabel}>FINISH CHUNK</Text>

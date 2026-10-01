@@ -286,6 +286,17 @@ describe('scheduleDay — bedtime', () => {
     expect(end - NOW.getTime() / 60_000).toBeLessThanOrEqual(90 + BEDTIME_BEND_MAX_MINUTES);
   });
 
+  it('does not crash when only the running chunk is left past the bend', () => {
+    // A late-night session: the one chunk on the timer runs past bedtime and
+    // the bend, and there is nothing else to let go. No triage to report.
+    const running = task('late', 'reading', 'meh', 150, { dueAt: dueIn(0, 23), pinned: true });
+    const result = scheduleDay(dayOf([running]), bed(16, 0), NOW, {
+      active: { assignmentId: 'late', index: 1, startedAt: NOW },
+    });
+    expect(result.urgentTriage).toBeNull();
+    expect(result.day.chunks.map((c) => c.assignmentId)).toEqual(['late']);
+  });
+
   it('never grows a chunk past the cap', () => {
     const { day } = scheduleDay(
       dayOf([task('a', 'writing', 'dreading', 55, { dueAt: dueIn(0, 23), pinned: true })]),

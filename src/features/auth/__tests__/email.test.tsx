@@ -10,7 +10,7 @@ const mockPush = jest.fn();
 const mockBack = jest.fn();
 let mockBlur: (() => void) | undefined;
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: mockPush, back: mockBack }),
+  useRouter: () => ({ push: mockPush, canGoBack: () => true, back: mockBack }),
   useFocusEffect: (effect: () => (() => void)) => {
     require('react').useEffect(() => { mockBlur = effect(); return mockBlur; }, [effect]);
   },

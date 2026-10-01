@@ -1,21 +1,6 @@
-/**
- * The work the student has added, and the chunks they have finished.
- *
- * This is the seam Supabase replaces. `src/api` is the only place allowed to
- * talk to Supabase, and nothing is signed in yet — 2.19 accepts any code
- * without creating a session — so until auth is real the app needs somewhere
- * to keep work, and this is it. Same shape as the onboarding draft and the
- * same trade: **it is memory only.** Reloading the bundler loses it.
- *
- * The rows deliberately mirror the planner's `Assignment` rather than the
- * screens' needs, so `toPlannerAssignments` is a rename and not a translation,
- * and so the Supabase tables can take the same shape when they arrive.
- *
- * TODO(batch 6): move to `assignments` and `chunk_completions` through
- * `src/api`, with TanStack Query holding it. `chunk_completions` is
- * append-only by policy, which is why completions here are only ever added.
- */
+/** Work and immutable history. Local persistence is managed by the data layer. */
 
+import { randomUUID } from 'expo-crypto';
 import { create } from 'zustand';
 
 import { logsForRunSeconds } from '../logs/config';
@@ -76,7 +61,7 @@ type WorkState = {
   completions: Completion[];
   active: ActiveChunk | null;
   /** Started and left unfinished; append-only, for §9 learning. */
-  abandoned: AbandonedChunk[];
+  abandoned: (AbandonedChunk & { id: string })[];
   /** Chunk keys whose 5.4 urgent card the student chose to keep at its planned time. */
   keptForLater: string[];
   keepForLater(chunkKey: string): void;
@@ -96,8 +81,7 @@ type WorkState = {
   reset(): void;
 };
 
-/** Good enough for a memory store; the database generates the real ones. */
-const newId = () => `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+const newId = randomUUID;
 
 export const useWork = create<WorkState>((set, get) => ({
   assignments: [],
@@ -123,7 +107,6 @@ export const useWork = create<WorkState>((set, get) => ({
   removeAssignment(id) {
     set((state) => ({
       assignments: state.assignments.filter((entry) => entry.id !== id),
-      completions: state.completions.filter((entry) => entry.assignmentId !== id),
       active: state.active?.assignmentId === id ? null : state.active,
     }));
   },
@@ -211,6 +194,7 @@ export const useWork = create<WorkState>((set, get) => ({
       abandoned: [
         ...s.abandoned,
         {
+          id: newId(),
           assignmentId: active.assignmentId,
           dread: active.dread,
           firstChunk: active.firstChunk,

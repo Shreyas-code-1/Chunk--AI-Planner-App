@@ -17,20 +17,33 @@ import { Stack, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
+import { useLocalDataReady, useOnboardingProgress } from '../features/persistence/localData';
+import { useAndroidBack } from '../features/navigation/useAndroidBack';
+import { preloadImages } from '../lib/preloadImages';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AiConsentSync } from '../features/ai/AiConsentSync';
-import { SessionProvider } from '../features/auth/SessionProvider';
-import { preloadImages } from '../lib/preloadImages';
+import { SessionProvider, useSession } from '../features/auth/SessionProvider';
 import { queryClient } from '../lib/queryClient';
-import { StartupSplash } from '../features/startup/StartupSplash';
+import { ExpoGoStartupPreview } from '../features/startup/ExpoGoStartupPreview';
 
-// Keep the native splash up until StartupSplash has drawn its copy over it.
-void SplashScreen.preventAutoHideAsync();
-const startedAt = Date.now();
+const IMAGE_WAIT_MAX_MS = 1500;
+
+// Keep the native splash until required local startup work and routing settle.
+void SplashScreen.preventAutoHideAsync().catch(() => console.warn('[startup] splash-prepare-failed'));
+
 
 export default function RootLayout() {
+  return <SessionProvider><StartupContent /></SessionProvider>;
+}
+
+function StartupContent() {
+  const { loading } = useSession();
+  const dataReady = useLocalDataReady();
   const pathname = usePathname();
+  useAndroidBack(pathname);
+  useOnboardingProgress(pathname, dataReady && !loading);
   const [laidOut, setLaidOut] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
@@ -47,19 +60,30 @@ export default function RootLayout() {
     Nunito_900Black,
   });
 
-  const fontsReady = fontsLoaded || !!fontError;
-  // The splash holds for images too (never past its own maximum), so the
-  // first screen draws with its mascot and the dock with its icons.
+  // Startup waits for images so the first screen draws with its mascot and
+  // the dock with its icons (the 30 Sep blank-image fix) — but never longer
+  // than IMAGE_WAIT_MAX_MS, so a slow prefetch can't hold the app.
   const [imagesReady, setImagesReady] = useState(false);
   useEffect(() => {
+    const cap = setTimeout(() => setImagesReady(true), IMAGE_WAIT_MAX_MS);
     preloadImages()
-      .catch(() => {})
-      .finally(() => setImagesReady(true));
+      .catch(() => console.warn('[startup] image-preload-failed'))
+      .finally(() => {
+        clearTimeout(cap);
+        setImagesReady(true);
+      });
+    return () => clearTimeout(cap);
   }, []);
+  const fontsReady = fontsLoaded || !!fontError;
   // Index is only a routing gate, so leaving it means session and route are
   // settled. Direct links skip it.
-  const ready = fontsReady && imagesReady && laidOut && pathname !== '/';
-  if (ready && !revealed) setRevealed(true);
+  const storesReady = dataReady && fontsReady && imagesReady && !loading;
+  const ready = storesReady && laidOut && pathname !== '/';
+  useEffect(() => {
+    if (!ready || revealed) return;
+    void SplashScreen.hideAsync().catch(() => console.warn('[startup] splash-hide-failed'));
+    setRevealed(true);
+  }, [ready, revealed]);
 
   return (
     // GestureHandlerRootView must wrap everything that uses a gesture, and
@@ -67,9 +91,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FFFFFF' }} onLayout={() => setLaidOut(true)}>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <SessionProvider>
-            <AiConsentSync />
-            {fontsReady && <Stack
+
+            {dataReady && <AiConsentSync />}
+            {storesReady && <Stack
               screenOptions={{
                 headerShown: false,
                 // No animated intermediate screen on initial routing.
@@ -78,8 +102,10 @@ export default function RootLayout() {
                 animationDuration: 180,
               }}
             />}
-            <StartupSplash ready={ready} startedAt={startedAt} />
-          </SessionProvider>
+            {Constants.executionEnvironment === ExecutionEnvironment.StoreClient && (
+              <ExpoGoStartupPreview ready={ready} />
+            )}
+
         </QueryClientProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>

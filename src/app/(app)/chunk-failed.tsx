@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 5.6 SOMETHING WENT WRONG — the AI breakdown didn't come back. The
  * assignment is already saved, so CHUNK IT MYSELF goes to 3.6 and TRY AGAIN
@@ -53,7 +54,7 @@ export default function ChunkFailed() {
             </View>
 
             <View style={styles.buttons}>
-              <Button label="TRY AGAIN" onPress={() => router.back()} />
+              <Button label="TRY AGAIN" onPress={() => safeBack(router, '/add')} />
               <Button
                 label="CHUNK IT MYSELF"
                 variant="secondary"

@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 5.5 OFFLINE. Pushed by anything that needs the network when there is none.
  * TRY AGAIN rechecks and goes back once the connection returns.
@@ -30,9 +31,11 @@ export default function Offline() {
             style={styles.button}
             onPress={async () => {
               setChecking(true);
-              const online = await isOnline();
-              setChecking(false);
-              if (online) router.back();
+              try {
+                if (await isOnline()) safeBack(router, '/home');
+              } catch {
+                console.warn('[network] connectivity-check-failed');
+              } finally { setChecking(false); }
             }}
           />
         </View>

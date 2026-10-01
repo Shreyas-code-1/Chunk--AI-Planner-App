@@ -50,18 +50,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!configured) return;
 
     let cancelled = false;
-    const supabase = getSupabase();
+    let generation = 0;
+    const restoreGeneration = generation;
+    let supabase: ReturnType<typeof getSupabase>;
+    try { supabase = getSupabase(); }
+    catch { console.warn('[session] configuration-failed'); setLoading(false); return; }
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      setSession(data.session);
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (cancelled || generation !== restoreGeneration) return;
+      if (error) console.warn('[session] restore-failed');
+      setSession(error ? null : data.session);
       setLoading(false);
+    }).catch(() => {
+      if (cancelled || generation !== restoreGeneration) return;
+      console.warn('[session] restore-failed');
+      setSession(null); setLoading(false);
     });
 
     // Fires on sign-in, sign-out and every token refresh, so this is the only
     // place session state is written.
     const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+      if (cancelled) return;
+      generation += 1;
       setSession(next);
+      setLoading(false);
     });
 
     return () => {
