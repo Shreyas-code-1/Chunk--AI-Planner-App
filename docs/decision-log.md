@@ -1461,3 +1461,11 @@ Complete, so its icons blanked.
 - `src/lib/preloadImages.ts` downloads and decodes every mascot, dock icon and
   the log during the startup splash; the splash waits for it (never past its
   3 s maximum). `expo-asset` added as a direct dependency (Expo Go safe).
+
+## 2026-09-30 — New Chunk Complete mascot
+
+3.4 CHUNK COMPLETE's mascot is now Shreyas's "New mascot for chunk completion
+screen.png" (sunglasses, flame behind), trimmed and saved as
+`design/assets/mascot-chunk-complete.png` at 600×600 for its 200pt slot.
+**Supersedes the board's `design/mascot/17-chunk-cheering.png` on 3.4.**
+It is preloaded at startup like the other mascots.
