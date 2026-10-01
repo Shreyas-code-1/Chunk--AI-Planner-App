@@ -11,6 +11,7 @@
  * way the board's 18:42 of 24 min is.
  *
  * TODO(design): the board draws no paused state, only PAUSE as a label.
+ * Logs tick up beside the length, one per running minute (decision log 2026-09-30).
  * The mascot and the music card are removed by request (29 Sep).
  * Opening it snapshots the chunk onto the timer (`startChunk`), and the timer
  * runs from that snapshot, not from the plan — a dread tap or a re-cut while
@@ -20,14 +21,16 @@
  * `chunk_completions` policy is: the lifetime count depends on it.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OrangeGradient, ProgressRing } from '../../components/ui';
-import { useWork } from '../../features/work/store';
+import { runSecondsOf, useWork } from '../../features/work/store';
+import { logsForRunSeconds } from '../../features/logs/config';
+import { LogIcon } from '../../features/logs/LogIcon';
 import { FirstActionLine } from '../../features/work/FirstActionLine';
 import { usePlan } from '../../features/work/usePlan';
 import { timeLabel } from '../../lib/clock';
@@ -60,6 +63,8 @@ export default function Focus() {
   const startChunk = useWork((state) => state.startChunk);
   const finishActive = useWork((state) => state.finishActive);
   const abandonActive = useWork((state) => state.abandonActive);
+  const pauseActive = useWork((state) => state.pauseActive);
+  const resumeActive = useWork((state) => state.resumeActive);
   const { finishAtToday } = usePlan();
 
   // Re-opening the chunk that's already running picks up its snapshot.
@@ -76,31 +81,23 @@ export default function Focus() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const [remaining, setRemaining] = useState(() => {
-    if (!snapshot) return totalSeconds;
-    const elapsed = Math.floor((Date.now() - snapshot.startedAt.getTime()) / 1000);
-    return Math.max(0, totalSeconds - elapsed);
-  });
-  const [running, setRunning] = useState(totalSeconds > 0);
-  const tick = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  // Time comes from the store's run clock, so pauses and leaving the screen
+  // are counted correctly; the interval only re-renders.
+  const running = Boolean(snapshot?.runningSince);
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     if (!running) return;
-    tick.current = setInterval(() => {
-      setRemaining((value) => {
-        if (value <= 1) {
-          // Stopping here rather than in a second effect: the interval is the
-          // thing that reached zero, so it is the thing that stands itself down.
-          setRunning(false);
-          return 0;
-        }
-        return value - 1;
-      });
-    }, 1000);
-    return () => {
-      if (tick.current) clearInterval(tick.current);
-    };
+    const tick = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(tick);
   }, [running]);
+
+  const runSeconds = snapshot ? runSecondsOf(snapshot, now) : 0;
+  const remaining = totalSeconds - runSeconds;
+  const logsSoFar = logsForRunSeconds(runSeconds);
+
+  useEffect(() => {
+    if (running && remaining <= 0) pauseActive();
+  }, [running, remaining, pauseActive]);
 
   const elapsed = totalSeconds === 0 ? 0 : (totalSeconds - remaining) / totalSeconds;
   const cyclesDone = Math.floor(elapsed * CYCLES);
@@ -148,8 +145,14 @@ export default function Focus() {
           >
             <Text style={styles.ringLabel}>TIME LEFT</Text>
             <Text style={styles.ringClock}>{clock(remaining)}</Text>
-            <View style={styles.ringOf}>
-              <Text style={styles.ringOfLabel}>{`of ${minutes || 0} min`}</Text>
+            <View style={styles.ringPills}>
+              <View style={styles.ringOf}>
+                <Text style={styles.ringOfLabel}>{`of ${minutes || 0} min`}</Text>
+              </View>
+              <View style={styles.ringOf} accessibilityLabel={`${logsSoFar} logs earned`}>
+                <LogIcon size={16} />
+                <Text style={styles.ringOfLabel}>{logsSoFar}</Text>
+              </View>
             </View>
             {/* The evening's end, small, under the countdown (v3 §8). */}
             {finishAtToday ? (
@@ -196,7 +199,8 @@ export default function Focus() {
               accessibilityRole="button"
               onPress={() => {
                 haptic('press');
-                setRunning((value) => !value);
+                if (running) pauseActive();
+                else resumeActive();
               }}
               disabled={totalSeconds === 0}
               style={styles.pause}
@@ -208,14 +212,15 @@ export default function Focus() {
               accessibilityRole="button"
               onPress={() => {
                 haptic('press');
-                const focused = Math.max(1, Math.round((totalSeconds - remaining) / 60));
+                const focused = Math.max(1, Math.round(runSeconds / 60));
 
-                finishActive(focused);
+                const finished = finishActive(focused);
 
                 router.replace({
                   pathname: '/chunk-complete',
                   params: {
                     minutes: String(focused),
+                    logs: String(finished?.logs ?? 0),
                     index: params.index ?? '',
                     total: params.total ?? '',
                   },
@@ -272,8 +277,11 @@ const styles = StyleSheet.create({
     color: colors.white,
     includeFontPadding: false,
   },
+  ringPills: { marginTop: 4, flexDirection: 'row', gap: 6 },
   ringOf: {
-    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: 'rgba(255,255,255,0.24)',
     borderRadius: radii.pill,
     paddingVertical: 6,

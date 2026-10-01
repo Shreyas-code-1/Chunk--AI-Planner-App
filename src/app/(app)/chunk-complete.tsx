@@ -29,15 +29,17 @@ import { mascot } from '../../components/mascot';
 import { SHORT_BREAK_MINUTES } from '../../planner/constants';
 import { usePlan } from '../../features/work/usePlan';
 import { useWork } from '../../features/work/store';
+import { LogsEarned } from '../../features/logs/LogsEarned';
 import { timeLabel } from '../../lib/clock';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 export default function ChunkComplete() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ minutes?: string; index?: string }>();
+  const params = useLocalSearchParams<{ minutes?: string; index?: string; logs?: string }>();
 
   const minutes = Number(params.minutes ?? 0);
   const index = Number(params.index ?? 0);
+  const logs = Number(params.logs ?? 0);
 
   const { doneToday, plannedToday, allTimeChunks, upNext } = usePlan();
   // The chunk just finished; its end is "now" for the done line.
@@ -67,6 +69,8 @@ export default function ChunkComplete() {
                   : 'That one is behind you. Take the win.'}
             </Text>
           </View>
+
+          <LogsEarned logs={logs} />
 
           <View style={[styles.card, shadows.hardEdge(6)]}>
             <View style={styles.statRow}>

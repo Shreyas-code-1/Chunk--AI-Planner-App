@@ -1369,3 +1369,28 @@ At Shreyas's request the splash departs from the board's cream 2.1:
 - **Width 185 → 197 pt**, so the beaver itself stays at the board's size, with
   the outline added around it. `splash-native.png` was regenerated (a
   transparent 1170×2532 canvas with the logo 591 px wide).
+
+## 2026-09-30 — Logs currency, and a flame for the streak
+
+**Streak icon.** The 8–9 px orange dot in the streak pill (3.1 HOME, 5.1
+PROGRESS) is now `Flame`, an SVG drawn from Shreyas's reference
+`Screenshot 2026-09-30 181747.png`: flame in `colors.orange`, drop in
+`colors.gold`. Not on the board.
+
+**Logs** (branch `feature/logs`, not merged until tested on a phone):
+- Art: `Chunk Log Currency .png` (1254×1254, transparent background), trimmed
+  to the log and saved as `assets/icons/log.png` at 48/96/144 px (@1x/2x/3x).
+- **1 log per whole minute the timer actually runs**, `LOGS_PER_MINUTE` in
+  `src/features/logs/config.ts` (provisional). Per session; a partial minute
+  earns nothing. Capped at the chunk's length.
+- Running time is now a run clock on the active chunk (`runMs` +
+  `runningSince` in the work store), so pause, background and leaving the
+  screen are counted from real timestamps. The countdown reads the same clock.
+- Leaving a chunk unfinished still banks the minutes it ran.
+- `balance` and `lifetimeEarned`, persisted with AsyncStorage (`chunk.logs`)
+  because no user data is in Supabase yet. `earn` ignores anything but a
+  positive whole number, so lifetime can't go down. Never sold for money.
+- Shown on Home as a fourth stat tile (log in place of the label; values
+  shrink to fit rather than wrap), on Focus as a pill next to "of N min",
+  and on Chunk Complete as "+N logs" counting up.
+- The scheduling engine is unchanged.

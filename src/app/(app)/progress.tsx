@@ -13,6 +13,7 @@ import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Flame } from '../../components/icons';
 import { BottomDock, Chip } from '../../components/ui';
 import { mascot } from '../../components/mascot';
 import { useDockNavigation } from '../../features/navigation/useDockNavigation';
@@ -75,7 +76,7 @@ export default function Progress() {
             </Text>
           </View>
           <View style={styles.streak}>
-            <View style={styles.streakDot} />
+            <Flame size={17} />
             <Text style={styles.streakLabel}>{`${streak}-day streak`}</Text>
           </View>
         </View>
@@ -188,7 +189,6 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 14,
   },
-  streakDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: colors.orange },
   streakLabel: { fontFamily: fonts.body.black, fontSize: 12.5, color: colors.white },
 
   week: {
