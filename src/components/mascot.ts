@@ -18,6 +18,11 @@ export const mascot = {
   splash: require('../../design/mascot/02-chunk-mascot.png'),
   /** 2.2 WELCOME — the waving pose, and the mascot proper. */
   waving: require('../../design/mascot/03-chunk-mascot-waving.png'),
+  /**
+   * 2.2 WELCOME (GET STARTED / I ALREADY HAVE AN ACCOUNT). Replaced 30 Sep by
+   * Shreyas's "Initial screen Mascot.png", trimmed to 708px in design/assets/.
+   */
+  welcome: require('../../design/assets/mascot-welcome.png'),
   /** 2.3 GOALS — the small bust beside the speech bubble. */
   goals: require('../../design/mascot/04-chunk.png'),
   /** 2.4 NAME + GRADE. */
@@ -61,7 +66,9 @@ export const mascot = {
   /** 3.3 FOCUS — RUNNING. */
   focus: require('../../design/mascot/16-chunk-studying.png'),
   /** 3.4 CHUNK COMPLETE. */
-  complete: require('../../design/mascot/17-chunk-cheering.png'),
+  // Replaced 30 Sep by Shreyas's "New mascot for chunk completion screen.png"
+  // (sunglasses in front of a flame), trimmed to 600px in design/assets/.
+  complete: require('../../design/assets/mascot-chunk-complete.png'),
   /** 3.7 THE CHUNKING MOMENT — the bust beside the speech bubble. */
   chunked: require('../../design/mascot/19-chunk.png'),
   /** 4.1 SCAN TO CHUNK. */

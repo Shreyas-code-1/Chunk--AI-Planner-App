@@ -10,12 +10,14 @@
  * only place that difference lives.
  */
 
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, SpeechBubble } from '../../components/ui';
+import { Button, SpeechBubble, ScreenScroll } from '../../components/ui';
 import { Clock } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
@@ -53,78 +55,83 @@ export default function Week() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
-      <View style={styles.body}>
-        <OnboardingHeader step={5} />
+      <ScreenScroll>
+        <StatusBar style="dark" />
+        <View style={styles.body}>
+          <OnboardingHeader step={5} />
 
-        <Text style={styles.headline}>Which days{'\n'}are busiest?</Text>
-        <Text style={styles.sub}>Tap a day to cycle light, normal, busy.</Text>
+          <Text style={styles.headline}>Which days{'\n'}are busiest?</Text>
+          <Text style={styles.sub}>Tap a day to cycle light, normal, busy.</Text>
 
-        <View style={styles.days}>
-          {DISPLAY_ORDER.map((stored) => {
-            const load = weekLoad[stored];
-            const spec = BAR[load];
-            return (
-              <View key={stored} style={styles.dayColumn}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${DAY_LABEL[stored]}, ${load}`}
-                  onPress={() => {
-                    haptic('select');
-                    cycleDay(stored);
-                  }}
-                  style={[
-                    styles.bar,
-                    { height: spec.height, backgroundColor: spec.fill },
-                    load === 'busy' && shadows.hardEdge(5),
-                  ]}
-                >
-                  <View
-                    style={[styles.tick, { backgroundColor: spec.tick, opacity: spec.tickOpacity }]}
-                  />
-                </Pressable>
-                <Text style={[styles.dayLabel, { color: LABEL_COLOR[load] }]}>
-                  {DAY_LABEL[stored]}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-
-        <View style={styles.legend}>
-          {LEGEND.map(([load, label]) => (
-            <View key={load} style={styles.legendItem}>
-              <View style={[styles.swatch, { backgroundColor: BAR[load].fill }]} />
-              <Text style={styles.legendLabel}>{label}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={[styles.note, shadows.hardEdge(5)]}>
-          <View style={styles.noteIcon}>
-            <Clock size={18} color={colors.orangeDeep} strokeWidth={2.6} />
+          <View style={styles.days}>
+            {DISPLAY_ORDER.map((stored) => {
+              const load = weekLoad[stored];
+              const spec = BAR[load];
+              return (
+                <View key={stored} style={styles.dayColumn}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${DAY_LABEL[stored]}, ${load}`}
+                    onPress={() => {
+                      haptic('select');
+                      cycleDay(stored);
+                    }}
+                    style={[
+                      styles.bar,
+                      { height: spec.height, backgroundColor: spec.fill },
+                      load === 'busy' && shadows.hardEdge(5),
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.tick,
+                        { backgroundColor: spec.tick, opacity: spec.tickOpacity },
+                      ]}
+                    />
+                  </Pressable>
+                  <Text style={[styles.dayLabel, { color: LABEL_COLOR[load] }]}>
+                    {DAY_LABEL[stored]}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
-          <Text style={styles.noteText}>
-            {"Three busy days max — so there's somewhere to move work to."}
-          </Text>
+
+          <View style={styles.legend}>
+            {LEGEND.map(([load, label]) => (
+              <View key={load} style={styles.legendItem}>
+                <View style={[styles.swatch, { backgroundColor: BAR[load].fill }]} />
+                <Text style={styles.legendLabel}>{label}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={[styles.note, shadows.hardEdge(5)]}>
+            <View style={styles.noteIcon}>
+              <Clock size={18} color={colors.orangeDeep} strokeWidth={2.6} />
+            </View>
+            <Text style={styles.noteText}>
+              {"Three busy days max — so there's somewhere to move work to."}
+            </Text>
+          </View>
+
+          <View style={styles.spacer} />
+
+          <SpeechBubble
+            size="compact"
+            style={styles.aside}
+            mascot={<AppImage source={mascot.week} style={styles.mascot} resizeMode="contain" />}
+          >
+            {"Chunk won't pile work on your busy days."}
+          </SpeechBubble>
+
+          <Button
+            label="CONTINUE"
+            disabled={!answered}
+            onPress={() => router.push('/when-you-start')}
+          />
         </View>
-
-        <View style={styles.spacer} />
-
-        <SpeechBubble
-          size="compact"
-          style={styles.aside}
-          mascot={<Image source={mascot.week} style={styles.mascot} resizeMode="contain" />}
-        >
-          {"Chunk won't pile work on your busy days."}
-        </SpeechBubble>
-
-        <Button
-          label="CONTINUE"
-          disabled={!answered}
-          onPress={() => router.push('/when-you-start')}
-        />
-      </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

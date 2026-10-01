@@ -16,7 +16,7 @@ export function AiConsentSync() {
     if (!session || !pending) return;
     recordAiConsent(pending.granted, pending.decidedAt)
       .then(() => useAiConsent.getState().markSynced(pending.decidedAt))
-      .catch(() => {});
+      .catch(() => console.warn('[consent] sync-failed'));
   }, [session, pending]);
 
   return null;

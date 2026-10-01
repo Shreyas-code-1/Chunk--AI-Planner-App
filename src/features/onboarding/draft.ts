@@ -1,32 +1,13 @@
-/**
- * The onboarding draft.
- *
- * Sign-up lives in batch 3, so there is no authenticated user while 2.3, 2.4
- * and 2.5 are on screen — and every table those screens feed (`profiles`,
- * `preferences`, `classes`) is RLS-scoped to `auth.uid()`. Writing as we go is
- * impossible, not merely inconvenient.
- *
- * So the answers accumulate here and are flushed in one go once a session
- * exists. That is also the right shape independent of the ordering: someone
- * who abandons onboarding at 2.5 should not leave a half-written profile row
- * behind for the next screen to reason about.
- *
- * This is the user's own input held in memory, not fixtures — §9.1's ban on
- * mock data in committed code is about invented content, and there is none
- * here.
- *
- * Not persisted: killing the app mid-onboarding loses the answers and starts
- * the flow again. For eight screens that is an acceptable v1 trade, and it is
- * recorded as such in docs/decision-log.md. If it proves annoying, this store
- * gains a SecureStore backing and no screen changes.
- */
+/** Onboarding answers and progress, persisted by the local data layer. */
 
+import { randomUUID } from 'expo-crypto';
 import { create } from 'zustand';
 
 import type { ChunkLengthPref, Goal, StartStyle } from '../../api/types';
 
 /** A class as 2.5 collects it, before it has a row or an id. */
 export type DraftClass = {
+  id?: string;
   name: string;
   /** Both optional on the board's "Add a class" form and nullable in the schema. */
   period?: string;
@@ -65,7 +46,13 @@ export type DayLoad = 'light' | 'normal' | 'busy';
  */
 export type AnswerKey = 'chunkLength' | 'bestTime' | 'week' | 'startStyle' | 'dailyPace';
 
+export const ONBOARDING_STEPS = ['/welcome', '/ai-consent', '/goals', '/profile', '/classes', '/study-style', '/week', '/when-you-start', '/what-goes-wrong', '/daily-pace', '/progress-curve', '/vs-alone', '/paywall'] as const;
+export type OnboardingStep = typeof ONBOARDING_STEPS[number];
 type DraftState = {
+  lastStep: OnboardingStep | null;
+  completed: boolean;
+  complete(): void;
+  setStep(step: OnboardingStep): void;
   goals: Goal[];
   displayName: string;
   grade: number | null;
@@ -107,6 +94,8 @@ const NEXT_LOAD: Record<DayLoad, DayLoad> = {
 };
 
 const EMPTY = {
+  lastStep: null as OnboardingStep | null,
+  completed: false,
   goals: [] as Goal[],
   displayName: '',
   grade: null,
@@ -128,6 +117,8 @@ const answer = (key: AnswerKey) => (state: DraftState) => ({
 
 export const useDraft = create<DraftState>((set) => ({
   ...EMPTY,
+  setStep: (lastStep) => set(s => s.completed ? {} : { lastStep }),
+  complete: () => set({ completed: true, lastStep: null }),
 
   toggleGoal: (goal) =>
     set((state) => ({
@@ -142,7 +133,7 @@ export const useDraft = create<DraftState>((set) => ({
   setGrade: (grade) => set({ grade }),
   setBirthYear: (birthYear) => set({ birthYear }),
 
-  addClass: (entry) => set((state) => ({ classes: [...state.classes, entry] })),
+  addClass: (entry) => set((state) => ({ classes: [...state.classes, { ...entry, id: randomUUID() }] })),
   removeClass: (index) =>
     set((state) => ({ classes: state.classes.filter((_, i) => i !== index) })),
 

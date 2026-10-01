@@ -15,7 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '../../components/ui';
+import { Button, ScreenScroll } from '../../components/ui';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { colors, displayLine, fonts, shadows } from '../../theme/tokens';
 
@@ -26,45 +26,47 @@ export default function VsAlone() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
-      <View style={styles.body}>
-        <OnboardingHeader step={9} />
+      <ScreenScroll>
+        <StatusBar style="dark" />
+        <View style={styles.body}>
+          <OnboardingHeader step={9} />
 
-        <Text style={styles.headline}>{'Finish twice as\nmuch work with\nChunk'}</Text>
+          <Text style={styles.headline}>{'Finish twice as\nmuch work with\nChunk'}</Text>
 
-        <View style={[styles.card, shadows.hardEdge(6)]}>
-          <View style={styles.plot}>
-            <View style={styles.column}>
-              <Text style={styles.columnLabel}>On your own</Text>
-              <View style={[styles.bar, styles.barAlone, { height: PLOT_HEIGHT * 0.36 }]}>
-                <Text style={styles.barValueAlone}>1x</Text>
+          <View style={[styles.card, shadows.hardEdge(6)]}>
+            <View style={styles.plot}>
+              <View style={styles.column}>
+                <Text style={styles.columnLabel}>On your own</Text>
+                <View style={[styles.bar, styles.barAlone, { height: PLOT_HEIGHT * 0.36 }]}>
+                  <Text style={styles.barValueAlone}>1x</Text>
+                </View>
+              </View>
+
+              <View style={styles.column}>
+                <Text style={[styles.columnLabel, styles.columnLabelOn]}>With Chunk</Text>
+                <View
+                  style={[
+                    styles.bar,
+                    styles.barChunk,
+                    shadows.hardEdge(6),
+                    { height: PLOT_HEIGHT * 0.84 },
+                  ]}
+                >
+                  <Text style={styles.barValueChunk}>2x</Text>
+                </View>
               </View>
             </View>
 
-            <View style={styles.column}>
-              <Text style={[styles.columnLabel, styles.columnLabelOn]}>With Chunk</Text>
-              <View
-                style={[
-                  styles.bar,
-                  styles.barChunk,
-                  shadows.hardEdge(6),
-                  { height: PLOT_HEIGHT * 0.84 },
-                ]}
-              >
-                <Text style={styles.barValueChunk}>2x</Text>
-              </View>
-            </View>
+            <Text style={styles.caption}>
+              Small chunks are easier to start, so more of them actually get done.
+            </Text>
           </View>
 
-          <Text style={styles.caption}>
-            Small chunks are easier to start, so more of them actually get done.
-          </Text>
+          <View style={styles.spacer} />
+
+          <Button label="CONTINUE" onPress={() => router.push('/progress-curve')} />
         </View>
-
-        <View style={styles.spacer} />
-
-        <Button label="CONTINUE" onPress={() => router.push('/progress-curve')} />
-      </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

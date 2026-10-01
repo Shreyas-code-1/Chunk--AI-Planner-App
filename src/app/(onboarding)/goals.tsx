@@ -8,7 +8,9 @@
  * CONTINUE is gated on choosing at least one (decision log, 22 Sep).
  */
 
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,7 +46,7 @@ export default function Goals() {
 
         <SpeechBubble
           style={styles.bubble}
-          mascot={<Image source={mascot.goals} style={styles.mascot} resizeMode="contain" />}
+          mascot={<AppImage source={mascot.goals} style={styles.mascot} resizeMode="contain" />}
         >
           {"What's getting in your way right now?"}
         </SpeechBubble>

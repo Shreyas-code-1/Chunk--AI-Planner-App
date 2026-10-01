@@ -9,7 +9,9 @@
  * Thursday subtitles are an illustration of the choice, not a live schedule.
  */
 
-import { Image, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,7 +77,7 @@ export default function WhenYouStart() {
         <SpeechBubble
           size="compact"
           style={styles.aside}
-          mascot={<Image source={mascot.whenYouStart} style={styles.mascot} resizeMode="contain" />}
+          mascot={<AppImage source={mascot.whenYouStart} style={styles.mascot} resizeMode="contain" />}
         >
           {"I'll plan around how you like to work."}
         </SpeechBubble>

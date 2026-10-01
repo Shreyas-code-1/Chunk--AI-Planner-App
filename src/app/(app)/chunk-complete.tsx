@@ -19,25 +19,29 @@
  * owns whether a chunk is finished, and it is not this screen.
  */
 
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '../../components/ui';
+import { Button, ScreenScroll } from '../../components/ui';
 import { mascot } from '../../components/mascot';
 import { SHORT_BREAK_MINUTES } from '../../planner/constants';
 import { usePlan } from '../../features/work/usePlan';
 import { useWork } from '../../features/work/store';
+import { LogsEarned } from '../../features/logs/LogsEarned';
 import { timeLabel } from '../../lib/clock';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 export default function ChunkComplete() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ minutes?: string; index?: string }>();
+  const params = useLocalSearchParams<{ minutes?: string; index?: string; logs?: string }>();
 
   const minutes = Number(params.minutes ?? 0);
   const index = Number(params.index ?? 0);
+  const logs = Number(params.logs ?? 0);
 
   const { doneToday, plannedToday, allTimeChunks, upNext } = usePlan();
   // The chunk just finished; its end is "now" for the done line.
@@ -48,76 +52,80 @@ export default function ChunkComplete() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
+      <ScreenScroll>
+        <StatusBar style="dark" />
 
-      <View style={styles.body}>
-        <View style={styles.middle}>
-          <Image source={mascot.complete} style={styles.mascot} resizeMode="contain" />
+        <View style={styles.body}>
+          <View style={styles.middle}>
+            <AppImage source={mascot.complete} style={styles.mascot} resizeMode="contain" />
 
-          <View style={styles.copy}>
-            <Text style={styles.headline}>
-              {index > 0 ? `Chunk ${index} done!` : 'Chunk done!'}
-            </Text>
-            {/* v3 §8: when the next one starts, or that the evening is over. */}
-            <Text style={styles.sub}>
-              {upNext
-                ? `Next chunk at ${timeLabel(upNext.scheduledStart)}.`
-                : justFinished
-                  ? `You're done. It's ${timeLabel(justFinished.endedAt)}.`
-                  : 'That one is behind you. Take the win.'}
-            </Text>
-          </View>
-
-          <View style={[styles.card, shadows.hardEdge(6)]}>
-            <View style={styles.statRow}>
-              <Stat value={`${minutes}`} label="MIN FOCUSED" />
-              <View style={styles.divider} />
-              <Stat value={`${doneToday}/${plannedToday}`} label="TODAY" />
-              <View style={styles.divider} />
-              <Stat value={`${streak}`} label="DAY STREAK" accent />
+            <View style={styles.copy}>
+              <Text style={styles.headline}>
+                {index > 0 ? `Chunk ${index} done!` : 'Chunk done!'}
+              </Text>
+              {/* v3 §8: when the next one starts, or that the evening is over. */}
+              <Text style={styles.sub}>
+                {upNext
+                  ? `Next chunk at ${timeLabel(upNext.scheduledStart)}.`
+                  : justFinished
+                    ? `You're done. It's ${timeLabel(justFinished.endedAt)}.`
+                    : 'That one is behind you. Take the win.'}
+              </Text>
             </View>
 
-            <View style={styles.segments}>
-              {Array.from({ length: Math.max(plannedToday, 5) }, (_, position) => (
-                <View
-                  key={position}
-                  style={[
-                    styles.segment,
-                    position < doneToday ? styles.segmentDone : styles.segmentTodo,
-                  ]}
-                />
-              ))}
+            <LogsEarned logs={logs} />
+
+            <View style={[styles.card, shadows.hardEdge(6)]}>
+              <View style={styles.statRow}>
+                <Stat value={`${minutes}`} label="MIN FOCUSED" />
+                <View style={styles.divider} />
+                <Stat value={`${doneToday}/${plannedToday}`} label="TODAY" />
+                <View style={styles.divider} />
+                <Stat value={`${streak}`} label="DAY STREAK" accent />
+              </View>
+
+              <View style={styles.segments}>
+                {Array.from({ length: Math.max(plannedToday, 5) }, (_, position) => (
+                  <View
+                    key={position}
+                    style={[
+                      styles.segment,
+                      position < doneToday ? styles.segmentDone : styles.segmentTodo,
+                    ]}
+                  />
+                ))}
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.actions}>
-          <Button
-            label={`TAKE A ${SHORT_BREAK_MINUTES}-MIN BREAK`}
-            onPress={() => router.replace('/home')}
-          />
-          <Button
-            label={upNext ? 'STRAIGHT INTO THE NEXT ONE' : 'BACK TO TODAY'}
-            variant="secondary"
-            onPress={() =>
-              upNext
-                ? router.replace({
-                    pathname: '/focus',
-                    params: {
-                      chunk: upNext.key,
-                      assignment: upNext.assignmentId,
-                      title: upNext.title,
-                      className: upNext.classId ?? '',
-                      minutes: String(upNext.plannedMinutes),
-                      index: String(doneToday + 1),
-                      total: String(plannedToday),
-                    },
-                  })
-                : router.replace('/today')
-            }
-          />
+          <View style={styles.actions}>
+            <Button
+              label={`TAKE A ${SHORT_BREAK_MINUTES}-MIN BREAK`}
+              onPress={() => router.replace('/home')}
+            />
+            <Button
+              label={upNext ? 'STRAIGHT INTO THE NEXT ONE' : 'BACK TO TODAY'}
+              variant="secondary"
+              onPress={() =>
+                upNext
+                  ? router.replace({
+                      pathname: '/focus',
+                      params: {
+                        chunk: upNext.key,
+                        assignment: upNext.assignmentId,
+                        title: upNext.title,
+                        className: upNext.classId ?? '',
+                        minutes: String(upNext.plannedMinutes),
+                        index: String(doneToday + 1),
+                        total: String(plannedToday),
+                      },
+                    })
+                  : router.replace('/today')
+              }
+            />
+          </View>
         </View>
-      </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

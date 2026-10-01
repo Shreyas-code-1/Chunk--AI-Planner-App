@@ -8,7 +8,9 @@
  * column exists. Raised here rather than invented.
  */
 
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -70,7 +72,7 @@ export default function WhatGoesWrong() {
         <SpeechBubble
           size="compact"
           style={styles.aside}
-          mascot={<Image source={mascot.whatGoesWrong} style={styles.mascot} resizeMode="contain" />}
+          mascot={<AppImage source={mascot.whatGoesWrong} style={styles.mascot} resizeMode="contain" />}
         >
           {"Everyone's got one. I'll watch for yours."}
         </SpeechBubble>

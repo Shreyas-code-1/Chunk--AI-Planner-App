@@ -1,23 +1,10 @@
-/**
- * The work the student has added, and the chunks they have finished.
- *
- * This is the seam Supabase replaces. `src/api` is the only place allowed to
- * talk to Supabase, and nothing is signed in yet — 2.19 accepts any code
- * without creating a session — so until auth is real the app needs somewhere
- * to keep work, and this is it. Same shape as the onboarding draft and the
- * same trade: **it is memory only.** Reloading the bundler loses it.
- *
- * The rows deliberately mirror the planner's `Assignment` rather than the
- * screens' needs, so `toPlannerAssignments` is a rename and not a translation,
- * and so the Supabase tables can take the same shape when they arrive.
- *
- * TODO(batch 6): move to `assignments` and `chunk_completions` through
- * `src/api`, with TanStack Query holding it. `chunk_completions` is
- * append-only by policy, which is why completions here are only ever added.
- */
+/** Work and immutable history. Local persistence is managed by the data layer. */
 
+import { randomUUID } from 'expo-crypto';
 import { create } from 'zustand';
 
+import { logsForRunSeconds } from '../logs/config';
+import { useLogs } from '../logs/store';
 import { DEFAULT_DREAD } from '../../planner/constants';
 import type { AbandonedChunk } from '../../planner/learning';
 import type { Assignment, CompletedChunk, Dread, Mode, RunningChunk } from '../../planner/types';
@@ -49,14 +36,32 @@ export type ActiveChunk = RunningChunk & {
   mode: Mode;
   dread: Dread;
   firstChunk: boolean;
+  /** Running time banked before the current run; pauses don't count. */
+  runMs: number;
+  /** When the timer last started running; null while paused. */
+  runningSince: Date | null;
 };
+
+/** Seconds the timer has actually run, capped at the chunk's length. */
+export function runSecondsOf(active: ActiveChunk, now: Date): number {
+  const live = active.runningSince ? now.getTime() - active.runningSince.getTime() : 0;
+  const seconds = Math.floor((active.runMs + Math.max(0, live)) / 1000);
+  return Math.min(seconds, Math.round(active.plannedMinutes * 60));
+}
+
+/** Banks the session's running time as logs. */
+function awardLogs(active: ActiveChunk, now: Date): number {
+  const logs = logsForRunSeconds(runSecondsOf(active, now));
+  useLogs.getState().earn(logs);
+  return logs;
+}
 
 type WorkState = {
   assignments: WorkAssignment[];
   completions: Completion[];
   active: ActiveChunk | null;
   /** Started and left unfinished; append-only, for §9 learning. */
-  abandoned: AbandonedChunk[];
+  abandoned: (AbandonedChunk & { id: string })[];
   /** Chunk keys whose 5.4 urgent card the student chose to keep at its planned time. */
   keptForLater: string[];
   keepForLater(chunkKey: string): void;
@@ -67,15 +72,16 @@ type WorkState = {
   setFirstAction(id: string, firstAction: string | null): void;
   /** Snapshot a chunk onto the timer. Starting another abandons the one running. */
   startChunk(chunk: { assignmentId: string; title: string; plannedMinutes: number }): void;
-  /** Record the running chunk as done. Append-only; a no-op if nothing is running. */
-  finishActive(actualMinutes: number): Completion | null;
+  pauseActive(now?: Date): void;
+  resumeActive(now?: Date): void;
+  /** Record the running chunk as done and bank its logs. Append-only; null if nothing is running. */
+  finishActive(actualMinutes: number, now?: Date): { completion: Completion; logs: number } | null;
   /** Leave the running chunk; it goes back on the plan. */
   abandonActive(): void;
   reset(): void;
 };
 
-/** Good enough for a memory store; the database generates the real ones. */
-const newId = () => `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+const newId = randomUUID;
 
 export const useWork = create<WorkState>((set, get) => ({
   assignments: [],
@@ -101,7 +107,6 @@ export const useWork = create<WorkState>((set, get) => ({
   removeAssignment(id) {
     set((state) => ({
       assignments: state.assignments.filter((entry) => entry.id !== id),
-      completions: state.completions.filter((entry) => entry.assignmentId !== id),
       active: state.active?.assignmentId === id ? null : state.active,
     }));
   },
@@ -137,13 +142,29 @@ export const useWork = create<WorkState>((set, get) => ({
         mode: task.mode,
         dread: task.dread ?? DEFAULT_DREAD,
         firstChunk: !s.completions.some((c) => c.assignmentId === chunk.assignmentId),
+        runMs: 0,
+        runningSince: new Date(),
       },
     }));
   },
 
-  finishActive(actualMinutes) {
+  pauseActive(now = new Date()) {
+    const { active } = get();
+    if (!active?.runningSince) return;
+    const ran = Math.max(0, now.getTime() - active.runningSince.getTime());
+    set({ active: { ...active, runMs: active.runMs + ran, runningSince: null } });
+  },
+
+  resumeActive(now = new Date()) {
+    const { active } = get();
+    if (!active || active.runningSince) return;
+    set({ active: { ...active, runningSince: now } });
+  },
+
+  finishActive(actualMinutes, now = new Date()) {
     const { active } = get();
     if (!active) return null;
+    const logs = awardLogs(active, now);
     // Append-only, and exactly once: the snapshot is cleared in the same
     // update, so finishing twice can't inflate the lifetime count — the whole
     // point of the policy on `chunk_completions`.
@@ -154,23 +175,26 @@ export const useWork = create<WorkState>((set, get) => ({
       plannedMinutes: active.plannedMinutes,
       actualMinutes,
       startedAt: active.startedAt,
-      endedAt: new Date(),
+      endedAt: now,
       mode: active.mode,
       dread: active.dread,
       firstChunk: active.firstChunk,
     };
     set((s) => ({ completions: [...s.completions, completion], active: null }));
-    return completion;
+    return { completion, logs };
   },
 
   abandonActive() {
     const { active } = get();
     if (!active) return;
+    // Time the timer ran still earns, even if the chunk goes back on the plan.
+    awardLogs(active, new Date());
     set((s) => ({
       active: null,
       abandoned: [
         ...s.abandoned,
         {
+          id: newId(),
           assignmentId: active.assignmentId,
           dread: active.dread,
           firstChunk: active.firstChunk,

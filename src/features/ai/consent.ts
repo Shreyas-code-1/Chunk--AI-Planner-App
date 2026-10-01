@@ -1,5 +1,5 @@
 /**
- * AI consent: whether the student lets Chunk send photos and voice to the AI
+ * AI consent: whether the student lets Chunk send their work to the AI
  * provider.
  *
  * The choice is made before sign-in (right after 2.2), so it is kept on the
@@ -9,6 +9,7 @@
  */
 
 import * as SecureStore from 'expo-secure-store';
+import { z } from 'zod';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -28,9 +29,18 @@ type AiConsentState = {
   markSynced(decidedAt: string): void;
 };
 
+const choiceSchema = z.object({ granted: z.boolean(), decidedAt: z.iso.datetime() });
+const consentSchema = z.object({ choice: choiceSchema.nullable(), pending: choiceSchema.nullable() });
+// Preserve the established SecureStore location and consent timestamps, but serialize writes.
+let consentWrites: Promise<void> = Promise.resolve();
 const secureStorage = createJSONStorage(() => ({
   getItem: (key: string) => SecureStore.getItemAsync(key),
-  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  setItem: (key: string, value: string) => {
+    consentWrites = consentWrites.then(() => SecureStore.setItemAsync(key, value)).catch(() => {
+      console.warn('[local-data] consent-write-failed');
+    });
+    return consentWrites;
+  },
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 }));
 
@@ -49,13 +59,25 @@ export const useAiConsent = create<AiConsentState>()(
     }),
     {
       name: 'chunk.ai-consent',
+      merge: (saved, current) => {
+        if (saved === undefined) return current;
+        const parsed = consentSchema.safeParse(saved);
+        if (!parsed.success) {
+          console.warn('[local-data] invalid-consent');
+          return current;
+        }
+        return { ...current, ...parsed.data };
+      },
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) console.warn('[local-data] consent-read-failed');
+      },
       storage: secureStorage,
       partialize: (s) => ({ choice: s.choice, pending: s.pending }),
     },
   ),
 );
 
-/** Photo and voice input show only when the student has said yes. */
+/** AI features show only when the student has said yes. */
 export function useAiEnabled(): boolean {
   return useAiConsent((s) => s.choice?.granted === true);
 }

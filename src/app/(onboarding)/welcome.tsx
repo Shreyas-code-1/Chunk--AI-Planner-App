@@ -9,7 +9,9 @@
  * recorded in docs/decision-log.md is closed.
  */
 
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,7 +33,7 @@ export default function Welcome() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <Image source={mascot.waving} style={styles.mascot} resizeMode="contain" />
+        <AppImage source={mascot.welcome} style={styles.mascot} resizeMode="contain" />
 
         <View style={styles.copy}>
           {/* The board breaks this line itself: "Let's [chunk]" then

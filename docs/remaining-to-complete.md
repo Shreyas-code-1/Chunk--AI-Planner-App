@@ -20,7 +20,7 @@ still always returns false there.
    RevenueCat wired in, plus a decision on what Pro unlocks and whether the
    paywall can be skipped.
 6. **Apple/Google sign-in**: both currently throw "needs a development build".
-7. **Sign out and account deletion** (Q2). Apple requires in-app deletion.
+7. **Account deletion** (Q2). Apple requires in-app deletion. (Log out is done: 29 Sep, on Profile.)
 
 ## Features not built
 8. **Section 4, AI tutor (4.1–4.5).** Needs 1 and a server function. The AI

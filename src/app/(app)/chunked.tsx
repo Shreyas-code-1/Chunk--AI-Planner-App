@@ -11,7 +11,9 @@
  * two dynamic ones.
  */
 
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,7 +47,7 @@ export default function Chunked() {
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <View style={styles.bubbleRow}>
-          <Image source={mascot.chunked} style={styles.mascot} resizeMode="contain" />
+          <AppImage source={mascot.chunked} style={styles.mascot} resizeMode="contain" />
           <View style={styles.bubble}>
             <Text style={styles.bubbleText}>
               {chunks.length === 0

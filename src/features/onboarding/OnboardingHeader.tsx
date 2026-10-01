@@ -1,3 +1,4 @@
+import { safeBack, QUESTION_ROUTES, backDestination } from '../navigation/safeBack';
 /**
  * The header every onboarding question screen shares: a back button and a
  * progress bar, side by side.
@@ -22,8 +23,8 @@ import { ChevronLeft } from '../../components/icons';
 import { haptic } from '../../lib/haptics';
 import { colors, radii } from '../../theme/tokens';
 
-/** 2.3 through 2.13 carry the header. The bar is at step/TOTAL across. */
-const TOTAL_STEPS = 11;
+/** 2.3 through 2.12 carry the header (2.13 was removed). The bar is at step/TOTAL across. */
+const TOTAL_STEPS = 10;
 
 export function OnboardingHeader({ step }: { step: number }) {
   const router = useRouter();
@@ -36,7 +37,7 @@ export function OnboardingHeader({ step }: { step: number }) {
         hitSlop={8}
         onPress={() => {
           haptic('select');
-          router.back();
+          safeBack(router, backDestination(QUESTION_ROUTES[step - 1] ?? '/goals'));
         }}
         style={styles.back}
       >

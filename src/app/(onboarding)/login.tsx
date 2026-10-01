@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 2.17 LOG IN.
  *
@@ -16,10 +17,14 @@
  */
 
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { ScreenScroll } from '../../components/ui';
 
 import { AppleMark, ChevronLeft, GoogleMark, Mail } from '../../components/icons';
 import { mascot } from '../../components/mascot';
@@ -44,71 +49,71 @@ export default function Login() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
+      <ScreenScroll>
+        <StatusBar style="dark" />
 
-      <View style={styles.headerRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={8}
-          onPress={() => {
-            haptic('select');
-            router.back();
-          }}
-          style={styles.back}
-        >
-          <ChevronLeft size={18} color={colors.ink} strokeWidth={2.8} />
-        </Pressable>
-      </View>
-
-      <View style={styles.middle}>
-        <Image source={mascot.login} style={styles.mascot} resizeMode="contain" />
-        <View style={styles.copy}>
-          <Text style={styles.headline}>{'Create an\naccount.'}</Text>
-          <Text style={styles.sub}>
-            So your chunks, streaks and classes save across devices.
-          </Text>
+        <View style={styles.headerRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={8}
+            onPress={() => {
+              haptic('select');
+              safeBack(router, '/welcome');
+            }}
+            style={styles.back}
+          >
+            <ChevronLeft size={18} color={colors.ink} strokeWidth={2.8} />
+          </Pressable>
         </View>
-      </View>
 
-      <View style={styles.actions}>
-        {problem ? (
-          // TODO(design): no error treatment exists on the board for this.
-          <Text style={styles.problem}>{problem}</Text>
-        ) : null}
+        <View style={styles.middle}>
+          <AppImage source={mascot.login} style={styles.mascot} resizeMode="contain" />
+          <View style={styles.copy}>
+            <Text style={styles.headline}>{'Create an\naccount.'}</Text>
+            <Text style={styles.sub}>So your chunks, streaks and classes save across devices.</Text>
+          </View>
+        </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => attempt(signInWithGoogle)}
-          style={[styles.provider, styles.providerPlain, shadows.hardEdge(5)]}
-        >
-          <GoogleMark />
-          <Text style={styles.providerLabel}>CONTINUE WITH GOOGLE</Text>
-        </Pressable>
+        <View style={styles.actions}>
+          {problem ? (
+            // TODO(design): no error treatment exists on the board for this.
+            <Text style={styles.problem}>{problem}</Text>
+          ) : null}
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => attempt(signInWithApple)}
-          style={[styles.provider, styles.providerDark, shadows.hardEdge(5)]}
-        >
-          <AppleMark />
-          <Text style={[styles.providerLabel, styles.onDark]}>CONTINUE WITH APPLE</Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => attempt(signInWithGoogle)}
+            style={[styles.provider, styles.providerPlain, shadows.hardEdge(5)]}
+          >
+            <GoogleMark />
+            <Text style={styles.providerLabel}>CONTINUE WITH GOOGLE</Text>
+          </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            haptic('select');
-            router.push('/email');
-          }}
-          style={[styles.provider, styles.providerEmail, shadows.hardEdge(5)]}
-        >
-          <Mail size={22} color={colors.white} strokeWidth={2.4} />
-          <Text style={[styles.providerLabel, styles.onDark]}>CONTINUE WITH EMAIL</Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => attempt(signInWithApple)}
+            style={[styles.provider, styles.providerDark, shadows.hardEdge(5)]}
+          >
+            <AppleMark />
+            <Text style={[styles.providerLabel, styles.onDark]}>CONTINUE WITH APPLE</Text>
+          </Pressable>
 
-        <Text style={styles.legal}>By continuing you agree to our Terms and Privacy Policy.</Text>
-      </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              haptic('select');
+              router.push('/email');
+            }}
+            style={[styles.provider, styles.providerEmail, shadows.hardEdge(5)]}
+          >
+            <Mail size={22} color={colors.white} strokeWidth={2.4} />
+            <Text style={[styles.providerLabel, styles.onDark]}>CONTINUE WITH EMAIL</Text>
+          </Pressable>
+
+          <Text style={styles.legal}>By continuing you agree to our Terms and Privacy Policy.</Text>
+        </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

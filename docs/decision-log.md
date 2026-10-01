@@ -1279,7 +1279,7 @@ outlines were left alone. After the change: fur `#EE741D`, log `#A44825` /
 ## 2026-09-29 — Splash logo filled the screen in Expo Go
 
 Shreyas saw the logo at the size of the screen. The in-app splash sets 185 pt,
-so the likely cause is Expo Go drawing the `app.json` splash image stretched to
+so the cause is Expo Go drawing the `app.json` splash image stretched to
 the screen width and ignoring `imageWidth`. The earlier "large and blurry"
 beaver fits the same cause. Fix: `app.json` now points at
 `assets/images/splash-native.png`, a transparent 1170×2532 canvas (a
@@ -1287,3 +1287,192 @@ beaver fits the same cause. Fix: `app.json` now points at
 `imageWidth: 390`. Stretched to the screen or drawn at 390 pt, the logo comes
 out 185 pt either way. The in-app splash now sets an explicit height as well as
 its width.
+Confirmed on Shreyas's iPhone in Expo Go the same evening: the logo now shows
+at the right size.
+
+## 2026-09-29 — Import Work removed; Focus loses mascot and music card
+
+Shreyas's decisions on `docs/dead-buttons.md` items 1–3 and 5:
+- **2.13 IMPORT WORK deleted.** None of its three cards did anything. 2.12
+  PROGRESS CURVE's CONTINUE now goes straight to 2.14 BUILDING PLAN, and the
+  onboarding progress bar is 10 steps instead of 11, so 2.12 fills it.
+  Photo and voice input now appear nowhere, so the AI consent choice
+  (see the entry above) has nothing to hide for now. It's still saved, ready
+  for 4.1.
+- **3.3 FOCUS:** the mascot and the "No track" music card are gone. An empty
+  spacer keeps PAUSE and FINISH CHUNK at the bottom of the screen.
+
+## 2026-09-29 — 2.14 Building Plan and 2.15 Your First Plan removed
+
+By request ("remove your week is ready screen and also chunking screen").
+Read as 2.15 YOUR FIRST PLAN ("Your week is ready.") and the onboarding
+chunking animation before it, 2.14 BUILDING PLAN. 3.7 THE CHUNKING MOMENT,
+shown after adding an assignment, is kept. Onboarding is now 2.12 PROGRESS
+CURVE → 2.16 PAYWALL. Their mascot poses stay in `mascot.ts`, unused.
+
+## 2026-09-29 — Paywall scrolls as one page
+
+Shreyas: content was cut off partway down the screen when scrolling. Cause: the
+back/PRO row and the footer (START MY FREE WEEK, NO THANKS) were pinned, and
+only the middle scrolled between two hard edges. Now the whole screen is one
+`ScrollView` with safe-area padding. On a tall screen the footer still sits at
+the bottom (`flexGrow` + `marginTop: 'auto'`); on a short one it scrolls with
+everything else. Nothing in the design changed.
+
+## 2026-09-29 — AI consent copy no longer mentions photos or voice
+
+Photo and voice input aren't in the app (2.13 was removed). First line changed
+from "When you scan a worksheet or use your voice, Chunk sends it to
+Anthropic, an AI company, to find your assignments." to "When Chunk uses AI,
+it sends your work to Anthropic, an AI company." The Profile row "Scan and
+voice" is now "AI features". Lines 2–3 and both buttons are unchanged.
+
+## 2026-09-29 — Email sign-in brought in from the partner's branch
+
+With Shreyas's OK, only the email sign-in was cherry-picked from
+`origin/codex/revenuecat-auth-integration` (with `-x`, so each commit names
+its source): `dea93d5`, `86de6c0`, `b87a480`, `65e0969`, `147374d`. Eight
+files, all email-only: `requestEmailOtp.ts`, `verifyEmailOtp.ts`, 2.18
+`email.tsx`, 2.19 `verify.tsx`, and their tests. It's a 6-digit code
+(`signInWithOtp`, then `verifyOtp` with `type: 'email'`), pure Supabase, so it
+runs in Expo Go. A correct code goes to Home.
+
+Left out on purpose: RevenueCat, Apple/Google, EAS config, splash, the
+branch's SessionProvider rework (`c51c692`; `main`'s `onAuthStateChange`
+already picks up the new session), and its RevenueCat env key.
+
+Needs, in the Supabase dashboard: the sign-in email template must contain
+`{{ .Token }}` so a code is sent rather than a link. The built-in email
+sender only allows a few emails an hour.
+
+230 tests pass (up from 163), typecheck is clean, and the iOS bundle builds.
+
+## 2026-09-29 — Log out button on Profile
+
+A LOG OUT button (the standard secondary `Button`) sits at the bottom of 5.2
+PROFILE, under Preferences and Reminders. It calls Supabase `signOut`, then
+goes to 2.2 WELCOME. If that fails (e.g. offline), an alert says so and the
+student stays signed in. Not on the board, so it's marked `TODO(design)`.
+Account deletion is still to do.
+
+## 2026-09-30 — Splash on the button orange, with an outlined logo
+
+At Shreyas's request the splash departs from the board's cream 2.1:
+- **Background `#FBF1DB` → `#FA7814`** (`colors.orange`, the button orange), in
+  `app.json` and `StartupSplash.tsx`.
+- **New source:** `Chunk Splash Screen Logo Part 2.png` (1352×1163), the same
+  art with a thick cream sticker outline, so the beaver doesn't blend into
+  the orange. Checked clean: one piece, no stray specks, soft pixels within
+  4 px of the edge. Yesterday's colour correction was re-applied (the fur was
+  the darker `#CC672A` again); the outline is untouched. Cropped to
+  1308×1089 as `assets/images/splash-logo.png`.
+- **Width 185 → 197 pt**, so the beaver itself stays at the board's size, with
+  the outline added around it. `splash-native.png` was regenerated (a
+  transparent 1170×2532 canvas with the logo 591 px wide).
+
+## 2026-09-30 — Logs currency, and a flame for the streak
+
+**Streak icon.** The 8–9 px orange dot in the streak pill (3.1 HOME, 5.1
+PROGRESS) is now `Flame`, an SVG drawn from Shreyas's reference
+`Screenshot 2026-09-30 181747.png`: flame in `colors.orange`, drop in
+`colors.gold`. Not on the board.
+
+**Logs** (branch `feature/logs`, not merged until tested on a phone):
+- Art: `Chunk Log Currency .png` (1254×1254, transparent background), trimmed
+  to the log and saved as `assets/icons/log.png` at 48/96/144 px (@1x/2x/3x).
+- **1 log per whole minute the timer actually runs**, `LOGS_PER_MINUTE` in
+  `src/features/logs/config.ts` (provisional). Per session; a partial minute
+  earns nothing. Capped at the chunk's length.
+- Running time is now a run clock on the active chunk (`runMs` +
+  `runningSince` in the work store), so pause, background and leaving the
+  screen are counted from real timestamps. The countdown reads the same clock.
+- Leaving a chunk unfinished still banks the minutes it ran.
+- `balance` and `lifetimeEarned`, persisted with AsyncStorage (`chunk.logs`)
+  because no user data is in Supabase yet. `earn` ignores anything but a
+  positive whole number, so lifetime can't go down. Never sold for money.
+- Shown on Home as a fourth stat tile (log in place of the label; values
+  shrink to fit rather than wrap), on Focus as a pill next to "of N min",
+  and on Chunk Complete as "+N logs" counting up.
+- The scheduling engine is unchanged.
+
+## 2026-09-30 — v3 Profile, Progress, Settings and dock
+
+Branch `feature/profile-progress-redesign` (includes `feature/logs`, since both
+screens show logs). Sources copied to `design/v3/` from the repo root
+(identical to the Downloads copies): profile.png, progress.png, settings.png
+(784×1760, @2x of 392pt), dock-home.png (1170×261, @3x of 390pt),
+icon-set.png (2172×724). There is no HTML export of these screens, so values
+were measured from the PNGs and fonts fitted against the real Baloo 2 / Nunito.
+
+- **Dock** replaces the floating board dock everywhere: full-width white bar,
+  1pt cream top rule, 54×50 `#FFF1E2` active tile with a `#FFB46B` border,
+  46pt `#FF7A12` add square with a 4pt `#DE5F06` edge. Icons are cut from the
+  Warm Orange set (the glow removed by alpha) into `assets/icons/dock-*.png`
+  at @1x/2x/3x; sources are 190–240px, so @3x is downsampled, never stretched.
+- **Profile (5.2)**: amber header with name, gear (→ Settings) and the dashed
+  empty avatar; OVERVIEW grid; BADGES at the design's 46pt icon size. The old
+  Profile's CONNECTED cards, Preferences/Reminders links and LOG OUT are gone;
+  AI features and SIGN OUT moved to Settings.
+- **Progress (5.1)** is now all-time: focused total, hours per month (last 5),
+  chunks done, logs earned (lifetime), finish rate, done on time. The week
+  chart, streak pill and by-class breakdown are removed.
+- **Settings (5.2a)** new at `/settings`. Working: AI toggle, Restore purchases
+  (billing seam; explains it needs the App Store build in Expo Go), Sign out.
+- Overview/badge icons that aren't in the icon set (flame, check box,
+  stopwatch, calendar-check, gear) are vector; logs use the log PNG.
+- Open items: questions 23–32 in `docs/v2-and-remaining-screens-questions.md`.
+
+## 2026-09-30 — One persistent dock
+
+Tapping a dock tab made the whole screen, dock included, fade out and back:
+each screen drew its own dock and `router.replace` cross-faded. The dock now
+lives once in `src/app/(app)/_layout.tsx`, shown on /home, /all-work, /today,
+/progress and /you, and the tab screens switch with no animation.
+
+## 2026-09-30 — No graph on Progress; every screen scrolls; usernames
+
+At Shreyas's request:
+- **Progress:** the HOURS PER MONTH chart is removed (the `MonthChart`
+  component and `hoursByMonth` with it). Focused card → tiles → done on time.
+- **Standing rule: every screen scrolls smoothly and nothing is cut off.**
+  The ten screens that had a fixed layout (Focus, Chunk Complete, Chunk
+  Failed, Offline, AI consent, Daily pace, Log in, Progress curve, Vs alone,
+  Your week) are wrapped in `ScreenScroll`, which keeps their layout when it
+  fits and scrolls when it doesn't. The keyboard pushes content up instead of
+  covering it.
+- **Username:** Profile's "@HANDLE · JOINED 2026" line is the student's own
+  username. Tap "+ ADD USERNAME" (or the name) to edit in place; 3–20
+  lowercase letters, numbers or underscores, empty clears it. Saved on the
+  device (`chunk.username`); it moves to a unique `profiles.username` column
+  in batch 6, so for now it is only unique to the phone.
+
+## 2026-09-30 — Images: expo-image everywhere, preloaded at startup
+
+Reported: dock icons not loading, and blank after finishing a chunk; the log
+icon missing (e.g. on Chunk Complete); the mascot sometimes missing. All three
+are bundled PNGs drawn with React Native's `Image`, which re-fetches the asset
+each time a screen mounts (in Expo Go, from the dev server) and shows nothing
+until it arrives. The dock remounts when you come back from Focus / Chunk
+Complete, so its icons blanked.
+
+- New `AppImage` (`src/components/ui/AppImage.tsx`) on `expo-image` with a
+  memory + disk cache and no fade. Every image in the app uses it; RN `Image`
+  is no longer imported anywhere.
+- `src/lib/preloadImages.ts` downloads and decodes every mascot, dock icon and
+  the log during the startup splash; the splash waits for it (never past its
+  3 s maximum). `expo-asset` added as a direct dependency (Expo Go safe).
+
+## 2026-09-30 — New Chunk Complete mascot
+
+3.4 CHUNK COMPLETE's mascot is now Shreyas's "New mascot for chunk completion
+screen.png" (sunglasses, flame behind), trimmed and saved as
+`design/assets/mascot-chunk-complete.png` at 600×600 for its 200pt slot.
+**Supersedes the board's `design/mascot/17-chunk-cheering.png` on 3.4.**
+It is preloaded at startup like the other mascots.
+
+## 2026-09-30 — New Welcome mascot
+
+2.2 WELCOME (the first screen) now uses Shreyas's "Initial screen Mascot.png",
+saved as `design/assets/mascot-welcome.png` (708×708 for the 236pt slot).
+**Supersedes `design/mascot/03-chunk-mascot-waving.png` on 2.2**; the waving
+pose stays only in the dev gallery. Preloaded at startup with the others.

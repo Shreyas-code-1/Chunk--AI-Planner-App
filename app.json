@@ -13,7 +13,8 @@
         "backgroundColor": "#FF9934",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.caidenn2.chunk"
     },
     "web": {
       "output": "static",
@@ -24,18 +25,26 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FBF1DB",
-          "image": "./assets/images/splash-native.png",
-          "imageWidth": 390,
+          "backgroundColor": "#FCF1DC",
+          "image": "./assets/images/splash-beaver.png",
+          "imageWidth": 240,
           "resizeMode": "contain"
         }
       ],
       "expo-secure-store",
-      "expo-audio"
+      "expo-audio",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "caidenn2",
+    "extra": {
+      "eas": {
+        "projectId": "805f0a5f-067f-4fbd-a278-935eebb94a1e"
+      }
     }
   }
 }

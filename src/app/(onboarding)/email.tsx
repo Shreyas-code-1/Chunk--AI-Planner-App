@@ -1,3 +1,4 @@
+import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 2.18 LOG IN — EMAIL.
  *
@@ -9,27 +10,29 @@
  * the token that the analogous element uses elsewhere rather than extracted
  * from the board. Promote the next export and reconcile — see the decision log.
  *
- * TODO: **nothing is sent.** CONTINUE checks the address for shape and hands
- * it to 2.19, which accepts any six digits. `signInWithOtp` replaces the body
- * of `onContinue` when the send side is wired up.
+ * Requests an email OTP before opening verification. Verification is still
+ * a prototype and is not connected to Supabase yet.
  */
 
-import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Input } from '../../components/ui';
 import { ChevronLeft } from '../../components/icons';
 import { mascot } from '../../components/mascot';
+import { requestEmailOtp } from '../../features/auth/requestEmailOtp';
 import { haptic } from '../../lib/haptics';
 import { isOnline } from '../../lib/network';
 import { colors, displayLine, fonts, radii } from '../../theme/tokens';
 
 /**
  * Deliberately loose. The only authority on whether an address exists is the
- * code we are not sending yet, so this catches a typo, not a fake.
+ * verification step, so this catches a typo, not a fake.
  */
 const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -37,20 +40,51 @@ export default function EmailSignIn() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const locked = useRef(false);
+  const generation = useRef(0);
+  const focused = useRef(false);
+
+  useFocusEffect(useCallback(() => {
+    focused.current = true;
+    return () => { focused.current = false; generation.current += 1; };
+  }, []));
 
   const onContinue = async () => {
+    if (locked.current || !focused.current) return;
+    setProblem(null);
     const address = email.trim();
     if (!LOOKS_LIKE_EMAIL.test(address)) {
       setProblem('That does not look like an email address.');
       return;
     }
-    // Sending a code needs the network, so 5.5 comes first.
-    if (!(await isOnline())) {
-      router.push('/offline');
-      return;
+    locked.current = true;
+    setSending(true);
+    const current = generation.current;
+    try {
+      const online = await isOnline();
+      if (!focused.current || current !== generation.current) return;
+      if (!online) {
+        router.push('/offline');
+        return;
+      }
+      const result = await requestEmailOtp(address);
+      if (!focused.current || current !== generation.current) return;
+      if (result.status === 'requested') {
+        router.push({ pathname: '/verify', params: { email: address } });
+      } else {
+        setProblem(result.reason === 'invalid-email'
+          ? 'That does not look like an email address.'
+          : 'We couldn’t send your code. Please try again.');
+      }
+    } catch {
+      if (focused.current && current === generation.current) {
+        setProblem('We couldn’t send your code. Please try again.');
+      }
+    } finally {
+      locked.current = false;
+      setSending(false);
     }
-    // TODO: send the code. 2.19 accepts any six digits until it is sent.
-    router.push({ pathname: '/verify', params: { email: address } });
   };
 
   return (
@@ -64,7 +98,7 @@ export default function EmailSignIn() {
           hitSlop={8}
           onPress={() => {
             haptic('select');
-            router.back();
+            safeBack(router, '/login');
           }}
           style={styles.back}
         >
@@ -78,7 +112,7 @@ export default function EmailSignIn() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.heading}>
-          <Image source={mascot.email} style={styles.mascot} resizeMode="contain" />
+          <AppImage source={mascot.email} style={styles.mascot} resizeMode="contain" />
           <Text style={styles.headline}>{"What's your email?"}</Text>
         </View>
 
@@ -87,6 +121,7 @@ export default function EmailSignIn() {
           size="large"
           style={styles.field}
           value={email}
+          editable={!sending}
           onChangeText={(text) => {
             setEmail(text);
             setProblem(null);
@@ -110,13 +145,13 @@ export default function EmailSignIn() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label="CONTINUE" onPress={onContinue} />
+        <Button label={sending ? 'SENDING…' : 'CONTINUE'} disabled={sending} onPress={onContinue} />
 
         <Pressable
           accessibilityRole="button"
           onPress={() => {
             haptic('select');
-            router.back();
+            safeBack(router, '/login');
           }}
           style={styles.alternative}
         >

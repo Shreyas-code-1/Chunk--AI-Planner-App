@@ -11,18 +11,20 @@
  * the gaps here render a plain line rather than an invented treatment.
  */
 
+import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomDock, Chip } from '../../components/ui';
-import { Bell } from '../../components/icons';
+import { Chip } from '../../components/ui';
+import { Bell, Flame } from '../../components/icons';
 import { useDraft } from '../../features/onboarding/draft';
-import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { timeLabel } from '../../lib/clock';
 import { usePlan } from '../../features/work/usePlan';
 import { useWork } from '../../features/work/store';
+import { useLogs } from '../../features/logs/store';
+import { LogIcon } from '../../features/logs/LogIcon';
 import { UrgentHome, findUrgent } from '../../features/work/UrgentHome';
 import { haptic } from '../../lib/haptics';
 import { planDateOf, fromDateKey } from '../../lib/planDate';
@@ -37,7 +39,6 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
 
 export default function Home() {
   const router = useRouter();
-  const dock = useDockNavigation('home');
   const displayName = useDraft((state) => state.displayName);
   const classes = useDraft((state) => state.classes);
 
@@ -54,6 +55,7 @@ export default function Home() {
     today: todayChunks,
     finishAtToday,
   } = usePlan();
+  const logBalance = useLogs((state) => state.balance);
   const keptForLater = useWork((state) => state.keptForLater);
   const urgent = findUrgent(todayChunks, keptForLater, new Date());
   const chunksLeft = plannedToday - doneToday;
@@ -85,7 +87,7 @@ export default function Home() {
           </View>
 
           <View style={styles.streak} accessibilityLabel={`${streak} day streak`}>
-            <View style={styles.streakDot} />
+            <Flame size={16} />
             <Text style={styles.streakCount}>{streak}</Text>
           </View>
 
@@ -134,6 +136,7 @@ export default function Home() {
               <Stat value={`${doneToday}/${plannedToday}`} label="today" />
               <Stat value={`${focusedToday}m`} label="focused" />
               <Stat value={`${allTimeChunks}`} label="all time" />
+              <Stat value={`${logBalance}`} label="logs" icon={<LogIcon size={18} />} />
             </View>
 
             <Text style={styles.sectionLabel}>
@@ -228,17 +231,25 @@ export default function Home() {
           </>
         )}
       </ScrollView>
-
-      <BottomDock active="home" style={styles.dock} {...dock} />
     </SafeAreaView>
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+function Stat({ value, label, icon }: { value: string; label: string; icon?: ReactNode }) {
   return (
     <View style={[styles.stat, shadows.hardEdge(5)]}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      {/* Four tiles are narrower than the board's three; shrink rather than wrap. */}
+      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      {/* The log tile shows the log in place of its label. */}
+      {icon ? (
+        <View style={styles.statIcon} accessibilityLabel={label}>
+          {icon}
+        </View>
+      ) : (
+        <Text style={styles.statLabel}>{label}</Text>
+      )}
     </View>
   );
 }
@@ -275,7 +286,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  streakDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.orange },
   streakCount: { fontFamily: fonts.body.black, fontSize: 12.5, color: colors.white },
   bell: {
     width: 42,
@@ -334,6 +344,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
     includeFontPadding: false,
   },
+  statIcon: { marginTop: 1 },
   statLabel: { marginTop: 3, fontFamily: fonts.body.extraBold, fontSize: 11, color: colors.muted },
 
   sectionRow: {
@@ -426,5 +437,4 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  dock: { marginHorizontal: 20, marginBottom: 10 },
 });
