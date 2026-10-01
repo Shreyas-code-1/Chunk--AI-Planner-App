@@ -9,7 +9,9 @@
  * TODO(design): no frame for a brand-new student; empty values read "–".
  */
 
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -43,7 +45,7 @@ export default function Progress() {
             </Text>
             <Text style={styles.across}>{`Across ${stats.allTimeChunks} ${stats.allTimeChunks === 1 ? 'chunk' : 'chunks'}`}</Text>
           </View>
-          <Image source={mascot.progress} style={styles.mascot} resizeMode="contain" />
+          <AppImage source={mascot.progress} style={styles.mascot} resizeMode="contain" />
         </View>
 
         <View style={styles.tiles}>

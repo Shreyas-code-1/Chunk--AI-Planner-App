@@ -21,3 +21,4 @@ export { StrokedText, HighlightChip } from './StrokedText';
 export { StatsStrip, type Stat, type StatKind } from './StatsStrip';
 export { Toggle } from './Toggle';
 export { ScreenScroll } from './ScreenScroll';
+export { AppImage } from './AppImage';

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Animated, Image, StyleSheet } from 'react-native';
+import { Animated, StyleSheet } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import * as SplashScreen from 'expo-splash-screen';
 
 // Splash timing. Provisional — tune on a real device.
@@ -50,7 +52,7 @@ export function StartupSplash({ ready, startedAt }: { ready: boolean; startedAt:
       style={[styles.screen, { opacity }]}
       onLayout={() => { void SplashScreen.hideAsync(); }}
     >
-      <Image
+      <AppImage
         accessibilityLabel="Chunk"
         source={require('../../../assets/images/splash-logo.png')}
         resizeMode="contain"

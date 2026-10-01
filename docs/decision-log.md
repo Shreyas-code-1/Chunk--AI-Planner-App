@@ -1445,3 +1445,19 @@ At Shreyas's request:
   lowercase letters, numbers or underscores, empty clears it. Saved on the
   device (`chunk.username`); it moves to a unique `profiles.username` column
   in batch 6, so for now it is only unique to the phone.
+
+## 2026-09-30 — Images: expo-image everywhere, preloaded at startup
+
+Reported: dock icons not loading, and blank after finishing a chunk; the log
+icon missing (e.g. on Chunk Complete); the mascot sometimes missing. All three
+are bundled PNGs drawn with React Native's `Image`, which re-fetches the asset
+each time a screen mounts (in Expo Go, from the dev server) and shows nothing
+until it arrives. The dock remounts when you come back from Focus / Chunk
+Complete, so its icons blanked.
+
+- New `AppImage` (`src/components/ui/AppImage.tsx`) on `expo-image` with a
+  memory + disk cache and no fade. Every image in the app uses it; RN `Image`
+  is no longer imported anywhere.
+- `src/lib/preloadImages.ts` downloads and decodes every mascot, dock icon and
+  the log during the startup splash; the splash waits for it (never past its
+  3 s maximum). `expo-asset` added as a direct dependency (Expo Go safe).

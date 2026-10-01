@@ -10,7 +10,9 @@
  * only place that difference lives.
  */
 
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -118,7 +120,7 @@ export default function Week() {
           <SpeechBubble
             size="compact"
             style={styles.aside}
-            mascot={<Image source={mascot.week} style={styles.mascot} resizeMode="contain" />}
+            mascot={<AppImage source={mascot.week} style={styles.mascot} resizeMode="contain" />}
           >
             {"Chunk won't pile work on your busy days."}
           </SpeechBubble>

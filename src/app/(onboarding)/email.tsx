@@ -14,7 +14,9 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -109,7 +111,7 @@ export default function EmailSignIn() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.heading}>
-          <Image source={mascot.email} style={styles.mascot} resizeMode="contain" />
+          <AppImage source={mascot.email} style={styles.mascot} resizeMode="contain" />
           <Text style={styles.headline}>{"What's your email?"}</Text>
         </View>
 

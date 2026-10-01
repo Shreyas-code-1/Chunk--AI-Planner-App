@@ -8,7 +8,9 @@
  * until AI is switched on from Profile.
  */
 
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,7 +42,7 @@ export default function AiConsent() {
 
         <View style={styles.content}>
           <Text style={styles.headline}>One thing before we start</Text>
-          <Image source={mascot.name} style={styles.mascot} resizeMode="contain" />
+          <AppImage source={mascot.name} style={styles.mascot} resizeMode="contain" />
           <View style={styles.lines}>
             {LINES.map((line) => (
               <Text key={line} style={styles.line}>

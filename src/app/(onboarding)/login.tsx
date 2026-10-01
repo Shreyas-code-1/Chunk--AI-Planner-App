@@ -16,7 +16,9 @@
  */
 
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -65,7 +67,7 @@ export default function Login() {
         </View>
 
         <View style={styles.middle}>
-          <Image source={mascot.login} style={styles.mascot} resizeMode="contain" />
+          <AppImage source={mascot.login} style={styles.mascot} resizeMode="contain" />
           <View style={styles.copy}>
             <Text style={styles.headline}>{'Create an\naccount.'}</Text>
             <Text style={styles.sub}>So your chunks, streaks and classes save across devices.</Text>

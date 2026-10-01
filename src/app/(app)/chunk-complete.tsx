@@ -19,7 +19,9 @@
  * owns whether a chunk is finished, and it is not this screen.
  */
 
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -55,7 +57,7 @@ export default function ChunkComplete() {
 
         <View style={styles.body}>
           <View style={styles.middle}>
-            <Image source={mascot.complete} style={styles.mascot} resizeMode="contain" />
+            <AppImage source={mascot.complete} style={styles.mascot} resizeMode="contain" />
 
             <View style={styles.copy}>
               <Text style={styles.headline}>

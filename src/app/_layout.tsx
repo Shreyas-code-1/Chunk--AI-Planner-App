@@ -16,11 +16,12 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AiConsentSync } from '../features/ai/AiConsentSync';
 import { SessionProvider } from '../features/auth/SessionProvider';
+import { preloadImages } from '../lib/preloadImages';
 import { queryClient } from '../lib/queryClient';
 import { StartupSplash } from '../features/startup/StartupSplash';
 
@@ -47,9 +48,17 @@ export default function RootLayout() {
   });
 
   const fontsReady = fontsLoaded || !!fontError;
+  // The splash holds for images too (never past its own maximum), so the
+  // first screen draws with its mascot and the dock with its icons.
+  const [imagesReady, setImagesReady] = useState(false);
+  useEffect(() => {
+    preloadImages()
+      .catch(() => {})
+      .finally(() => setImagesReady(true));
+  }, []);
   // Index is only a routing gate, so leaving it means session and route are
   // settled. Direct links skip it.
-  const ready = fontsReady && laidOut && pathname !== '/';
+  const ready = fontsReady && imagesReady && laidOut && pathname !== '/';
   if (ready && !revealed) setRevealed(true);
 
   return (

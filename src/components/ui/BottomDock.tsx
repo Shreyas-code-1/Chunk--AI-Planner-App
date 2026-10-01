@@ -9,16 +9,17 @@
  *   add           46x46 #FF7A12 square, radius 15, 4pt #DE5F06 edge
  */
 
-import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { haptic } from '../../lib/haptics';
 import { colors, radii, shadows } from '../../theme/tokens';
 import { Plus } from '../icons';
+import { AppImage } from './AppImage';
 
 export type DockTab = 'home' | 'week' | 'focus' | 'profile';
 
-type Tab = { key: DockTab; label: string; icon: ImageSourcePropType; width: number; height: number };
+type Tab = { key: DockTab; label: string; icon: number; width: number; height: number };
 
 const TABS: Tab[] = [
   { key: 'home', label: 'Home', icon: require('../../../assets/icons/dock-home.png'), width: 29.3, height: 27.2 },
@@ -48,7 +49,7 @@ export function BottomDock({ active, onSelect, onAdd }: Props) {
           onPressIn={() => haptic('select')}
           style={[styles.tab, isActive && styles.activeTab]}
         >
-          <Image source={icon} style={{ width, height }} />
+          <AppImage source={icon} style={{ width, height }} />
         </Pressable>
       </View>
     );
@@ -74,6 +75,9 @@ export function BottomDock({ active, onSelect, onAdd }: Props) {
 }
 
 const DOCK_PADDING_TOP = 11;
+
+/** For `preloadImages`. */
+export const DOCK_ICON_SOURCES = TABS.map((tab) => tab.icon);
 
 const styles = StyleSheet.create({
   dock: {
