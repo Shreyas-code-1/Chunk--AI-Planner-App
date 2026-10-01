@@ -17,10 +17,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomDock, Chip } from '../../components/ui';
+import { Chip } from '../../components/ui';
 import { Bell, Flame } from '../../components/icons';
 import { useDraft } from '../../features/onboarding/draft';
-import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { timeLabel } from '../../lib/clock';
 import { usePlan } from '../../features/work/usePlan';
 import { useWork } from '../../features/work/store';
@@ -40,7 +39,6 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
 
 export default function Home() {
   const router = useRouter();
-  const dock = useDockNavigation('home');
   const displayName = useDraft((state) => state.displayName);
   const classes = useDraft((state) => state.classes);
 
@@ -233,8 +231,6 @@ export default function Home() {
           </>
         )}
       </ScrollView>
-
-      <BottomDock active="home" {...dock} />
     </SafeAreaView>
   );
 }

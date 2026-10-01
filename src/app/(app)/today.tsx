@@ -33,8 +33,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomDock, PathNode } from '../../components/ui';
-import { useDockNavigation } from '../../features/navigation/useDockNavigation';
+import { PathNode } from '../../components/ui';
 import { usePlan, type PlannedChunk } from '../../features/work/usePlan';
 import { timeLabel } from '../../lib/clock';
 import { planDateOf, fromDateKey, addDays } from '../../lib/planDate';
@@ -59,7 +58,6 @@ function metaFor(chunk: PlannedChunk): string {
 
 export default function Today() {
   const router = useRouter();
-  const dock = useDockNavigation('week');
 
   const todayKey = planDateOf(new Date());
   const today = fromDateKey(todayKey);
@@ -206,8 +204,6 @@ export default function Today() {
           </View>
         )}
       </ScrollView>
-
-      <BottomDock active="week" {...dock} />
     </SafeAreaView>
   );
 }

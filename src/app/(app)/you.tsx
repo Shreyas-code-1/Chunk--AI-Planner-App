@@ -12,9 +12,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { CalendarCheck, Check, Flame, Timer } from '../../components/icons';
-import { BottomDock } from '../../components/ui';
 import { LogIcon } from '../../features/logs/LogIcon';
-import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { useDraft } from '../../features/onboarding/draft';
 import { OverviewTile } from '../../features/profile/OverviewTile';
 import { ProfileHeader } from '../../features/profile/ProfileHeader';
@@ -26,7 +24,6 @@ import { colors, fonts, radii } from '../../theme/tokens';
 const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
 
 export default function You() {
-  const dock = useDockNavigation('profile');
   const router = useRouter();
   const displayName = useDraft((s) => s.displayName);
   const stats = useProgressStats();
@@ -88,8 +85,6 @@ export default function You() {
           </View>
         </View>
       </ScrollView>
-
-      <BottomDock active="profile" {...dock} />
     </View>
   );
 }

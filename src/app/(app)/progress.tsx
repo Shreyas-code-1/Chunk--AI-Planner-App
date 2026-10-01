@@ -13,10 +13,8 @@ import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomDock } from '../../components/ui';
 import { mascot } from '../../components/mascot';
 import { LogIcon } from '../../features/logs/LogIcon';
-import { useDockNavigation } from '../../features/navigation/useDockNavigation';
 import { MonthChart } from '../../features/progress/MonthChart';
 import { durationLabel } from '../../features/work/progress';
 import { useProgressStats } from '../../features/work/useProgressStats';
@@ -25,7 +23,6 @@ import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 const SINCE: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
 
 export default function Progress() {
-  const dock = useDockNavigation('focus');
   const stats = useProgressStats();
   const { onTime } = stats;
   const share = onTime.total === 0 ? 0 : onTime.onTime / onTime.total;
@@ -69,8 +66,6 @@ export default function Progress() {
           </View>
         </View>
       </ScrollView>
-
-      <BottomDock active="focus" {...dock} />
     </SafeAreaView>
   );
 }

@@ -1421,3 +1421,10 @@ were measured from the PNGs and fonts fitted against the real Baloo 2 / Nunito.
 - Overview/badge icons that aren't in the icon set (flame, check box,
   stopwatch, calendar-check, gear) are vector; logs use the log PNG.
 - Open items: questions 23–32 in `docs/v2-and-remaining-screens-questions.md`.
+
+## 2026-09-30 — One persistent dock
+
+Tapping a dock tab made the whole screen, dock included, fade out and back:
+each screen drew its own dock and `router.replace` cross-faded. The dock now
+lives once in `src/app/(app)/_layout.tsx`, shown on /home, /all-work, /today,
+/progress and /you, and the tab screens switch with no animation.

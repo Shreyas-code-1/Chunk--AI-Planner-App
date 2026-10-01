@@ -18,8 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BottomDock, Chip } from '../../components/ui';
-import { useDockNavigation } from '../../features/navigation/useDockNavigation';
+import { Chip } from '../../components/ui';
 import { usePlan } from '../../features/work/usePlan';
 import { EmptyWork } from '../../features/work/EmptyWork';
 import { TaskChips } from '../../features/work/TaskChips';
@@ -33,7 +32,6 @@ const DAY_FORMAT: Intl.DateTimeFormatOptions = { weekday: 'short' };
 
 export default function AllWork() {
   const router = useRouter();
-  const dock = useDockNavigation('home');
   const assignments = useWork((state) => state.assignments);
   const { all } = usePlan();
 
@@ -178,8 +176,6 @@ export default function AllWork() {
           ))
         )}
       </ScrollView>
-
-      <BottomDock active="home" {...dock} />
     </SafeAreaView>
   );
 }
