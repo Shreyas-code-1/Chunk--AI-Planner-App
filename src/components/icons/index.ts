@@ -39,3 +39,6 @@ export { Sun } from './Sun';
 export { Timer } from './Timer';
 export { Mail } from './Mail';
 export { GoogleMark, AppleMark } from './BrandMarks';
+export { Flame } from './Flame';
+export { Gear } from './Gear';
+export { CalendarCheck } from './CalendarCheck';

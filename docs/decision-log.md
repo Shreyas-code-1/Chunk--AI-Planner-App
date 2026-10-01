@@ -1369,3 +1369,110 @@ At Shreyas's request the splash departs from the board's cream 2.1:
 - **Width 185 → 197 pt**, so the beaver itself stays at the board's size, with
   the outline added around it. `splash-native.png` was regenerated (a
   transparent 1170×2532 canvas with the logo 591 px wide).
+
+## 2026-09-30 — Logs currency, and a flame for the streak
+
+**Streak icon.** The 8–9 px orange dot in the streak pill (3.1 HOME, 5.1
+PROGRESS) is now `Flame`, an SVG drawn from Shreyas's reference
+`Screenshot 2026-09-30 181747.png`: flame in `colors.orange`, drop in
+`colors.gold`. Not on the board.
+
+**Logs** (branch `feature/logs`, not merged until tested on a phone):
+- Art: `Chunk Log Currency .png` (1254×1254, transparent background), trimmed
+  to the log and saved as `assets/icons/log.png` at 48/96/144 px (@1x/2x/3x).
+- **1 log per whole minute the timer actually runs**, `LOGS_PER_MINUTE` in
+  `src/features/logs/config.ts` (provisional). Per session; a partial minute
+  earns nothing. Capped at the chunk's length.
+- Running time is now a run clock on the active chunk (`runMs` +
+  `runningSince` in the work store), so pause, background and leaving the
+  screen are counted from real timestamps. The countdown reads the same clock.
+- Leaving a chunk unfinished still banks the minutes it ran.
+- `balance` and `lifetimeEarned`, persisted with AsyncStorage (`chunk.logs`)
+  because no user data is in Supabase yet. `earn` ignores anything but a
+  positive whole number, so lifetime can't go down. Never sold for money.
+- Shown on Home as a fourth stat tile (log in place of the label; values
+  shrink to fit rather than wrap), on Focus as a pill next to "of N min",
+  and on Chunk Complete as "+N logs" counting up.
+- The scheduling engine is unchanged.
+
+## 2026-09-30 — v3 Profile, Progress, Settings and dock
+
+Branch `feature/profile-progress-redesign` (includes `feature/logs`, since both
+screens show logs). Sources copied to `design/v3/` from the repo root
+(identical to the Downloads copies): profile.png, progress.png, settings.png
+(784×1760, @2x of 392pt), dock-home.png (1170×261, @3x of 390pt),
+icon-set.png (2172×724). There is no HTML export of these screens, so values
+were measured from the PNGs and fonts fitted against the real Baloo 2 / Nunito.
+
+- **Dock** replaces the floating board dock everywhere: full-width white bar,
+  1pt cream top rule, 54×50 `#FFF1E2` active tile with a `#FFB46B` border,
+  46pt `#FF7A12` add square with a 4pt `#DE5F06` edge. Icons are cut from the
+  Warm Orange set (the glow removed by alpha) into `assets/icons/dock-*.png`
+  at @1x/2x/3x; sources are 190–240px, so @3x is downsampled, never stretched.
+- **Profile (5.2)**: amber header with name, gear (→ Settings) and the dashed
+  empty avatar; OVERVIEW grid; BADGES at the design's 46pt icon size. The old
+  Profile's CONNECTED cards, Preferences/Reminders links and LOG OUT are gone;
+  AI features and SIGN OUT moved to Settings.
+- **Progress (5.1)** is now all-time: focused total, hours per month (last 5),
+  chunks done, logs earned (lifetime), finish rate, done on time. The week
+  chart, streak pill and by-class breakdown are removed.
+- **Settings (5.2a)** new at `/settings`. Working: AI toggle, Restore purchases
+  (billing seam; explains it needs the App Store build in Expo Go), Sign out.
+- Overview/badge icons that aren't in the icon set (flame, check box,
+  stopwatch, calendar-check, gear) are vector; logs use the log PNG.
+- Open items: questions 23–32 in `docs/v2-and-remaining-screens-questions.md`.
+
+## 2026-09-30 — One persistent dock
+
+Tapping a dock tab made the whole screen, dock included, fade out and back:
+each screen drew its own dock and `router.replace` cross-faded. The dock now
+lives once in `src/app/(app)/_layout.tsx`, shown on /home, /all-work, /today,
+/progress and /you, and the tab screens switch with no animation.
+
+## 2026-09-30 — No graph on Progress; every screen scrolls; usernames
+
+At Shreyas's request:
+- **Progress:** the HOURS PER MONTH chart is removed (the `MonthChart`
+  component and `hoursByMonth` with it). Focused card → tiles → done on time.
+- **Standing rule: every screen scrolls smoothly and nothing is cut off.**
+  The ten screens that had a fixed layout (Focus, Chunk Complete, Chunk
+  Failed, Offline, AI consent, Daily pace, Log in, Progress curve, Vs alone,
+  Your week) are wrapped in `ScreenScroll`, which keeps their layout when it
+  fits and scrolls when it doesn't. The keyboard pushes content up instead of
+  covering it.
+- **Username:** Profile's "@HANDLE · JOINED 2026" line is the student's own
+  username. Tap "+ ADD USERNAME" (or the name) to edit in place; 3–20
+  lowercase letters, numbers or underscores, empty clears it. Saved on the
+  device (`chunk.username`); it moves to a unique `profiles.username` column
+  in batch 6, so for now it is only unique to the phone.
+
+## 2026-09-30 — Images: expo-image everywhere, preloaded at startup
+
+Reported: dock icons not loading, and blank after finishing a chunk; the log
+icon missing (e.g. on Chunk Complete); the mascot sometimes missing. All three
+are bundled PNGs drawn with React Native's `Image`, which re-fetches the asset
+each time a screen mounts (in Expo Go, from the dev server) and shows nothing
+until it arrives. The dock remounts when you come back from Focus / Chunk
+Complete, so its icons blanked.
+
+- New `AppImage` (`src/components/ui/AppImage.tsx`) on `expo-image` with a
+  memory + disk cache and no fade. Every image in the app uses it; RN `Image`
+  is no longer imported anywhere.
+- `src/lib/preloadImages.ts` downloads and decodes every mascot, dock icon and
+  the log during the startup splash; the splash waits for it (never past its
+  3 s maximum). `expo-asset` added as a direct dependency (Expo Go safe).
+
+## 2026-09-30 — New Chunk Complete mascot
+
+3.4 CHUNK COMPLETE's mascot is now Shreyas's "New mascot for chunk completion
+screen.png" (sunglasses, flame behind), trimmed and saved as
+`design/assets/mascot-chunk-complete.png` at 600×600 for its 200pt slot.
+**Supersedes the board's `design/mascot/17-chunk-cheering.png` on 3.4.**
+It is preloaded at startup like the other mascots.
+
+## 2026-09-30 — New Welcome mascot
+
+2.2 WELCOME (the first screen) now uses Shreyas's "Initial screen Mascot.png",
+saved as `design/assets/mascot-welcome.png` (708×708 for the 236pt slot).
+**Supersedes `design/mascot/03-chunk-mascot-waving.png` on 2.2**; the waving
+pose stays only in the dev gallery. Preloaded at startup with the others.

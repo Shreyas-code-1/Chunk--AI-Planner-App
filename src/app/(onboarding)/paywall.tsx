@@ -22,7 +22,9 @@
  */
 
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -102,7 +104,7 @@ export default function Paywall() {
           </View>
         </View>
 
-        <Image source={mascot.paywall} style={styles.art} resizeMode="contain" />
+        <AppImage source={mascot.paywall} style={styles.art} resizeMode="contain" />
 
         <View style={styles.headlineBlock}>
           <View style={styles.headlineRow}>

@@ -2,7 +2,9 @@
  * 5.3 EMPTY STATE — All work before anything has been added.
  */
 
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { useRouter } from 'expo-router';
 
 import { Button } from '../../components/ui';
@@ -13,7 +15,7 @@ export function EmptyWork() {
   const router = useRouter();
   return (
     <View style={styles.wrap}>
-      <Image source={mascot.waiting} style={styles.mascot} resizeMode="contain" />
+      <AppImage source={mascot.waiting} style={styles.mascot} resizeMode="contain" />
       <View style={styles.text}>
         <Text style={styles.title}>Nothing due yet</Text>
         <Text style={styles.line}>

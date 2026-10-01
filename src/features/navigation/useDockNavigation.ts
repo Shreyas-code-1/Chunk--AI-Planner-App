@@ -4,7 +4,7 @@
  */
 
 import { useCallback } from 'react';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 
 import type { DockTab } from '../../components/ui';
 
@@ -15,13 +15,15 @@ const ROUTES = {
   profile: '/you',
 } as const;
 
-export function useDockNavigation(active: DockTab) {
+export function useDockNavigation(active: DockTab | undefined) {
   const router = useRouter();
+  const pathname = usePathname();
   const onSelect = useCallback(
     (tab: DockTab) => {
-      if (tab !== active) router.replace(ROUTES[tab]);
+      // By route, not tab: All Work sits under Home, and Home must still go home.
+      if (ROUTES[tab] !== pathname) router.replace(ROUTES[tab]);
     },
-    [active, router],
+    [pathname, router],
   );
   const onAdd = useCallback(() => router.push('/add'), [router]);
   return { onSelect, onAdd };

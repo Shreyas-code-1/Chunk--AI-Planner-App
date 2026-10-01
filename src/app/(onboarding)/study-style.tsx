@@ -11,7 +11,9 @@
  * inventing a window width here.
  */
 
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -141,7 +143,7 @@ export default function StudyStyle() {
         <SpeechBubble
           size="compact"
           style={styles.aside}
-          mascot={<Image source={mascot.studyStyle} style={styles.mascot} resizeMode="contain" />}
+          mascot={<AppImage source={mascot.studyStyle} style={styles.mascot} resizeMode="contain" />}
         >
           {"Be honest — I'd rather plan small and finish."}
         </SpeechBubble>

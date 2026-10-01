@@ -103,6 +103,18 @@ export const colors = {
   /** The edge under a dark button, and the splash logo's drop shadow. */
   edgeInk: '#1F1610',
   white: '#FFFFFF',
+
+  /** v3 redesign (30 Sep): 5.1, 5.2, 5.2a and the dock, sampled from design/v3/. */
+  avatarFill: '#F6BC80',
+  gearBorder: '#F3CFA4',
+  gearEdge: '#E9B784',
+  dockActive: '#FFF1E2',
+  dockActiveBorder: '#FFB46B',
+  dockAdd: '#FF7A12',
+  dockAddEdge: '#DE5F06',
+  subtle: '#8F7F74',
+  flameGold: '#F2B024',
+  calendarGreen: '#2FB37A',
 } as const;
 
 /**

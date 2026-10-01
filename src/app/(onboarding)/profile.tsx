@@ -16,7 +16,9 @@
  */
 
 import { useMemo } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,7 +63,7 @@ export default function Profile() {
         >
           <SpeechBubble
             style={styles.bubble}
-            mascot={<Image source={mascot.name} style={styles.mascot} resizeMode="contain" />}
+            mascot={<AppImage source={mascot.name} style={styles.mascot} resizeMode="contain" />}
           >
             Nice to meet you — who am I helping?
           </SpeechBubble>

@@ -1,4 +1,5 @@
-import { Image, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { AppImage } from '../../../components/ui/AppImage';
 import React from 'react';
 import RootLayout from '../../../app/_layout';
 import Startup from '../../../app/index';
@@ -16,6 +17,11 @@ jest.mock('expo-splash-screen', () => ({ preventAutoHideAsync: jest.fn(), hideAs
 jest.mock('react-native-gesture-handler', () => ({ GestureHandlerRootView: ({ children }: any) => children }));
 jest.mock('@tanstack/react-query', () => ({ QueryClientProvider: ({ children }: any) => children }));
 jest.mock('../../../lib/queryClient', () => ({ queryClient: {} }));
+// Settles synchronously so image preloading never holds the splash in these tests.
+jest.mock('../../../lib/preloadImages', () => {
+  const settled: any = { catch: () => settled, finally: (done: () => void) => { done(); return settled; } };
+  return { preloadImages: () => settled };
+});
 jest.mock('../../../components/ErrorBoundary', () => ({ ErrorBoundary: ({ children }: any) => children }));
 jest.mock('../../ai/AiConsentSync', () => ({ AiConsentSync: () => null }));
 jest.mock('../../auth/SessionProvider', () => ({ SessionProvider: ({ children }: any) => children, useSession: jest.fn() }));
@@ -37,7 +43,7 @@ test('splash renders the design and takes over from the native splash', () => {
   renderRoot();
   expect(splash().length).toBeGreaterThan(0);
   expect(StyleSheet.flatten(splash()[0].props.style).backgroundColor).toBe('#FA7814');
-  const image = tree.root.findByType(Image);
+  const image = tree.root.findByType(AppImage);
   expect(image.props.source).toEqual(require('../../../../assets/images/splash-logo.png'));
   expect(image.props.resizeMode).toBe('contain');
   act(() => splash()[0].props.onLayout());

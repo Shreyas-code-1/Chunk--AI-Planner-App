@@ -7,7 +7,9 @@
  * It is only offered when the planned time is actually later.
  */
 
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { useRouter } from 'expo-router';
 
 import { Chip } from '../../components/ui';
@@ -106,7 +108,7 @@ export function UrgentHome({ urgent, today }: { urgent: PlannedChunk; today: Pla
       {rest.length > 0 ? (
         <>
           <View style={[styles.after, shadows.hardEdge(7)]}>
-            <Image source={mascot.urgent} style={styles.mascot} resizeMode="contain" />
+            <AppImage source={mascot.urgent} style={styles.mascot} resizeMode="contain" />
             <View style={styles.flex}>
               <Text style={styles.afterLabel}>AFTER THAT</Text>
               <Text style={styles.afterValue}>

@@ -16,7 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Slider } from '../../components/ui';
+import { Button, Slider, ScreenScroll } from '../../components/ui';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { DAILY_MAX, DAILY_MIN, DAILY_STEP, useDraft } from '../../features/onboarding/draft';
 import { colors, displayLine, fonts } from '../../theme/tokens';
@@ -53,58 +53,58 @@ export default function DailyPace() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
-      <View style={styles.body}>
-        <OnboardingHeader step={8} />
+      <ScreenScroll>
+        <StatusBar style="dark" />
+        <View style={styles.body}>
+          <OnboardingHeader step={8} />
 
-        <Text style={styles.headline}>
-          {'How much do you\nwant to get through\neach day?'}
-        </Text>
+          <Text style={styles.headline}>{'How much do you\nwant to get through\neach day?'}</Text>
 
-        <View style={styles.readout}>
-          <Text style={styles.readoutLabel}>Study time per school day</Text>
-          <Text style={styles.readoutValue}>{formatMinutes(dailyMinutes)}</Text>
-        </View>
-
-        <View style={styles.bands}>
-          {BANDS.map((band, index) => (
-            <Text key={band} style={[styles.band, index === active && styles.bandOn]}>
-              {band}
-            </Text>
-          ))}
-        </View>
-
-        <Slider
-          value={dailyMinutes}
-          min={DAILY_MIN}
-          max={DAILY_MAX}
-          step={DAILY_STEP}
-          onChange={(minutes) => {
-            setDailyMinutes(minutes);
-            markAnswered('dailyPace');
-          }}
-          style={styles.slider}
-        />
-
-        <View style={styles.ticks}>
-          <Text style={styles.tick}>{formatMinutes(DAILY_MIN)}</Text>
-          <Text style={styles.tick}>{formatMinutes((DAILY_MIN + DAILY_MAX) / 2)}</Text>
-          <Text style={styles.tick}>{formatMinutes(DAILY_MAX)}</Text>
-        </View>
-
-        {classCount > 0 ? (
-          <View style={styles.recommend}>
-            <Text style={styles.recommendText}>
-              Recommended for {classCount} {classCount === 1 ? 'class' : 'classes'}
-            </Text>
+          <View style={styles.readout}>
+            <Text style={styles.readoutLabel}>Study time per school day</Text>
+            <Text style={styles.readoutValue}>{formatMinutes(dailyMinutes)}</Text>
           </View>
-        ) : null}
 
-        <View style={styles.spacer} />
+          <View style={styles.bands}>
+            {BANDS.map((band, index) => (
+              <Text key={band} style={[styles.band, index === active && styles.bandOn]}>
+                {band}
+              </Text>
+            ))}
+          </View>
 
-        <Text style={styles.footnote}>You can change this any week.</Text>
-        <Button label="CONTINUE" disabled={!answered} onPress={() => router.push('/vs-alone')} />
-      </View>
+          <Slider
+            value={dailyMinutes}
+            min={DAILY_MIN}
+            max={DAILY_MAX}
+            step={DAILY_STEP}
+            onChange={(minutes) => {
+              setDailyMinutes(minutes);
+              markAnswered('dailyPace');
+            }}
+            style={styles.slider}
+          />
+
+          <View style={styles.ticks}>
+            <Text style={styles.tick}>{formatMinutes(DAILY_MIN)}</Text>
+            <Text style={styles.tick}>{formatMinutes((DAILY_MIN + DAILY_MAX) / 2)}</Text>
+            <Text style={styles.tick}>{formatMinutes(DAILY_MAX)}</Text>
+          </View>
+
+          {classCount > 0 ? (
+            <View style={styles.recommend}>
+              <Text style={styles.recommendText}>
+                Recommended for {classCount} {classCount === 1 ? 'class' : 'classes'}
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={styles.spacer} />
+
+          <Text style={styles.footnote}>You can change this any week.</Text>
+          <Button label="CONTINUE" disabled={!answered} onPress={() => router.push('/vs-alone')} />
+        </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

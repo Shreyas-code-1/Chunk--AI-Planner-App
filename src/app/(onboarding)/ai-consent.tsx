@@ -8,12 +8,14 @@
  * until AI is switched on from Profile.
  */
 
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '../../components/ui';
+import { Button, ScreenScroll } from '../../components/ui';
 import { mascot } from '../../components/mascot';
 import { PRIVACY_POLICY_URL, useAiConsent } from '../../features/ai/consent';
 import { colors, displayLine, fonts } from '../../theme/tokens';
@@ -35,29 +37,38 @@ export default function AiConsent() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
+      <ScreenScroll>
+        <StatusBar style="dark" />
 
-      <View style={styles.content}>
-        <Text style={styles.headline}>One thing before we start</Text>
-        <Image source={mascot.name} style={styles.mascot} resizeMode="contain" />
-        <View style={styles.lines}>
-          {LINES.map((line) => (
-            <Text key={line} style={styles.line}>
-              {line}
-            </Text>
-          ))}
+        <View style={styles.content}>
+          <Text style={styles.headline}>One thing before we start</Text>
+          <AppImage source={mascot.name} style={styles.mascot} resizeMode="contain" />
+          <View style={styles.lines}>
+            {LINES.map((line) => (
+              <Text key={line} style={styles.line}>
+                {line}
+              </Text>
+            ))}
+          </View>
         </View>
-      </View>
 
-      <View style={styles.footer}>
-        <Button label="SOUNDS GOOD" onPress={() => decide(true)} />
-        <Pressable accessibilityRole="button" onPress={() => decide(false)} style={styles.textButton}>
-          <Text style={styles.textButtonLabel}>{"I'll type everything"}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
-          <Text style={styles.link}>Privacy policy</Text>
-        </Pressable>
-      </View>
+        <View style={styles.footer}>
+          <Button label="SOUNDS GOOD" onPress={() => decide(true)} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => decide(false)}
+            style={styles.textButton}
+          >
+            <Text style={styles.textButtonLabel}>{"I'll type everything"}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+          >
+            <Text style={styles.link}>Privacy policy</Text>
+          </Pressable>
+        </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

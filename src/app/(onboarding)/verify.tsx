@@ -14,7 +14,9 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { AppImage } from '../../components/ui/AppImage';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -108,7 +110,7 @@ export default function Verify() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.heading}>
-          <Image source={mascot.verify} style={styles.mascot} resizeMode="contain" />
+          <AppImage source={mascot.verify} style={styles.mascot} resizeMode="contain" />
           <Text style={styles.headline}>Check your email.</Text>
         </View>
 

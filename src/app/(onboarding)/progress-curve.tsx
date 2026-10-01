@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
-import { Button } from '../../components/ui';
+import { Button, ScreenScroll } from '../../components/ui';
 import { OnboardingHeader } from '../../features/onboarding/OnboardingHeader';
 import { colors, displayLine, fonts, shadows } from '../../theme/tokens';
 
@@ -26,70 +26,76 @@ export default function ProgressCurve() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
-      <View style={styles.body}>
-        <OnboardingHeader step={10} />
+      <ScreenScroll>
+        <StatusBar style="dark" />
+        <View style={styles.body}>
+          <OnboardingHeader step={10} />
 
-        <Text style={styles.headline}>
-          {"You're set up to\nstay ahead of\nyour deadlines"}
-        </Text>
+          <Text style={styles.headline}>{"You're set up to\nstay ahead of\nyour deadlines"}</Text>
 
-        <View style={[styles.card, shadows.hardEdge(6)]}>
-          <Text style={styles.cardTitle}>Work finished on time</Text>
+          <View style={[styles.card, shadows.hardEdge(6)]}>
+            <Text style={styles.cardTitle}>Work finished on time</Text>
 
-          <View style={styles.plot}>
-            <Svg viewBox="0 0 300 170" width="100%" height={170}>
-              <Defs>
-                <LinearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0%" stopColor={colors.orange} stopOpacity="0.28" />
-                  <Stop offset="100%" stopColor={colors.orange} stopOpacity="0" />
-                </LinearGradient>
-              </Defs>
-              <Path d={CURVE_FILL} fill="url(#curveFill)" />
-              <Path d={CURVE} fill="none" stroke={colors.ink} strokeWidth={3.5} strokeLinecap="round" />
-              {[
-                [10, 130],
-                [98, 119],
-                [150, 89],
-              ].map(([cx, cy]) => (
-                <Circle
-                  key={`${cx}`}
-                  cx={cx}
-                  cy={cy}
-                  r={6.5}
-                  fill={colors.white}
+            <View style={styles.plot}>
+              <Svg viewBox="0 0 300 170" width="100%" height={170}>
+                <Defs>
+                  <LinearGradient id="curveFill" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0%" stopColor={colors.orange} stopOpacity="0.28" />
+                    <Stop offset="100%" stopColor={colors.orange} stopOpacity="0" />
+                  </LinearGradient>
+                </Defs>
+                <Path d={CURVE_FILL} fill="url(#curveFill)" />
+                <Path
+                  d={CURVE}
+                  fill="none"
                   stroke={colors.ink}
                   strokeWidth={3.5}
+                  strokeLinecap="round"
                 />
-              ))}
-              <Circle cx={285} cy={22} r={14} fill={colors.orange} />
-              <Path
-                d="M279 22l5 5 8-9"
-                fill="none"
-                stroke={colors.white}
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <Line x1={10} y1={158} x2={290} y2={158} stroke={colors.cream} strokeWidth={2.5} />
-            </Svg>
+                {[
+                  [10, 130],
+                  [98, 119],
+                  [150, 89],
+                ].map(([cx, cy]) => (
+                  <Circle
+                    key={`${cx}`}
+                    cx={cx}
+                    cy={cy}
+                    r={6.5}
+                    fill={colors.white}
+                    stroke={colors.ink}
+                    strokeWidth={3.5}
+                  />
+                ))}
+                <Circle cx={285} cy={22} r={14} fill={colors.orange} />
+                <Path
+                  d="M279 22l5 5 8-9"
+                  fill="none"
+                  stroke={colors.white}
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <Line x1={10} y1={158} x2={290} y2={158} stroke={colors.cream} strokeWidth={2.5} />
+              </Svg>
 
-            <View style={styles.axis}>
-              <Text style={styles.axisLabel}>Day 3</Text>
-              <Text style={styles.axisLabel}>Week 1</Text>
-              <Text style={styles.axisLabel}>Month 1</Text>
+              <View style={styles.axis}>
+                <Text style={styles.axisLabel}>Day 3</Text>
+                <Text style={styles.axisLabel}>Week 1</Text>
+                <Text style={styles.axisLabel}>Month 1</Text>
+              </View>
             </View>
+
+            <Text style={styles.caption}>
+              The first few days are the slowest. Once the routine sticks, most students clear their
+              week without the late-night scramble.
+            </Text>
           </View>
 
-          <Text style={styles.caption}>
-            The first few days are the slowest. Once the routine sticks, most students clear
-            their week without the late-night scramble.
-          </Text>
+          <View style={styles.spacer} />
+          <Button label="CONTINUE" onPress={() => router.push('/paywall')} />
         </View>
-
-        <View style={styles.spacer} />
-        <Button label="CONTINUE" onPress={() => router.push('/paywall')} />
-      </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }
