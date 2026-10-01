@@ -234,7 +234,7 @@ export default function Home() {
         )}
       </ScrollView>
 
-      <BottomDock active="home" style={styles.dock} {...dock} />
+      <BottomDock active="home" {...dock} />
     </SafeAreaView>
   );
 }
@@ -441,5 +441,4 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  dock: { marginHorizontal: 20, marginBottom: 10 },
 });

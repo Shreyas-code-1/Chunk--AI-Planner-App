@@ -179,7 +179,7 @@ export default function AllWork() {
         )}
       </ScrollView>
 
-      <BottomDock active="home" style={styles.dock} {...dock} />
+      <BottomDock active="home" {...dock} />
     </SafeAreaView>
   );
 }
@@ -274,5 +274,4 @@ const styles = StyleSheet.create({
   },
 
   bodyEmpty: { flexGrow: 1 },
-  dock: { marginHorizontal: 20, marginBottom: 10 },
 });

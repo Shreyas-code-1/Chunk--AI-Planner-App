@@ -1,110 +1,106 @@
 /**
- * Bottom dock navigation.
+ * Bottom dock navigation — the v3 dock, design/v3/dock-home.png (@3x).
  *
- * Board values: white, 2px `#F0E4D6` border, radius 24, padding 10/14, hard
- * bottom edge `0 6px 0 #6E4A28`. Four destinations either side of a raised
- * add button:
+ * A full-width white bar with a 1pt cream top rule, owning the bottom safe
+ * area. Five equal slots; the add button sits in the middle.
  *
- *   active tab    46x46 amber square at radius 16, icon 21px in #C65E06
- *   inactive tab  bare 21px icon in #C3B4A8, no container
- *   add           46x46 orange circle, edge 0 4px 0, plus in white at 3.0
- *
- * Note the add button's edge is 4px where the dock's own is 6px; they are not
- * the same value and are not made the same here.
+ *   active tab    54x50 #FFF1E2 tile, 1pt #FFB46B border, radius 16
+ *   icons         the Warm Orange set, full colour at every state
+ *   add           46x46 #FF7A12 square, radius 15, 4pt #DE5F06 edge
  */
 
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Calendar, Home, Person, Plus, Timer } from '../icons';
 import { haptic } from '../../lib/haptics';
 import { colors, radii, shadows } from '../../theme/tokens';
+import { Plus } from '../icons';
 
 export type DockTab = 'home' | 'week' | 'focus' | 'profile';
 
-const TABS: { key: DockTab; Icon: typeof Home; label: string }[] = [
-  { key: 'home', Icon: Home, label: 'Home' },
-  { key: 'week', Icon: Calendar, label: 'Week' },
-  { key: 'focus', Icon: Timer, label: 'Focus' },
-  { key: 'profile', Icon: Person, label: 'Profile' },
+type Tab = { key: DockTab; label: string; icon: ImageSourcePropType; width: number; height: number };
+
+const TABS: Tab[] = [
+  { key: 'home', label: 'Home', icon: require('../../../assets/icons/dock-home.png'), width: 29.3, height: 27.2 },
+  { key: 'week', label: 'Week', icon: require('../../../assets/icons/dock-calendar.png'), width: 22.9, height: 25.7 },
+  { key: 'focus', label: 'Progress', icon: require('../../../assets/icons/dock-stopwatch.png'), width: 22.9, height: 28 },
+  { key: 'profile', label: 'Profile', icon: require('../../../assets/icons/dock-person.png'), width: 23.9, height: 25.7 },
 ];
 
 type Props = {
   active: DockTab;
   onSelect(tab: DockTab): void;
   onAdd(): void;
-  style?: StyleProp<ViewStyle>;
 };
 
-export function BottomDock({ active, onSelect, onAdd, style }: Props) {
-  // The add button sits in the middle of the row, between the second and
-  // third destination, exactly as the board draws it.
-  const left = TABS.slice(0, 2);
-  const right = TABS.slice(2);
+export function BottomDock({ active, onSelect, onAdd }: Props) {
+  const insets = useSafeAreaInsets();
 
-  const tab = ({ key, Icon, label }: (typeof TABS)[number]) => {
+  const tab = ({ key, label, icon, width, height }: Tab) => {
     const isActive = key === active;
     return (
-      <Pressable
-        key={key}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: isActive }}
-        accessibilityLabel={label}
-        onPress={() => onSelect(key)}
-        onPressIn={() => haptic('select')}
-        style={isActive ? styles.activeTab : styles.tab}
-      >
-        <Icon
-          size={21}
-          color={isActive ? colors.orangeDeep : colors.mutedLine}
-          strokeWidth={2.4}
-        />
-      </Pressable>
+      <View key={key} style={styles.slot}>
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: isActive }}
+          accessibilityLabel={label}
+          onPress={() => onSelect(key)}
+          onPressIn={() => haptic('select')}
+          style={[styles.tab, isActive && styles.activeTab]}
+        >
+          <Image source={icon} style={{ width, height }} />
+        </Pressable>
+      </View>
     );
   };
 
   return (
-    <View style={[styles.dock, shadows.hardEdge(6), style]}>
-      {left.map(tab)}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Add an assignment"
-        onPress={onAdd}
-        onPressIn={() => haptic('press')}
-        style={[styles.add, shadows.hardEdge(4)]}
-      >
-        <Plus size={21} color={colors.white} strokeWidth={3} />
-      </Pressable>
-      {right.map(tab)}
+    <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, DOCK_PADDING_TOP) }]}>
+      {TABS.slice(0, 2).map(tab)}
+      <View style={styles.slot}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add an assignment"
+          onPress={onAdd}
+          onPressIn={() => haptic('press')}
+          style={[styles.add, shadows.hardEdge(4, colors.dockAddEdge)]}
+        >
+          <Plus size={26} color={colors.white} strokeWidth={4} />
+        </Pressable>
+      </View>
+      {TABS.slice(2).map(tab)}
     </View>
   );
 }
 
+const DOCK_PADDING_TOP = 11;
+
 const styles = StyleSheet.create({
   dock: {
     backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.creamBorder,
-    borderRadius: radii.chip - 2, // 24 on the board
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.cream,
+    paddingTop: DOCK_PADDING_TOP,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  tab: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
-  activeTab: {
-    width: 46,
-    height: 46,
+  slot: { flex: 1, alignItems: 'center' },
+  tab: {
+    width: 54,
+    height: 50,
     borderRadius: radii.lg,
-    backgroundColor: colors.amber,
+    borderWidth: 1,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  activeTab: { backgroundColor: colors.dockActive, borderColor: colors.dockActiveBorder },
   add: {
+    marginTop: 2,
     width: 46,
     height: 46,
-    borderRadius: radii.pill,
-    backgroundColor: colors.orange,
+    borderRadius: radii.mdAlt,
+    backgroundColor: colors.dockAdd,
     alignItems: 'center',
     justifyContent: 'center',
   },

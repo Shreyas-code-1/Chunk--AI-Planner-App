@@ -87,3 +87,27 @@ Each item below gives the provisional choice currently in the code.
     strip with the selected day". *Proposal:* tapping a day shows that day's
     planned chunks (read-only for future days); WEEK opens 5.1 Progress, or
     is removed. Waiting on Shreyas.
+
+## v3 Profile / Progress / Settings — open (2026-09-30)
+23. **"@handle" on Profile.** The app collects no username. *Now:* the line
+    reads "JOINED 2026" alone (year the account was created).
+24. **The avatar's plus.** Nothing behind it (no photo picker or storage).
+    *Now:* drawn, not tappable. Add a photo picker (works in Expo Go)?
+25. **Settings → Preferences.** No screen exists. *Now:* row has no chevron.
+26. **Settings → Notifications.** No reminder is scheduled anywhere, so the
+    design's "Daily nudge at 4:30 PM" has no source. *Now:* title only.
+27. **Settings → Classes.** Reuse onboarding's 2.5 classes screen, or a new one?
+    *Now:* shows the real class count, not tappable.
+28. **Settings → Chunk Pro.** Plan and renewal need RevenueCat (native build).
+    What does the row say for a non-subscriber, and should it open the paywall?
+    *Now:* "Chunk Pro" only.
+29. **Privacy policy / Terms of use.** Neither is hosted (the AI consent link
+    is a placeholder). Send the URLs.
+30. **Delete account.** Not in the Settings design, so not drawn. Apple
+    requires it for apps with sign-up — where should it go?
+31. **Empty states (new student).** Not drawn. *Now:* finish rate and
+    "Finished on time" read "–", the chart shows zero bars labelled 0, done
+    on time reads "0 of 0" with an empty bar.
+32. **Streak and history.** Streak / best streak are still the 0-or-1 stub,
+    and completions are memory-only, so chunks, focus time and the chart reset
+    on restart (logs persist). Both are batch 6.

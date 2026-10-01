@@ -207,7 +207,7 @@ export default function Today() {
         )}
       </ScrollView>
 
-      <BottomDock active="week" style={styles.dock} {...dock} />
+      <BottomDock active="week" {...dock} />
     </SafeAreaView>
   );
 }
@@ -303,5 +303,4 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
 
-  dock: { marginHorizontal: 20, marginBottom: 10 },
 });

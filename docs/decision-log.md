@@ -1394,3 +1394,30 @@ PROGRESS) is now `Flame`, an SVG drawn from Shreyas's reference
   shrink to fit rather than wrap), on Focus as a pill next to "of N min",
   and on Chunk Complete as "+N logs" counting up.
 - The scheduling engine is unchanged.
+
+## 2026-09-30 — v3 Profile, Progress, Settings and dock
+
+Branch `feature/profile-progress-redesign` (includes `feature/logs`, since both
+screens show logs). Sources copied to `design/v3/` from the repo root
+(identical to the Downloads copies): profile.png, progress.png, settings.png
+(784×1760, @2x of 392pt), dock-home.png (1170×261, @3x of 390pt),
+icon-set.png (2172×724). There is no HTML export of these screens, so values
+were measured from the PNGs and fonts fitted against the real Baloo 2 / Nunito.
+
+- **Dock** replaces the floating board dock everywhere: full-width white bar,
+  1pt cream top rule, 54×50 `#FFF1E2` active tile with a `#FFB46B` border,
+  46pt `#FF7A12` add square with a 4pt `#DE5F06` edge. Icons are cut from the
+  Warm Orange set (the glow removed by alpha) into `assets/icons/dock-*.png`
+  at @1x/2x/3x; sources are 190–240px, so @3x is downsampled, never stretched.
+- **Profile (5.2)**: amber header with name, gear (→ Settings) and the dashed
+  empty avatar; OVERVIEW grid; BADGES at the design's 46pt icon size. The old
+  Profile's CONNECTED cards, Preferences/Reminders links and LOG OUT are gone;
+  AI features and SIGN OUT moved to Settings.
+- **Progress (5.1)** is now all-time: focused total, hours per month (last 5),
+  chunks done, logs earned (lifetime), finish rate, done on time. The week
+  chart, streak pill and by-class breakdown are removed.
+- **Settings (5.2a)** new at `/settings`. Working: AI toggle, Restore purchases
+  (billing seam; explains it needs the App Store build in Expo Go), Sign out.
+- Overview/badge icons that aren't in the icon set (flame, check box,
+  stopwatch, calendar-check, gear) are vector; logs use the log PNG.
+- Open items: questions 23–32 in `docs/v2-and-remaining-screens-questions.md`.
