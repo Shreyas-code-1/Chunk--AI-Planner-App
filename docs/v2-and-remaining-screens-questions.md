@@ -70,3 +70,20 @@ Each item below gives the provisional choice currently in the code.
 16. **The Focus timer doesn't stop at the midpoint pause.** `pauseAt` is
     computed and shown on the path; 3.3 has no frame for the pause itself.
 17. **Migration 0002 needs running by hand** from the Supabase dashboard.
+
+## Logs — open (2026-09-30)
+18. **Leaving a chunk early.** Minutes it ran still earn logs. *Alternative:*
+    only finished chunks earn.
+19. **Partial minutes.** 90 s earns 1 log; the 30 s is lost. *Alternative:*
+    carry seconds over between sessions.
+20. **Home placement.** A fourth stat tile makes all four narrower. *Alternative:*
+    a log pill beside the streak pill in the header.
+21. **Logs move to Supabase** with the rest of the user data (batch 6).
+
+## 3.2 Today Path — open (2026-09-30)
+22. **Week strip and WEEK pill.** Both are display only right now. The board
+    draws a highlighted "selected" day and a WEEK pill, but no frame for
+    another day's path or for a week view, and the brief only says "the week
+    strip with the selected day". *Proposal:* tapping a day shows that day's
+    planned chunks (read-only for future days); WEEK opens 5.1 Progress, or
+    is removed. Waiting on Shreyas.
