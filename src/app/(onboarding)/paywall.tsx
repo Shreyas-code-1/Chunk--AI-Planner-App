@@ -1,13 +1,8 @@
-import { useDraft } from '../../features/onboarding/draft';
-import { safeBack } from '../../features/navigation/safeBack';
 /**
  * 2.16 PAYWALL.
  *
- * TODO(batch 8): **nothing here charges anyone.** `react-native-purchases` is
- * deliberately not installed — importing a native module crashes Expo Go — so
- * this is the screen only. Both buttons currently move on; the real purchase
- * arrives with the first EAS build, through src/features/billing/usePro.ts.
- * The chosen plan is what that call will be handed.
+ * Store prices and purchases come from the billing layer. A purchase continues
+ * to login only after Chunk Pro is active; NO THANKS still skips the paywall.
  *
  * The board draws one state only — 12 months chosen, 1 month not — so the
  * selected look is read off the frame rather than invented: gold 3px border
@@ -23,35 +18,26 @@ import { safeBack } from '../../features/navigation/safeBack';
  * against the cream.
  */
 
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-
-import { AppImage } from '../../components/ui/AppImage';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppImage } from '../../components/ui/AppImage';
 import { HighlightChip } from '../../components/ui/StrokedText';
+import { safeBack } from '../../features/navigation/safeBack';
+import { useDraft } from '../../features/onboarding/draft';
 import { Check, ChevronLeft } from '../../components/icons';
 import { mascot } from '../../components/mascot';
 import { haptic } from '../../lib/haptics';
 import type { PlanId } from '../../features/billing/usePro';
+import { useOffering } from '../../features/billing/useOffering';
+import { getPaywallPlans } from '../../features/billing/paywallPlans';
+import { purchasePlan } from '../../features/billing/purchase';
+import { restorePurchases } from '../../features/billing/restore';
+import { BILLING_UNAVAILABLE_MESSAGE } from '../../features/billing/availability';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
-
-/**
- * Prices, as the board draws them.
- *
- * Provisional, and in one place on purpose: the App Store is the real source
- * of these and they must eventually be read from the product, not typed here.
- * Until then, changing a price is a change to this block and nowhere else.
- */
-const PRICING = {
-  yearlyMonthly: '$7.99',
-  yearlyTotal: '$95.88',
-  yearlySaving: '27%',
-  monthly: '$10.99',
-  trialDays: 7,
-} as const;
 
 const BENEFITS = [
   'Unlimited chunking and re-plans',
@@ -61,22 +47,110 @@ const BENEFITS = [
 
 export default function Paywall() {
   const router = useRouter();
-  const onwards = () => { useDraft.getState().complete(); router.replace('/login'); };
+  const active = useRef(true);
+  const billingLock = useRef(false);
+  const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const busy = purchasing || restoring;
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const insets = useSafeAreaInsets();
+  const onwards = () => {
+    active.current = false;
+    useDraft.getState().complete();
+    router.replace('/login');
+  };
 
   const [plan, setPlan] = useState<PlanId>('yearly');
+  const { data, isPending, isError, isFetching, refetch } = useOffering();
+  const plans = isError ? null : getPaywallPlans(data);
+  const selectedPackage = plans?.[plan].package;
   const choose = (next: PlanId) => {
+    if (billingLock.current) return;
     haptic('select');
     setPlan(next);
   };
 
-  const insets = useSafeAreaInsets();
+  const onContinue = async () => {
+    if (!selectedPackage || isPending || billingLock.current || !active.current) return;
+    billingLock.current = true;
+    setPurchasing(true);
+    setBillingMessage(null);
+    try {
+      haptic('press');
+      const result = await purchasePlan(selectedPackage);
+      if (!active.current) return;
+      switch (result.status) {
+        case 'purchased':
+          onwards();
+          break;
+        case 'cancelled':
+          break;
+        case 'entitlement-inactive':
+          setBillingMessage(
+            'Your purchase completed, but Chunk Pro is not active yet. Please wait before trying again.',
+          );
+          break;
+        case 'failed':
+          setBillingMessage(
+            result.reason === 'unavailable'
+              ? BILLING_UNAVAILABLE_MESSAGE
+              : 'We couldn’t complete your purchase. Please try again.',
+          );
+          break;
+      }
+    } catch {
+      if (active.current)
+        setBillingMessage('We couldn’t complete your purchase. Please try again.');
+    } finally {
+      billingLock.current = false;
+      if (active.current) setPurchasing(false);
+    }
+  };
 
   const cardEdge = (selected: boolean) =>
     selected ? shadows.hardEdge(7, colors.goldEdge) : shadows.hardEdge(5, colors.edgeSand);
 
+  const onRestore = async () => {
+    if (billingLock.current || !active.current) return;
+    billingLock.current = true;
+    setRestoring(true);
+    setBillingMessage(null);
+    try {
+      haptic('press');
+      const result = await restorePurchases();
+      if (!active.current) return;
+      switch (result.status) {
+        case 'restored':
+          onwards();
+          break;
+        case 'entitlement-inactive':
+          setBillingMessage('No active Chunk Pro purchase was found to restore.');
+          break;
+        case 'failed':
+          setBillingMessage(
+            result.reason === 'unavailable'
+              ? BILLING_UNAVAILABLE_MESSAGE
+              : 'We couldn’t restore your purchases. Please try again.',
+          );
+          break;
+      }
+    } catch {
+      if (active.current)
+        setBillingMessage('We couldn’t restore your purchases. Please try again.');
+    } finally {
+      billingLock.current = false;
+      if (active.current) setRestoring(false);
+    }
+  };
+
   return (
-    // One scrolling page, header and buttons included, so nothing is cut off
-    // at a fixed edge mid-screen.
+    // One scrolling page, header and buttons included, so nothing is cut off.
     <View style={styles.screen}>
       <StatusBar style="dark" />
 
@@ -94,6 +168,7 @@ export default function Paywall() {
             hitSlop={8}
             onPress={() => {
               haptic('select');
+              active.current = false;
               safeBack(router, '/progress-curve');
             }}
             style={styles.back}
@@ -110,62 +185,82 @@ export default function Paywall() {
 
         <View style={styles.headlineBlock}>
           <View style={styles.headlineRow}>
-            <Text style={styles.headline}>Try </Text>
+            <Text style={styles.headline}>Meet </Text>
             {/* The one highlight chip on the board with no hard edge under it. */}
             <HighlightChip fontSize={31} background={colors.gold} edge={false}>
-              {`${PRICING.trialDays} days free`}
+              Chunk Pro
             </HighlightChip>
           </View>
-          <Text style={styles.headline}>of Chunk Pro</Text>
         </View>
 
-        <View style={styles.plans} accessibilityRole="radiogroup">
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: plan === 'yearly' }}
-            accessibilityLabel={`12 months, ${PRICING.yearlyMonthly} a month, ${PRICING.yearlyTotal} billed yearly, save ${PRICING.yearlySaving}`}
-            onPress={() => choose('yearly')}
-            style={[
-              styles.planFeatured,
-              plan === 'yearly' ? styles.planSelected : styles.planUnselected,
-              cardEdge(plan === 'yearly'),
-            ]}
-          >
-            <View style={styles.popular}>
-              <Text style={styles.popularLabel}>MOST POPULAR</Text>
-            </View>
-            <View style={styles.planRow}>
+        {isPending ? (
+          <View style={styles.plans} accessibilityLiveRegion="polite">
+            <ActivityIndicator color={colors.orangeDeep} />
+            <Text style={styles.footnote}>Loading plans…</Text>
+          </View>
+        ) : !plans ? (
+          <View style={styles.plans} accessibilityLiveRegion="polite">
+            <Text style={styles.footnote}>Plans are unavailable right now. Please try again.</Text>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isFetching}
+              accessibilityState={{ disabled: isFetching }}
+              onPress={() => {
+                void refetch();
+              }}
+              style={styles.decline}
+            >
+              <Text style={styles.declineLabel}>{isFetching ? 'RETRYING…' : 'TRY AGAIN'}</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.plans} accessibilityRole="radiogroup">
+            <Pressable
+              accessibilityRole="radio"
+              disabled={busy}
+              accessibilityState={{ checked: plan === 'yearly', disabled: busy }}
+              accessibilityLabel={plans.yearly.accessibilityLabel}
+              onPress={() => choose('yearly')}
+              style={[
+                styles.planFeatured,
+                plan === 'yearly' ? styles.planSelected : styles.planUnselected,
+                cardEdge(plan === 'yearly'),
+              ]}
+            >
+              <View style={styles.popular}>
+                <Text style={styles.popularLabel}>MOST POPULAR</Text>
+              </View>
+              <View style={styles.planRow}>
+                <View style={styles.planText}>
+                  <Text style={styles.planName}>12 months</Text>
+                  <Text style={styles.planDetail}>{plans.yearly.detail}</Text>
+                </View>
+                <View style={styles.planPriceBlock}>
+                  <Text style={styles.planPrice}>{plans.yearly.priceLabel}</Text>
+                </View>
+              </View>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="radio"
+              disabled={busy}
+              accessibilityState={{ checked: plan === 'monthly', disabled: busy }}
+              accessibilityLabel={plans.monthly.accessibilityLabel}
+              onPress={() => choose('monthly')}
+              style={[
+                styles.planPlain,
+                plan === 'monthly' ? styles.planSelected : styles.planUnselected,
+                cardEdge(plan === 'monthly'),
+              ]}
+            >
               <View style={styles.planText}>
-                <Text style={styles.planName}>12 months</Text>
-                <Text style={styles.planDetail}>
-                  {`${PRICING.yearlyTotal} billed yearly · save ${PRICING.yearlySaving}`}
-                </Text>
+                <Text style={styles.planNamePlain}>1 month</Text>
+                <Text style={styles.planDetail}>{plans.monthly.detail}</Text>
               </View>
-              <View style={styles.planPriceBlock}>
-                <Text style={styles.planPrice}>{`${PRICING.yearlyMonthly} / MO`}</Text>
-                <Text style={styles.planStrike}>{PRICING.monthly}</Text>
-              </View>
-            </View>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: plan === 'monthly' }}
-            accessibilityLabel={`1 month, ${PRICING.monthly} a month, billed monthly, cancel anytime`}
-            onPress={() => choose('monthly')}
-            style={[
-              styles.planPlain,
-              plan === 'monthly' ? styles.planSelected : styles.planUnselected,
-              cardEdge(plan === 'monthly'),
-            ]}
-          >
-            <View style={styles.planText}>
-              <Text style={styles.planNamePlain}>1 month</Text>
-              <Text style={styles.planDetail}>Billed monthly · cancel anytime</Text>
-            </View>
-            <Text style={styles.planPricePlain}>{`${PRICING.monthly} / MO`}</Text>
-          </Pressable>
-        </View>
+              <Text style={styles.planPricePlain}>{plans.monthly.priceLabel}</Text>
+            </Pressable>
+          </View>
+        )}
 
         <View style={styles.benefits}>
           {BENEFITS.map((benefit) => (
@@ -177,20 +272,43 @@ export default function Paywall() {
             </View>
           ))}
         </View>
-
         <View style={styles.footer}>
-          <Text style={styles.footnote}>Cancel anytime in the App Store</Text>
+          <Text style={styles.footnote}>Continue to purchase your selected plan.</Text>
+          {billingMessage ? (
+            <Text
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              style={styles.footnote}
+            >
+              {billingMessage}
+            </Text>
+          ) : null}
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => {
-              haptic('press');
-              // TODO(batch 8): `plan` is the product RevenueCat gets asked for here.
-              onwards();
+            disabled={!selectedPackage || isPending || busy}
+            accessibilityState={{
+              disabled: !selectedPackage || isPending || busy,
+              busy: purchasing,
             }}
-            style={[styles.cta, shadows.hardEdge(6)]}
+            onPress={onContinue}
+            style={[styles.cta, shadows.hardEdge(6), !selectedPackage && { opacity: 0.5 }]}
           >
-            <Text style={styles.ctaLabel}>START MY FREE WEEK</Text>
+            {purchasing ? <ActivityIndicator color={colors.ink} /> : null}
+            <Text style={styles.ctaLabel}>{purchasing ? 'PROCESSING…' : 'CONTINUE'}</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={onRestore}
+            disabled={busy}
+            accessibilityState={{ disabled: busy, busy: restoring }}
+            style={styles.decline}
+          >
+            {restoring ? <ActivityIndicator color={colors.muted} /> : null}
+            <Text style={styles.declineLabel}>
+              {restoring ? 'RESTORING…' : 'RESTORE PURCHASES'}
+            </Text>
           </Pressable>
 
           <Pressable accessibilityRole="button" onPress={onwards} style={styles.decline}>

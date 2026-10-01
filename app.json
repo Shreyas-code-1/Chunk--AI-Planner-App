@@ -7,7 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "chunk",
     "userInterfaceStyle": "automatic",
-    "ios": {},
+    "ios": {
+      "bundleIdentifier": "com.caidenn2.chunk"
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FF9934",

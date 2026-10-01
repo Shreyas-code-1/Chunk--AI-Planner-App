@@ -27,15 +27,23 @@ import { AiConsentSync } from '../features/ai/AiConsentSync';
 import { SessionProvider, useSession } from '../features/auth/SessionProvider';
 import { queryClient } from '../lib/queryClient';
 import { ExpoGoStartupPreview } from '../features/startup/ExpoGoStartupPreview';
+import { isBillingAvailable } from '../features/billing/availability';
+import { initializeRevenueCat } from '../features/billing/initialize';
+import { RevenueCatIdentitySync } from '../features/billing/RevenueCatIdentitySync';
 
 const IMAGE_WAIT_MAX_MS = 1500;
 
 // Keep the native splash until required local startup work and routing settle.
-void SplashScreen.preventAutoHideAsync().catch(() => console.warn('[startup] splash-prepare-failed'));
-
+void SplashScreen.preventAutoHideAsync().catch(() =>
+  console.warn('[startup] splash-prepare-failed'),
+);
 
 export default function RootLayout() {
-  return <SessionProvider><StartupContent /></SessionProvider>;
+  return (
+    <SessionProvider>
+      <StartupContent />
+    </SessionProvider>
+  );
 }
 
 function StartupContent() {
@@ -59,6 +67,11 @@ function StartupContent() {
     // The board's heaviest labels are 900, which only Nunito has.
     Nunito_900Black,
   });
+
+  useEffect(() => {
+    if (!isBillingAvailable()) return;
+    void initializeRevenueCat().catch(() => console.warn('[billing] initialization-failed'));
+  }, []);
 
   // Startup waits for images so the first screen draws with its mascot and
   // the dock with its icons (the 30 Sep blank-image fix) — but never longer
@@ -88,12 +101,17 @@ function StartupContent() {
   return (
     // GestureHandlerRootView must wrap everything that uses a gesture, and
     // the Slider does.
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FFFFFF' }} onLayout={() => setLaidOut(true)}>
+    <GestureHandlerRootView
+      style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+      onLayout={() => setLaidOut(true)}
+    >
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-
-            {dataReady && <AiConsentSync />}
-            {storesReady && <Stack
+          {dataReady && <AiConsentSync />}
+          {/* RevenueCat only exists in a native build; never in Expo Go. */}
+          {isBillingAvailable() && <RevenueCatIdentitySync />}
+          {storesReady && (
+            <Stack
               screenOptions={{
                 headerShown: false,
                 // No animated intermediate screen on initial routing.
@@ -101,11 +119,11 @@ function StartupContent() {
                 contentStyle: { backgroundColor: '#FFFFFF' },
                 animationDuration: 180,
               }}
-            />}
-            {Constants.executionEnvironment === ExecutionEnvironment.StoreClient && (
-              <ExpoGoStartupPreview ready={ready} />
-            )}
-
+            />
+          )}
+          {Constants.executionEnvironment === ExecutionEnvironment.StoreClient && (
+            <ExpoGoStartupPreview ready={ready} />
+          )}
         </QueryClientProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>

@@ -1499,3 +1499,31 @@ Also fixed while merging: a planner crash (`schedule.ts`) when the only chunk
 left is the running one and it runs past bedtime + bend — the let-go list was
 empty and read anyway. Showed up late at night (their Focus flow tests failed
 after ~midnight). Regression test in `schedule.test.ts`.
+
+## 2026-10-01 — Merged codex/revenuecat-auth-integration, Expo Go kept working
+
+Merged after persistence, at Shreyas's direction (Shipaton needs RevenueCat in
+the project; the demo is filmed in Expo Go). The branch adds RevenueCat
+(`react-native-purchases` 10.10.1: offerings, purchase, restore, identity sync
+with Supabase users), Apple and Google sign-in (browser OAuth back to
+`chunk://login`), the real paywall flow, and the iOS bundle id.
+
+**Expo Go guard.** `src/features/billing/availability.ts` —
+`isBillingAvailable()` is false in Expo Go and on web. `react-native-purchases`
+is loaded only through `billing/sdk.ts`, lazily, when that is true; nothing
+else imports it at runtime. In Expo Go:
+- the paywall renders with sample offerings at the board's prices
+  (`billing/sampleOffering.ts`: $7.99/mo billed $95.88 yearly, $10.99 monthly);
+  CONTINUE and RESTORE say "Purchases work in the App Store build";
+- Settings → Restore purchases says the same; RevenueCat init and identity
+  sync never mount;
+- Apple/Google buttons are hidden on 2.17 LOG IN; email sign-in is unchanged.
+`isBillingAvailable` in `usePro.ts` is now that function (was `false`).
+Tests: `billing/__tests__/expoGo.test.tsx` fails if the native module is ever
+loaded in Expo Go.
+
+Kept from main over the branch: orange splash, onboarding resume
+(`startDestination`), the one-page scrolling paywall, AppImage, safe Back.
+The CTA is now CONTINUE (purchases the selected plan), replacing START MY FREE
+WEEK. Verified: 517 tests pass, typecheck clean, iOS bundle exports (Hermes),
+and the screens render on web (same billing-unavailable path as Expo Go).

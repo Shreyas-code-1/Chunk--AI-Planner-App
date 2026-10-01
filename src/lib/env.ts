@@ -25,6 +25,13 @@ function isSet(value: string | undefined): boolean {
 }
 
 export const env = {
+  /** Public SDK key for the selected RevenueCat store (currently Test Store). */
+  revenueCatPublicSdkKey: () =>
+    required(
+      'EXPO_PUBLIC_REVENUECAT_SDK_KEY',
+      process.env.EXPO_PUBLIC_REVENUECAT_SDK_KEY,
+    ),
+
   /**
    * Whether the app has been configured at all. Callers use this to show a
    * readable message rather than letting a throw take down the route tree.

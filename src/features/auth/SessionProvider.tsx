@@ -1,10 +1,7 @@
 /**
  * Auth session.
  *
- * One Supabase user per person, however they signed in. Email works today;
- * Apple and Google are native modules that cannot run in Expo Go, so they
- * exist as call sites that fail with a clear message until the 2.10 dev build
- * (see docs/decision-log.md).
+ * One Supabase user per person. Email, Google, and Apple create real sessions.
  *
  * If the app has not been configured, this provider reports that through
  * `configError` and renders its children anyway. Auth is not a prerequisite
@@ -16,9 +13,12 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { getSupabase, isSupabaseConfigured } from '../../lib/supabase';
+import { signInWithGoogle } from './googleSignIn';
+import { signInWithApple } from './appleSignIn';
 
 type SessionState = {
   session: Session | null;
+  status: 'unresolved' | 'authenticated' | 'signed-out' | 'error';
   /** True until the stored session has been read; splash waits on this. */
   loading: boolean;
   /** Set when the app is not configured. Names the problem, never a value. */
@@ -30,55 +30,70 @@ type SessionState = {
   signOut(): Promise<void>;
 };
 
-const needsDevBuild = (provider: string) => async (): Promise<void> => {
-  throw new Error(`${provider} sign-in needs a development build; it cannot run in Expo Go.`);
-};
-
 const NOT_CONFIGURED =
   'Supabase is not configured. Fill in EXPO_PUBLIC_SUPABASE_URL and ' +
   'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY in .env, then restart the bundler with ' +
   '`npx expo start --clear`.';
 
 const SessionContext = createContext<SessionState | null>(null);
+type Resolution = Pick<SessionState, 'session' | 'status' | 'loading' | 'configError'>;
+const failedResolution: Resolution = { session: null, status: 'error', loading: false, configError: null };
+
+function resolveSession(session: Session | null): Resolution {
+  if (session === null) return { session: null, status: 'signed-out', loading: false, configError: null };
+  if (!session.access_token || !session.refresh_token || !session.user?.id || session.user.is_anonymous) {
+    return failedResolution;
+  }
+  return { session, status: 'authenticated', loading: false, configError: null };
+}
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
   const configured = isSupabaseConfigured();
-  const [loading, setLoading] = useState(configured);
+  const [resolution, setResolution] = useState<Resolution>(() => configured
+    ? { session: null, status: 'unresolved', loading: true, configError: null }
+    : { ...failedResolution, configError: NOT_CONFIGURED });
 
   useEffect(() => {
-    if (!configured) return;
+    if (!configured) {
+      setResolution({ ...failedResolution, configError: NOT_CONFIGURED });
+      return;
+    }
 
     let cancelled = false;
-    let generation = 0;
-    const restoreGeneration = generation;
+    let revision = 0;
+    let unsubscribe: (() => void) | undefined;
+    setResolution({ session: null, status: 'unresolved', loading: true, configError: null });
     let supabase: ReturnType<typeof getSupabase>;
-    try { supabase = getSupabase(); }
-    catch { console.warn('[session] configuration-failed'); setLoading(false); return; }
-
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (cancelled || generation !== restoreGeneration) return;
-      if (error) console.warn('[session] restore-failed');
-      setSession(error ? null : data.session);
-      setLoading(false);
-    }).catch(() => {
-      if (cancelled || generation !== restoreGeneration) return;
-      console.warn('[session] restore-failed');
-      setSession(null); setLoading(false);
-    });
-
-    // Fires on sign-in, sign-out and every token refresh, so this is the only
-    // place session state is written.
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      if (cancelled) return;
-      generation += 1;
-      setSession(next);
-      setLoading(false);
-    });
+    try {
+      supabase = getSupabase();
+    } catch {
+      setResolution({ ...failedResolution, configError: 'Supabase configuration could not be initialized.' });
+      return;
+    }
+    const restorationRevision = revision;
+    const canRestore = () => !cancelled && revision === restorationRevision;
+    try {
+      const { data } = supabase.auth.onAuthStateChange((event, next) => {
+        if (cancelled) return;
+        // Empty INITIAL_SESSION can also accompany SDK initialization errors.
+        // Only the error-checked restoration or SIGNED_OUT confirms no session.
+        if (event !== 'SIGNED_OUT' && !next) return;
+        revision += 1;
+        setResolution(event === 'SIGNED_OUT' ? resolveSession(null) : resolveSession(next));
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+      void supabase.auth.getSession().then(({ data, error }) => {
+        if (canRestore()) setResolution(error ? failedResolution : resolveSession(data.session));
+      }).catch(() => {
+        if (canRestore()) setResolution(failedResolution);
+      });
+    } catch {
+      if (canRestore()) setResolution(failedResolution);
+    }
 
     return () => {
       cancelled = true;
-      data.subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, [configured]);
 
@@ -89,9 +104,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
 
     return {
-      session,
-      loading,
-      configError: configured ? null : NOT_CONFIGURED,
+      ...resolution,
       async signInWithEmail(email, password) {
         const { error } = await requireConfig().auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -100,15 +113,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const { error } = await requireConfig().auth.signUp({ email, password });
         if (error) throw error;
       },
-      signInWithApple: needsDevBuild('Apple'),
-      signInWithGoogle: needsDevBuild('Google'),
+      signInWithApple,
+      signInWithGoogle,
       async signOut() {
         // Clears the stored session as well as the server-side one.
         const { error } = await requireConfig().auth.signOut();
         if (error) throw error;
       },
     };
-  }, [session, loading, configured]);
+  }, [resolution, configured]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

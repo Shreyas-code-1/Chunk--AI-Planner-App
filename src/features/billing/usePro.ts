@@ -26,14 +26,11 @@ export type ProState = {
   loading: boolean;
 };
 
-/** True once RevenueCat is wired up. Screens should not branch on this yet. */
-export const isBillingAvailable = false;
+/** True in a native build, false in Expo Go and on web. See ./availability. */
+export { isBillingAvailable } from './availability';
 
 export function usePro(): ProState {
   return { isPro: false, loading: false };
 }
 
-/** Placeholder so call sites can exist before the native module does. */
-export async function restorePurchases(): Promise<void> {
-  throw new Error('Purchases require a development build; not available in Expo Go.');
-}
+export { restorePurchases, type RestoreResult } from './restore';

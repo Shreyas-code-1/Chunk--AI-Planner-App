@@ -19,6 +19,7 @@ import { ChevronLeft } from '../../components/icons';
 import { Toggle } from '../../components/ui';
 import { useAiConsent, useAiEnabled } from '../../features/ai/consent';
 import { useSession } from '../../features/auth/SessionProvider';
+import { BILLING_UNAVAILABLE_MESSAGE } from '../../features/billing/availability';
 import { restorePurchases } from '../../features/billing/usePro';
 import { useDraft } from '../../features/onboarding/draft';
 import { SettingsCard, SettingsRow } from '../../features/settings/SettingsCard';
@@ -33,12 +34,15 @@ export default function Settings() {
   const classCount = useDraft((s) => s.classes.length);
 
   const restore = async () => {
-    try {
-      await restorePurchases();
-      Alert.alert('Purchases restored');
-    } catch (error) {
-      Alert.alert("Couldn't restore purchases", error instanceof Error ? error.message : undefined);
-    }
+    const result = await restorePurchases().catch(() => null);
+    if (result?.status === 'restored') Alert.alert('Purchases restored');
+    else if (result?.status === 'entitlement-inactive')
+      Alert.alert('Nothing to restore', 'No active Chunk Pro subscription was found.');
+    else
+      Alert.alert(
+        "Couldn't restore purchases",
+        result?.reason === 'unavailable' ? BILLING_UNAVAILABLE_MESSAGE : 'Please try again.',
+      );
   };
 
   const doSignOut = async () => {
@@ -69,14 +73,22 @@ export default function Settings() {
 
         <Text style={[styles.section, styles.firstSection]}>ACCOUNT</Text>
         <SettingsCard>
-          <SettingsRow title="Preferences" subtitle="Bedtime, study window, chunk length, busy days" />
+          <SettingsRow
+            title="Preferences"
+            subtitle="Bedtime, study window, chunk length, busy days"
+          />
           {/* TODO(design): no reminder is scheduled anywhere yet, so no time is shown. */}
           <SettingsRow title="Notifications" />
-          <SettingsRow title="Classes" subtitle={`${classCount} ${classCount === 1 ? 'class' : 'classes'}`} />
+          <SettingsRow
+            title="Classes"
+            subtitle={`${classCount} ${classCount === 1 ? 'class' : 'classes'}`}
+          />
           <SettingsRow
             title="AI features"
             subtitle="Chunking, explain and quiz"
-            right={<Toggle value={aiEnabled} onChange={chooseAi} accessibilityLabel="AI features" />}
+            right={
+              <Toggle value={aiEnabled} onChange={chooseAi} accessibilityLabel="AI features" />
+            }
           />
         </SettingsCard>
 
