@@ -2,9 +2,8 @@
  * 5.2 PROFILE — the dock's You tab, v3 design (design/v3/profile.png). At
  * `/you` because `/profile` is 2.4. The gear opens 5.2a SETTINGS.
  *
- * Every figure is real (`useProgressStats`); the design's are samples.
- * TODO(design): the "@handle" — the app collects no username, so the line
- * reads "JOINED 2026" alone. Asked in docs/v2-and-remaining-screens-questions.md.
+ * Every figure is real (`useProgressStats`); the design's are samples. The
+ * "@handle" line is the student's own username, editable in place.
  */
 
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -16,6 +15,7 @@ import { LogIcon } from '../../features/logs/LogIcon';
 import { useDraft } from '../../features/onboarding/draft';
 import { OverviewTile } from '../../features/profile/OverviewTile';
 import { ProfileHeader } from '../../features/profile/ProfileHeader';
+import { UsernameLine } from '../../features/profile/UsernameLine';
 import { BadgeTile } from '../../features/work/BadgeTile';
 import { hoursShortLabel } from '../../features/work/progress';
 import { useProgressStats } from '../../features/work/useProgressStats';
@@ -32,13 +32,16 @@ export default function You() {
   return (
     <View style={styles.screen}>
       <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         <ProfileHeader name={displayName} onSettings={() => router.push('/settings')} />
 
         <View style={styles.body}>
-          {stats.joinedAt ? (
-            <Text style={styles.handle}>{`JOINED ${stats.joinedAt.getFullYear()}`}</Text>
-          ) : null}
+          <UsernameLine joinedYear={stats.joinedAt?.getFullYear() ?? null} />
 
           <Text style={styles.section}>OVERVIEW</Text>
           <View style={styles.grid}>
@@ -93,13 +96,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.page },
   scroll: { paddingBottom: 18 },
   body: { paddingHorizontal: 21 },
-  handle: {
-    marginTop: 19,
-    fontFamily: fonts.body.black,
-    fontSize: 13,
-    letterSpacing: 13 * 0.04,
-    color: colors.muted,
-  },
   section: {
     marginTop: 20,
     fontFamily: fonts.body.black,

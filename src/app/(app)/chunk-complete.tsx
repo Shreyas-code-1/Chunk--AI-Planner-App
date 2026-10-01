@@ -24,7 +24,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '../../components/ui';
+import { Button, ScreenScroll } from '../../components/ui';
 import { mascot } from '../../components/mascot';
 import { SHORT_BREAK_MINUTES } from '../../planner/constants';
 import { usePlan } from '../../features/work/usePlan';
@@ -50,78 +50,80 @@ export default function ChunkComplete() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
+      <ScreenScroll>
+        <StatusBar style="dark" />
 
-      <View style={styles.body}>
-        <View style={styles.middle}>
-          <Image source={mascot.complete} style={styles.mascot} resizeMode="contain" />
+        <View style={styles.body}>
+          <View style={styles.middle}>
+            <Image source={mascot.complete} style={styles.mascot} resizeMode="contain" />
 
-          <View style={styles.copy}>
-            <Text style={styles.headline}>
-              {index > 0 ? `Chunk ${index} done!` : 'Chunk done!'}
-            </Text>
-            {/* v3 §8: when the next one starts, or that the evening is over. */}
-            <Text style={styles.sub}>
-              {upNext
-                ? `Next chunk at ${timeLabel(upNext.scheduledStart)}.`
-                : justFinished
-                  ? `You're done. It's ${timeLabel(justFinished.endedAt)}.`
-                  : 'That one is behind you. Take the win.'}
-            </Text>
-          </View>
-
-          <LogsEarned logs={logs} />
-
-          <View style={[styles.card, shadows.hardEdge(6)]}>
-            <View style={styles.statRow}>
-              <Stat value={`${minutes}`} label="MIN FOCUSED" />
-              <View style={styles.divider} />
-              <Stat value={`${doneToday}/${plannedToday}`} label="TODAY" />
-              <View style={styles.divider} />
-              <Stat value={`${streak}`} label="DAY STREAK" accent />
+            <View style={styles.copy}>
+              <Text style={styles.headline}>
+                {index > 0 ? `Chunk ${index} done!` : 'Chunk done!'}
+              </Text>
+              {/* v3 §8: when the next one starts, or that the evening is over. */}
+              <Text style={styles.sub}>
+                {upNext
+                  ? `Next chunk at ${timeLabel(upNext.scheduledStart)}.`
+                  : justFinished
+                    ? `You're done. It's ${timeLabel(justFinished.endedAt)}.`
+                    : 'That one is behind you. Take the win.'}
+              </Text>
             </View>
 
-            <View style={styles.segments}>
-              {Array.from({ length: Math.max(plannedToday, 5) }, (_, position) => (
-                <View
-                  key={position}
-                  style={[
-                    styles.segment,
-                    position < doneToday ? styles.segmentDone : styles.segmentTodo,
-                  ]}
-                />
-              ))}
+            <LogsEarned logs={logs} />
+
+            <View style={[styles.card, shadows.hardEdge(6)]}>
+              <View style={styles.statRow}>
+                <Stat value={`${minutes}`} label="MIN FOCUSED" />
+                <View style={styles.divider} />
+                <Stat value={`${doneToday}/${plannedToday}`} label="TODAY" />
+                <View style={styles.divider} />
+                <Stat value={`${streak}`} label="DAY STREAK" accent />
+              </View>
+
+              <View style={styles.segments}>
+                {Array.from({ length: Math.max(plannedToday, 5) }, (_, position) => (
+                  <View
+                    key={position}
+                    style={[
+                      styles.segment,
+                      position < doneToday ? styles.segmentDone : styles.segmentTodo,
+                    ]}
+                  />
+                ))}
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.actions}>
-          <Button
-            label={`TAKE A ${SHORT_BREAK_MINUTES}-MIN BREAK`}
-            onPress={() => router.replace('/home')}
-          />
-          <Button
-            label={upNext ? 'STRAIGHT INTO THE NEXT ONE' : 'BACK TO TODAY'}
-            variant="secondary"
-            onPress={() =>
-              upNext
-                ? router.replace({
-                    pathname: '/focus',
-                    params: {
-                      chunk: upNext.key,
-                      assignment: upNext.assignmentId,
-                      title: upNext.title,
-                      className: upNext.classId ?? '',
-                      minutes: String(upNext.plannedMinutes),
-                      index: String(doneToday + 1),
-                      total: String(plannedToday),
-                    },
-                  })
-                : router.replace('/today')
-            }
-          />
+          <View style={styles.actions}>
+            <Button
+              label={`TAKE A ${SHORT_BREAK_MINUTES}-MIN BREAK`}
+              onPress={() => router.replace('/home')}
+            />
+            <Button
+              label={upNext ? 'STRAIGHT INTO THE NEXT ONE' : 'BACK TO TODAY'}
+              variant="secondary"
+              onPress={() =>
+                upNext
+                  ? router.replace({
+                      pathname: '/focus',
+                      params: {
+                        chunk: upNext.key,
+                        assignment: upNext.assignmentId,
+                        title: upNext.title,
+                        className: upNext.classId ?? '',
+                        minutes: String(upNext.plannedMinutes),
+                        index: String(doneToday + 1),
+                        total: String(plannedToday),
+                      },
+                    })
+                  : router.replace('/today')
+              }
+            />
+          </View>
         </View>
-      </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

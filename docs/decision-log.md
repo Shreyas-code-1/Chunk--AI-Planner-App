@@ -1428,3 +1428,20 @@ Tapping a dock tab made the whole screen, dock included, fade out and back:
 each screen drew its own dock and `router.replace` cross-faded. The dock now
 lives once in `src/app/(app)/_layout.tsx`, shown on /home, /all-work, /today,
 /progress and /you, and the tab screens switch with no animation.
+
+## 2026-09-30 — No graph on Progress; every screen scrolls; usernames
+
+At Shreyas's request:
+- **Progress:** the HOURS PER MONTH chart is removed (the `MonthChart`
+  component and `hoursByMonth` with it). Focused card → tiles → done on time.
+- **Standing rule: every screen scrolls smoothly and nothing is cut off.**
+  The ten screens that had a fixed layout (Focus, Chunk Complete, Chunk
+  Failed, Offline, AI consent, Daily pace, Log in, Progress curve, Vs alone,
+  Your week) are wrapped in `ScreenScroll`, which keeps their layout when it
+  fits and scrolls when it doesn't. The keyboard pushes content up instead of
+  covering it.
+- **Username:** Profile's "@HANDLE · JOINED 2026" line is the student's own
+  username. Tap "+ ADD USERNAME" (or the name) to edit in place; 3–20
+  lowercase letters, numbers or underscores, empty clears it. Saved on the
+  device (`chunk.username`); it moves to a unique `profiles.username` column
+  in batch 6, so for now it is only unique to the phone.

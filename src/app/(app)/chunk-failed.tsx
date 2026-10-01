@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '../../components/ui';
+import { Button, ScreenScroll } from '../../components/ui';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
 
 const FIXES = [
@@ -24,46 +24,48 @@ export default function ChunkFailed() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
-      <View style={styles.body}>
-        <View style={styles.pill}>
-          <View style={styles.pillDot} />
-          <Text style={styles.pillLabel}>SOMETHING WENT WRONG</Text>
-        </View>
-
-        <View style={styles.middle}>
-          <View>
-            <Text style={styles.title}>{"That didn't chunk"}</Text>
-            <Text style={styles.line}>
-              {"Your assignment is saved. The breakdown just didn't come back this time."}
-            </Text>
+      <ScreenScroll>
+        <StatusBar style="dark" />
+        <View style={styles.body}>
+          <View style={styles.pill}>
+            <View style={styles.pillDot} />
+            <Text style={styles.pillLabel}>SOMETHING WENT WRONG</Text>
           </View>
 
-          <View style={[styles.card, shadows.hardEdge(6)]}>
-            <Text style={styles.cardLabel}>WHAT USUALLY FIXES IT</Text>
-            <View style={styles.fixes}>
-              {FIXES.map(([head, body]) => (
-                <View key={head}>
-                  <Text style={styles.fixHead}>{head}</Text>
-                  <Text style={styles.fixBody}>{body}</Text>
-                </View>
-              ))}
+          <View style={styles.middle}>
+            <View>
+              <Text style={styles.title}>{"That didn't chunk"}</Text>
+              <Text style={styles.line}>
+                {"Your assignment is saved. The breakdown just didn't come back this time."}
+              </Text>
+            </View>
+
+            <View style={[styles.card, shadows.hardEdge(6)]}>
+              <Text style={styles.cardLabel}>WHAT USUALLY FIXES IT</Text>
+              <View style={styles.fixes}>
+                {FIXES.map(([head, body]) => (
+                  <View key={head}>
+                    <Text style={styles.fixHead}>{head}</Text>
+                    <Text style={styles.fixBody}>{body}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.buttons}>
+              <Button label="TRY AGAIN" onPress={() => router.back()} />
+              <Button
+                label="CHUNK IT MYSELF"
+                variant="secondary"
+                onPress={() => router.replace('/add')}
+              />
+              <Text style={styles.stuck}>
+                {code ? `Still stuck? Tell us — error ${code}` : 'Still stuck? Tell us.'}
+              </Text>
             </View>
           </View>
-
-          <View style={styles.buttons}>
-            <Button label="TRY AGAIN" onPress={() => router.back()} />
-            <Button
-              label="CHUNK IT MYSELF"
-              variant="secondary"
-              onPress={() => router.replace('/add')}
-            />
-            <Text style={styles.stuck}>
-              {code ? `Still stuck? Tell us — error ${code}` : 'Still stuck? Tell us.'}
-            </Text>
-          </View>
         </View>
-      </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

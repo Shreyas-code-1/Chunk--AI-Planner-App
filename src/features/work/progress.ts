@@ -136,32 +136,6 @@ export function hoursShortLabel(total: number): string {
   return total >= 60 ? `${Math.floor(total / 60)} hr` : `${total} min`;
 }
 
-export type MonthBar = { key: string; label: string; hours: number; isCurrent: boolean };
-
-const MONTH = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** Focused hours for the last `count` months, oldest first, ending with this one. */
-export function hoursByMonth(completions: Completion[], today: PlanDate, count = 5): MonthBar[] {
-  const [year, month] = today.split('-').map(Number);
-  const minutes = new Map<string, number>();
-  for (const entry of completions) {
-    const key = planDateOf(entry.endedAt).slice(0, 7);
-    minutes.set(key, (minutes.get(key) ?? 0) + entry.actualMinutes);
-  }
-  return Array.from({ length: count }, (_, i) => {
-    const offset = month - 1 - (count - 1 - i);
-    const y = year + Math.floor(offset / 12);
-    const m = ((offset % 12) + 12) % 12;
-    const key = `${y}-${String(m + 1).padStart(2, '0')}`;
-    return {
-      key,
-      label: MONTH[m],
-      hours: Math.round(((minutes.get(key) ?? 0) / 60) * 10) / 10,
-      isCurrent: i === count - 1,
-    };
-  });
-}
-
 /**
  * Assignments finished before their due date, out of those that are either
  * finished or past due — v3 5.1's "57 of 65" and 5.2's "Finished on time".

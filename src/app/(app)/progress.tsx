@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { mascot } from '../../components/mascot';
 import { LogIcon } from '../../features/logs/LogIcon';
-import { MonthChart } from '../../features/progress/MonthChart';
 import { durationLabel } from '../../features/work/progress';
 import { useProgressStats } from '../../features/work/useProgressStats';
 import { colors, displayLine, fonts, radii, shadows } from '../../theme/tokens';
@@ -46,8 +45,6 @@ export default function Progress() {
           </View>
           <Image source={mascot.progress} style={styles.mascot} resizeMode="contain" />
         </View>
-
-        <MonthChart months={stats.months} />
 
         <View style={styles.tiles}>
           <Tile value={`${stats.allTimeChunks}`} label="chunks done" />

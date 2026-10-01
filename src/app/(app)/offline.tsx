@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '../../components/ui';
+import { Button, ScreenScroll } from '../../components/ui';
 import { isOnline } from '../../lib/network';
 import { colors, displayLine, fonts } from '../../theme/tokens';
 
@@ -19,22 +19,24 @@ export default function Offline() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
-      <View style={styles.body}>
-        <Text style={styles.title}>{"You're offline"}</Text>
-        <Text style={styles.line}>Please, check your connection and try again.</Text>
-        <Button
-          label="TRY AGAIN"
-          disabled={checking}
-          style={styles.button}
-          onPress={async () => {
-            setChecking(true);
-            const online = await isOnline();
-            setChecking(false);
-            if (online) router.back();
-          }}
-        />
-      </View>
+      <ScreenScroll>
+        <StatusBar style="dark" />
+        <View style={styles.body}>
+          <Text style={styles.title}>{"You're offline"}</Text>
+          <Text style={styles.line}>Please, check your connection and try again.</Text>
+          <Button
+            label="TRY AGAIN"
+            disabled={checking}
+            style={styles.button}
+            onPress={async () => {
+              setChecking(true);
+              const online = await isOnline();
+              setChecking(false);
+              if (online) router.back();
+            }}
+          />
+        </View>
+      </ScreenScroll>
     </SafeAreaView>
   );
 }

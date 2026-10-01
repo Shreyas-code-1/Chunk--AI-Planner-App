@@ -9,8 +9,7 @@
 
 import { useSession } from '../auth/SessionProvider';
 import { useLogs } from '../logs/store';
-import { planDateOf } from '../../lib/planDate';
-import { badges, focusedMinutes, hoursByMonth, onTimeSummary } from './progress';
+import { badges, focusedMinutes, onTimeSummary } from './progress';
 import { useWork } from './store';
 import { usePlan } from './usePlan';
 
@@ -53,7 +52,6 @@ export function useProgressStats() {
     finishRate,
     joinedAt,
     since,
-    months: hoursByMonth(completions, planDateOf(now)),
     badges: badges({
       allTimeChunks,
       streak,

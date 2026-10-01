@@ -89,8 +89,8 @@ Each item below gives the provisional choice currently in the code.
     is removed. Waiting on Shreyas.
 
 ## v3 Profile / Progress / Settings — open (2026-09-30)
-23. **"@handle" on Profile.** The app collects no username. *Now:* the line
-    reads "JOINED 2026" alone (year the account was created).
+23. ~~"@handle" on Profile.~~ **Answered 30 Sep:** students add their own
+    username on Profile (decision log).
 24. **The avatar's plus.** Nothing behind it (no photo picker or storage).
     *Now:* drawn, not tappable. Add a photo picker (works in Expo Go)?
 25. **Settings → Preferences.** No screen exists. *Now:* row has no chevron.
@@ -106,8 +106,7 @@ Each item below gives the provisional choice currently in the code.
 30. **Delete account.** Not in the Settings design, so not drawn. Apple
     requires it for apps with sign-up — where should it go?
 31. **Empty states (new student).** Not drawn. *Now:* finish rate and
-    "Finished on time" read "–", the chart shows zero bars labelled 0, done
-    on time reads "0 of 0" with an empty bar.
+    "Finished on time" read "–", done on time reads "0 of 0" with an empty bar.
 32. **Streak and history.** Streak / best streak are still the 0-or-1 stub,
     and completions are memory-only, so chunks, focus time and the chart reset
     on restart (logs persist). Both are batch 6.

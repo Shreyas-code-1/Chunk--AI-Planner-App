@@ -27,7 +27,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { OrangeGradient, ProgressRing } from '../../components/ui';
+import { OrangeGradient, ProgressRing, ScreenScroll } from '../../components/ui';
 import { runSecondsOf, useWork } from '../../features/work/store';
 import { logsForRunSeconds } from '../../features/logs/config';
 import { LogIcon } from '../../features/logs/LogIcon';
@@ -108,130 +108,132 @@ export default function Focus() {
       <StatusBar style="light" />
 
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Leave the session"
-            onPress={() => {
-              haptic('select');
-              abandonActive();
-              router.back();
-            }}
-            style={styles.headerButton}
-          >
-            <Close size={18} color={colors.white} strokeWidth={2.6} />
-          </Pressable>
+        <ScreenScroll>
+          <View style={styles.headerRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Leave the session"
+              onPress={() => {
+                haptic('select');
+                abandonActive();
+                router.back();
+              }}
+              style={styles.headerButton}
+            >
+              <Close size={18} color={colors.white} strokeWidth={2.6} />
+            </Pressable>
 
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Focus session</Text>
-            <Text style={styles.headerMeta}>
-              {params.index && params.total
-                ? `${params.className ? `${params.className} · ` : ''}chunk ${params.index} of ${params.total}`
-                : 'Nothing running'}
-            </Text>
-          </View>
-
-          <View style={styles.headerButton}>
-            <MoreVertical size={18} color={colors.white} strokeWidth={2.6} />
-          </View>
-        </View>
-
-        <View style={styles.ringRow}>
-          <ProgressRing
-            progress={elapsed}
-            size={276}
-            color={colors.white}
-            trackColor="rgba(255,255,255,0.32)"
-          >
-            <Text style={styles.ringLabel}>TIME LEFT</Text>
-            <Text style={styles.ringClock}>{clock(remaining)}</Text>
-            <View style={styles.ringPills}>
-              <View style={styles.ringOf}>
-                <Text style={styles.ringOfLabel}>{`of ${minutes || 0} min`}</Text>
-              </View>
-              <View style={styles.ringOf} accessibilityLabel={`${logsSoFar} logs earned`}>
-                <LogIcon size={16} />
-                <Text style={styles.ringOfLabel}>{logsSoFar}</Text>
-              </View>
+            <View style={styles.headerText}>
+              <Text style={styles.headerTitle}>Focus session</Text>
+              <Text style={styles.headerMeta}>
+                {params.index && params.total
+                  ? `${params.className ? `${params.className} · ` : ''}chunk ${params.index} of ${params.total}`
+                  : 'Nothing running'}
+              </Text>
             </View>
-            {/* The evening's end, small, under the countdown (v3 §8). */}
-            {finishAtToday ? (
-              <Text
-                style={styles.ringFinish}
-              >{`Done for today at ${timeLabel(finishAtToday)}`}</Text>
-            ) : null}
-          </ProgressRing>
-        </View>
 
-        <View style={[styles.chunkCard, shadows.hardEdge(6, 'rgba(0,0,0,0.12)')]}>
-          <Text style={styles.chunkLabel}>THIS CHUNK</Text>
-          <Text style={styles.chunkTitle}>{title ?? 'No chunk selected'}</Text>
-          {params.assignment ? <FirstActionLine assignmentId={params.assignment} /> : null}
-          <Text style={styles.chunkHint}>
-            {title
-              ? 'Mark the cycles as you go.'
-              : 'Start a chunk from your path and it will run here.'}
-          </Text>
-
-          <View style={styles.cycles}>
-            {Array.from({ length: CYCLES }, (_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.cycle,
-                  index < cyclesDone
-                    ? styles.cycleDone
-                    : index === cyclesDone && running
-                      ? styles.cycleNow
-                      : styles.cycleTodo,
-                ]}
-              />
-            ))}
+            <View style={styles.headerButton}>
+              <MoreVertical size={18} color={colors.white} strokeWidth={2.6} />
+            </View>
           </View>
-        </View>
 
-        {/* Keeps the buttons at the bottom. */}
-        <View style={styles.spacer} />
-
-        <View style={styles.footer}>
-          <View style={styles.buttons}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                haptic('press');
-                if (running) pauseActive();
-                else resumeActive();
-              }}
-              disabled={totalSeconds === 0}
-              style={styles.pause}
+          <View style={styles.ringRow}>
+            <ProgressRing
+              progress={elapsed}
+              size={276}
+              color={colors.white}
+              trackColor="rgba(255,255,255,0.32)"
             >
-              <Text style={styles.pauseLabel}>{running ? 'PAUSE' : 'RESUME'}</Text>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                haptic('press');
-                const focused = Math.max(1, Math.round(runSeconds / 60));
-
-                const finished = finishActive(focused);
-
-                router.replace({
-                  pathname: '/chunk-complete',
-                  params: {
-                    minutes: String(focused),
-                    logs: String(finished?.logs ?? 0),
-                    index: params.index ?? '',
-                    total: params.total ?? '',
-                  },
-                });
-              }}
-              style={[styles.finish, shadows.hardEdge(6, 'rgba(0,0,0,0.14)')]}
-            >
-              <Text style={styles.finishLabel}>FINISH CHUNK</Text>
-            </Pressable>
+              <Text style={styles.ringLabel}>TIME LEFT</Text>
+              <Text style={styles.ringClock}>{clock(remaining)}</Text>
+              <View style={styles.ringPills}>
+                <View style={styles.ringOf}>
+                  <Text style={styles.ringOfLabel}>{`of ${minutes || 0} min`}</Text>
+                </View>
+                <View style={styles.ringOf} accessibilityLabel={`${logsSoFar} logs earned`}>
+                  <LogIcon size={16} />
+                  <Text style={styles.ringOfLabel}>{logsSoFar}</Text>
+                </View>
+              </View>
+              {/* The evening's end, small, under the countdown (v3 §8). */}
+              {finishAtToday ? (
+                <Text
+                  style={styles.ringFinish}
+                >{`Done for today at ${timeLabel(finishAtToday)}`}</Text>
+              ) : null}
+            </ProgressRing>
           </View>
-        </View>
+
+          <View style={[styles.chunkCard, shadows.hardEdge(6, 'rgba(0,0,0,0.12)')]}>
+            <Text style={styles.chunkLabel}>THIS CHUNK</Text>
+            <Text style={styles.chunkTitle}>{title ?? 'No chunk selected'}</Text>
+            {params.assignment ? <FirstActionLine assignmentId={params.assignment} /> : null}
+            <Text style={styles.chunkHint}>
+              {title
+                ? 'Mark the cycles as you go.'
+                : 'Start a chunk from your path and it will run here.'}
+            </Text>
+
+            <View style={styles.cycles}>
+              {Array.from({ length: CYCLES }, (_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.cycle,
+                    index < cyclesDone
+                      ? styles.cycleDone
+                      : index === cyclesDone && running
+                        ? styles.cycleNow
+                        : styles.cycleTodo,
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Keeps the buttons at the bottom. */}
+          <View style={styles.spacer} />
+
+          <View style={styles.footer}>
+            <View style={styles.buttons}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  haptic('press');
+                  if (running) pauseActive();
+                  else resumeActive();
+                }}
+                disabled={totalSeconds === 0}
+                style={styles.pause}
+              >
+                <Text style={styles.pauseLabel}>{running ? 'PAUSE' : 'RESUME'}</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  haptic('press');
+                  const focused = Math.max(1, Math.round(runSeconds / 60));
+
+                  const finished = finishActive(focused);
+
+                  router.replace({
+                    pathname: '/chunk-complete',
+                    params: {
+                      minutes: String(focused),
+                      logs: String(finished?.logs ?? 0),
+                      index: params.index ?? '',
+                      total: params.total ?? '',
+                    },
+                  });
+                }}
+                style={[styles.finish, shadows.hardEdge(6, 'rgba(0,0,0,0.14)')]}
+              >
+                <Text style={styles.finishLabel}>FINISH CHUNK</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScreenScroll>
       </SafeAreaView>
     </View>
   );
