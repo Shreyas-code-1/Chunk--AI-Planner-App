@@ -65,7 +65,7 @@
     "lint": "expo lint",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "publish": "eas update --branch main --environment production"
+    "publish": "npx eas-cli update --branch main --environment production"
   },
   "private": true
 }

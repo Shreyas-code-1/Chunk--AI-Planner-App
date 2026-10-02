@@ -1547,7 +1547,7 @@ and Expo Go loads it from the project link.
   `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` must
   exist in that EAS environment (`eas env:push --path .env --environment
   production`): EAS Update does not read the local `.env`.
-- Publish with `npm run publish`. Each publish is a snapshot: code changes reach
+- Publish with `npm run publish` (runs eas-cli through npx; it is not installed globally). Each publish is a snapshot: code changes reach
   the phone only after the next publish.
 - Expo Go on iOS only opens projects owned by the account signed in to Expo Go,
   so sign in to Expo Go as `shreyas_chunk`.
