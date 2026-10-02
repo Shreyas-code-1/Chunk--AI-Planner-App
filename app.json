@@ -43,11 +43,17 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "owner": "caidenn2",
+    "owner": "shreyas_chunk",
     "extra": {
       "eas": {
-        "projectId": "805f0a5f-067f-4fbd-a278-935eebb94a1e"
+        "projectId": "4c062ba1-f8c0-4228-bd1d-ca28bdd973b2"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/4c062ba1-f8c0-4228-bd1d-ca28bdd973b2"
     }
   }
 }

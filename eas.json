@@ -6,20 +6,23 @@
       "environment": "development",
       "ios": {
         "simulator": false
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "environment": "development",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "preview"
     },
     "development-simulator": {
       "extends": "development",
       "ios": {
         "simulator": true
-      }
+      },
+      "channel": "development-simulator"
     }
   }
 }

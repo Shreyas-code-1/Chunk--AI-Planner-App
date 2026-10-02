@@ -1527,3 +1527,27 @@ Kept from main over the branch: orange splash, onboarding resume
 The CTA is now CONTINUE (purchases the selected plan), replacing START MY FREE
 WEEK. Verified: 517 tests pass, typecheck clean, iOS bundle exports (Hermes),
 and the screens render on web (same billing-unavailable path as Expo Go).
+
+## 2026-10-01 — Chunk runs in Expo Go without a dev server (EAS Update)
+
+Shreyas wants to open Chunk in Expo Go from anywhere, with no `expo start`
+running. Done with **EAS Update**: the JS bundle is published to Expo's servers
+and Expo Go loads it from the project link.
+
+- **EAS project moved to Shreyas's account.** `owner` was `caidenn2` and
+  `projectId` `805f0a5f-067f-4fbd-a278-935eebb94a1e`; `shreyas_chunk` cannot
+  publish to it. Shreyas chose a new project: owner `shreyas_chunk`, projectId
+  `4c062ba1-f8c0-4228-bd1d-ca28bdd973b2`
+  (https://expo.dev/accounts/shreyas_chunk/projects/Chunk-). Caidenn2's EAS
+  builds now point at this project; they need access to it (or to agree a
+  shared org) before their next `eas build`.
+- `expo-updates` installed; `runtimeVersion` policy `appVersion`;
+  `updates.url` set; channels added to the `eas.json` build profiles.
+- Updates publish to branch `main` from EAS environment `production`.
+  `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` must
+  exist in that EAS environment (`eas env:push --path .env --environment
+  production`): EAS Update does not read the local `.env`.
+- Publish with `npm run publish`. Each publish is a snapshot: code changes reach
+  the phone only after the next publish.
+- Expo Go on iOS only opens projects owned by the account signed in to Expo Go,
+  so sign in to Expo Go as `shreyas_chunk`.
