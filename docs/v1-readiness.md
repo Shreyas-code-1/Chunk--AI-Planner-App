@@ -49,3 +49,30 @@ to submit.** Checked on branch `integrate/all`.
 ## Not verified by me (needs a phone / native build)
 Real device run, native build, live Supabase sign-in and data, purchases,
 Apple/Google sign-in, notifications.
+
+## Store-side checklist — added 2026-10-04
+
+Question (Shreyas): what else is needed before publishing on the App Store?
+Re-checked: no app code changed since 2026-10-01, so the six rejection risks
+above all still stand. These are the setup steps outside the code:
+
+1. **Apple Developer Program** membership ($99/yr), on whichever person or
+   company will own the listing.
+2. **Bundle id.** `com.caidenn2.chunk` is the partner's name; it is permanent
+   once submitted. Decide it now (e.g. a neutral `com.<team>.chunk`).
+3. **Production build profile.** `eas.json` has only `development`,
+   `preview` and `development-simulator`; add `production` (store
+   distribution, channel `production`) and a `submit` section.
+4. **App Store Connect record**: name, subtitle, description, keywords,
+   category, support URL, privacy policy URL, age rating, screenshots
+   (6.9" iPhone required), app icon 1024px.
+5. **App Privacy labels** — declare what is collected (email, study data in
+   Supabase, purchases via RevenueCat).
+6. **Subscriptions**: Paid Apps agreement, tax and banking signed; products
+   created in a subscription group and mapped in RevenueCat to `$rc_annual` /
+   `$rc_monthly` in the `default` offering.
+7. **Export compliance**: set `ios.config.usesNonExemptEncryption: false` in
+   `app.json` (standard HTTPS only) so each build skips the question.
+8. **Review notes**: a working demo login for Apple's reviewer.
+9. **TestFlight**: `eas build --profile production`, `eas submit`, then a full
+   pass on a real iPhone, including a sandbox purchase and restore.
