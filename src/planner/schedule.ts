@@ -42,8 +42,16 @@ import type {
 
 type Segment = { kind: ScheduledChunk['segment']; chunks: PlacedChunk[] };
 
+/** An event as the scheduler needs it. EventOccurrence fits. */
+export type DayEvent = { title: string; start: Date; end: Date; allDay: boolean };
+
 export type DayResult = {
   day: DayPlan;
+  /**
+   * When work was deferred only because events took the evening: the longest
+   * event's title, for "Practice takes up most of tonight."
+   */
+  crowdedBy: string | null;
   /** Movable chunks that didn't fit before the cutoff, for the next day. */
   deferred: PlacedChunk[];
   urgentTriage: UrgentTriage | null;
@@ -230,27 +238,63 @@ type Layout = {
   end: number;
 };
 
-function layout(segments: Segment[], start: number, seam: Seam = FRESH): Layout {
+/** Busy time on the plan day, in minutes from its midnight. Sorted, overlaps merged. */
+type Busy = { start: number; end: number }[];
+
+/** Events as busy blocks on this plan day. All-day events are never busy. */
+function busyOf(planDate: PlanDate, events: DayEvent[]): Busy {
+  const blocks = events
+    .filter((e) => !e.allDay)
+    .map((e) => ({ start: minutesInto(planDate, e.start), end: minutesInto(planDate, e.end) }))
+    .filter((b) => b.end > b.start)
+    .sort((a, b) => a.start - b.start);
+  const merged: Busy = [];
+  for (const block of blocks) {
+    const last = merged[merged.length - 1];
+    if (last && block.start <= last.end) last.end = Math.max(last.end, block.end);
+    else merged.push({ ...block });
+  }
+  return merged;
+}
+
+/** Busy minutes inside [from, to). */
+function busyWithin(busy: Busy, from: number, to: number): number {
+  return busy.reduce((t, b) => t + Math.max(0, Math.min(b.end, to) - Math.max(b.start, from)), 0);
+}
+
+function layout(segments: Segment[], start: number, seam: Seam = FRESH, busy: Busy = []): Layout {
   const out: Layout = { chunks: [], breaks: [], end: start };
-  const all = segments.flatMap((s) => s.chunks.map((chunk, i) => ({ chunk, segment: s, i })));
+  const queue = segments.flatMap((s) => s.chunks.map((chunk) => ({ chunk, segment: s })));
 
   let slot = start;
   let { sinceBreak, sinceLong } = seam;
 
+  /** The first event that hasn't ended by `at`. */
+  const nextBusy = (at: number) => busy.find((b) => b.end > at) ?? null;
+  /** A break never runs into an event; the event is the rest instead. */
+  const breakFits = (at: number, minutes: number) => {
+    const next = nextBusy(at);
+    return !next || next.start >= at + minutes;
+  };
+  const rest = (minutes: number) => {
+    if (minutes >= SHORT_BREAK_MINUTES) sinceBreak = 0;
+    if (minutes >= LONG_BREAK_MINUTES) sinceLong = 0;
+  };
+
   // The break owed after what was already finished today. If the student has
   // already taken that long, nothing is owed.
-  if (seam.lastEnd != null && all.length > 0) {
+  if (seam.lastEnd != null && queue.length > 0) {
     const gap = start - seam.lastEnd;
     let owed = 0;
     if (sinceLong >= LONG_BREAK_AFTER - BREAK_SNAP_MINUTES) owed = LONG_BREAK_MINUTES;
     else if (
-      all[0].chunk.mode !== seam.lastMode ||
+      queue[0].chunk.mode !== seam.lastMode ||
       sinceBreak >= IN_BATCH_BREAK_EVERY - BREAK_SNAP_MINUTES
     )
       owed = SHORT_BREAK_MINUTES;
 
     if (!seam.anchored && gap < owed) {
-      out.breaks.push({ slot: seam.lastEnd, minutes: owed });
+      if (breakFits(seam.lastEnd, owed)) out.breaks.push({ slot: seam.lastEnd, minutes: owed });
       slot = seam.lastEnd + owed;
       sinceBreak = 0;
       if (owed === LONG_BREAK_MINUTES) sinceLong = 0;
@@ -260,17 +304,46 @@ function layout(segments: Segment[], start: number, seam: Seam = FRESH): Layout 
     }
   }
 
-  all.forEach(({ chunk, segment, i }, n) => {
+  let placed = 0;
+  while (queue.length > 0) {
+    // A running chunk can't be interrupted, even by an event (v3 §8).
+    const anchored = placed === 0 && seam.activeEnd != null;
+    const next = anchored ? null : nextBusy(slot);
+    if (next && next.start <= slot) {
+      rest(next.end - slot);
+      slot = next.end;
+      continue;
+    }
+
+    // A chunk is never split by an event. If the next one won't fit in the
+    // gap, the first later chunk that does (and is next in its own task) takes
+    // it; otherwise the gap is left and the work goes after the event.
+    const gapEnd = next ? next.start : Infinity;
+    let pick = 0;
+    if (slot + queue[0].chunk.plannedMinutes > gapEnd) {
+      pick = queue.findIndex(
+        (q, k) =>
+          slot + q.chunk.plannedMinutes <= gapEnd &&
+          !queue.slice(0, k).some((p) => p.chunk.assignmentId === q.chunk.assignmentId),
+      );
+      if (pick < 0) {
+        slot = gapEnd;
+        continue;
+      }
+    }
+
+    const [{ chunk, segment }] = queue.splice(pick, 1);
     const planned = slot + chunk.plannedMinutes;
     // A running chunk that overruns pushes everything after it (v3 §8).
-    const end = n === 0 && seam.activeEnd != null ? Math.max(planned, seam.activeEnd) : planned;
+    const end = anchored && seam.activeEnd != null ? Math.max(planned, seam.activeEnd) : planned;
     out.chunks.push({ chunk, slot, end, segment: segment.kind });
     sinceBreak += end - slot;
     sinceLong += end - slot;
     slot = end;
-    if (n === all.length - 1) return;
+    placed += 1;
+    if (queue.length === 0) break;
 
-    const lastInSegment = i === segment.chunks.length - 1;
+    const lastInSegment = !queue.some((q) => q.segment === segment);
     let minutes = 0;
     if (sinceLong >= LONG_BREAK_AFTER - BREAK_SNAP_MINUTES) {
       minutes = LONG_BREAK_MINUTES;
@@ -284,13 +357,14 @@ function layout(segments: Segment[], start: number, seam: Seam = FRESH): Layout 
       minutes = SHORT_BREAK_MINUTES;
     }
 
-    if (minutes > 0) {
+    // An event about to start is the break; the counters reset as it's passed.
+    if (minutes > 0 && breakFits(slot, minutes)) {
       out.breaks.push({ slot, minutes });
       slot += minutes;
       sinceBreak = 0;
       if (minutes === LONG_BREAK_MINUTES) sinceLong = 0;
     }
-  });
+  }
 
   out.end = slot;
   return out;
@@ -305,6 +379,8 @@ export function scheduleDay(
   now: Date,
   live: DayLive = {},
   held: HeldSegment[] | null = null,
+  /** Events touching this plan day. Timed ones are busy; all-day ones aren't. */
+  events: DayEvent[] = [],
 ): DayResult {
   const isToday = day.planDate === planDateOf(now, prefs.dayCutoffHour);
   const running = isToday ? (live.active ?? null) : null;
@@ -328,12 +404,17 @@ export function scheduleDay(
 
   const bedtime = bedtimeOf(prefs);
   const cutoff = bedtime - BEDTIME_MARGIN_MINUTES;
+  const busy = busyOf(day.planDate, events);
 
   let chunks = [...day.chunks];
   const anyDueToday = chunks.some((c) => isDueToday(c, day.planDate, prefs));
   // 15% of the evening, which is the smaller of the day's target and the
   // bedtime window. Work within the target is never deferred for it (v3 Q12).
-  const evening = Math.min(day.targetMinutes, Math.max(0, cutoff - start));
+  // Event time comes out of the window, never out of the target.
+  const evening = Math.min(
+    day.targetMinutes,
+    Math.max(0, cutoff - start - busyWithin(busy, start, cutoff)),
+  );
   const buffer = anyDueToday ? 0 : Math.round(evening * BUFFER_FRACTION);
   const limit = anyDueToday || sum(chunks) <= day.targetMinutes ? cutoff : cutoff - buffer;
 
@@ -361,7 +442,7 @@ export function scheduleDay(
   const holding = fromHeld(chunks) != null;
 
   let segments = arrange(chunks);
-  let result = layout(segments, start, seam);
+  let result = layout(segments, start, seam, busy);
 
   // 1. Defer movable work, latest deadline first. Work due tomorrow goes
   // last of all: it breaks the day-early rule and lands on its due day, which
@@ -380,7 +461,24 @@ export function scheduleDay(
     chunks = chunks.filter((c) => c !== latest);
     deferred.push(latest);
     segments = arrange(chunks);
-    result = layout(segments, start, seam);
+    result = layout(segments, start, seam, busy);
+  }
+
+  // Say so when it's the events that crowded the work out: the same evening
+  // without them would have fit.
+  let crowdedBy: string | null = null;
+  if (deferred.length > 0 && busy.length > 0 && layout(arrange(day.chunks), start, seam).end <= limit) {
+    const inWindow = events
+      .filter((e) => !e.allDay)
+      .map((e) => ({
+        title: e.title,
+        minutes:
+          Math.min(minutesInto(day.planDate, e.end), cutoff) -
+          Math.max(minutesInto(day.planDate, e.start), start),
+      }))
+      .filter((e) => e.minutes > 0);
+    if (inWindow.length > 0)
+      crowdedBy = inWindow.reduce((a, b) => (b.minutes > a.minutes ? b : a)).title;
   }
 
   // 2. Must-do-tonight work that still doesn't fit: suggest letting the
@@ -402,7 +500,7 @@ export function scheduleDay(
       letGo.push(largest);
       chunks = everything.filter(keep);
       segments = arrange(chunks);
-      result = layout(segments, start, seam);
+      result = layout(segments, start, seam, busy);
     }
     // Only the running chunk is left (e.g. a late-night session): there is
     // nothing to suggest letting go, so there is no triage to report.
@@ -423,7 +521,7 @@ export function scheduleDay(
           chunks: suggested,
         },
       ];
-      result = layout(segments, start, seam);
+      result = layout(segments, start, seam, busy);
     }
   }
 
@@ -487,6 +585,7 @@ export function scheduleDay(
             }
           : null,
     },
+    crowdedBy,
     deferred,
     urgentTriage,
     needsSubmitOrder,

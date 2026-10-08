@@ -19,8 +19,8 @@
 import { addDays, daysBetween, planDateOf } from '../lib/planDate';
 import type { BalancedDay } from './balance';
 import { REPLAN_MIN_SHIFT_MINUTES } from './constants';
-import { dayLiveOf, plan } from './plan';
-import { scheduleDay, type HeldSegment } from './schedule';
+import { dayLiveOf, eventsOn, plan } from './plan';
+import { scheduleDay, type DayEvent, type HeldSegment } from './schedule';
 import { chunkKey } from './types';
 import type {
   Assignment,
@@ -79,6 +79,7 @@ function keepStructure(
   prefs: Prefs,
   now: Date,
   live: DayLive,
+  events: DayEvent[],
 ): Plan | null {
   // Finishing or starting a chunk changes the contents, so the plan being
   // held is always one made from the same completions as this one.
@@ -106,7 +107,14 @@ function keepStructure(
       targetMinutes: day.targetMinutes,
       overTargetReason: day.overTargetReason,
     };
-    return scheduleDay(balanced, prefs, now, live, heldOf(day.chunks)).day;
+    return scheduleDay(
+      balanced,
+      prefs,
+      now,
+      live,
+      heldOf(day.chunks),
+      eventsOn(day.planDate, events, prefs),
+    ).day;
   });
   return { ...fresh, days, deferrals: current.deferrals };
 }
@@ -119,10 +127,11 @@ export function replan(
   now: Date = new Date(),
   completed: CompletedChunk[] = [],
   running: RunningChunk | null = null,
+  events: DayEvent[] = [],
 ): Replan {
-  const fresh = plan(assignments, prefs, history, now, completed, running);
+  const fresh = plan(assignments, prefs, history, now, completed, running, events);
   const live = dayLiveOf(completed, running, now, prefs);
-  const next = keepStructure(current, fresh, prefs, now, live) ?? fresh;
+  const next = keepStructure(current, fresh, prefs, now, live, events) ?? fresh;
 
   const previous = new Map(chunksOf(current).map((c) => [chunkKey(c), c]));
   const moves: Move[] = [];

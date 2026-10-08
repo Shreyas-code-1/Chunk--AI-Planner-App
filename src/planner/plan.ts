@@ -18,7 +18,7 @@ import { balance, targetFor, type BalancedDay, type PlacedChunk } from './balanc
 import { addDays, daysBetween, planDateOf } from '../lib/planDate';
 import { firstActionFor } from './mode';
 import { resolve } from './resolve';
-import { scheduleDay } from './schedule';
+import { scheduleDay, type DayEvent } from './schedule';
 import { split } from './split';
 import { spread } from './spread';
 import { triage } from './triage';
@@ -61,6 +61,11 @@ export function dayLiveOf(
   };
 }
 
+/** The events whose start falls on this plan day (the 03:00 boundary applies). */
+export function eventsOn<E extends DayEvent>(planDate: string, events: E[], prefs: Prefs): E[] {
+  return events.filter((e) => planDateOf(e.start, prefs.dayCutoffHour) === planDate);
+}
+
 export function plan(
   assignments: Assignment[],
   prefs: Prefs,
@@ -70,6 +75,8 @@ export function plan(
   completed: CompletedChunk[] = [],
   /** The chunk on the timer, anchored at its real start (v3 §8). */
   running: RunningChunk | null = null,
+  /** Event occurrences over the planned days. Timed ones are busy time. */
+  events: DayEvent[] = [],
 ): Plan {
   const today = planDateOf(now, prefs.dayCutoffHour);
 
@@ -160,7 +167,7 @@ export function plan(
     const day = pending.get(planDate) as BalancedDay;
     pending.delete(planDate);
 
-    const result = scheduleDay(day, prefs, now, live);
+    const result = scheduleDay(day, prefs, now, live, null, eventsOn(planDate, events, prefs));
     if (result.day.chunks.length > 0) days.push(result.day);
     if (planDate === today) {
       urgentTriage = result.urgentTriage;
@@ -189,6 +196,7 @@ export function plan(
           fromPlanDate: planDate,
           toPlanDate: next,
           dueAt: chunk.dueAt,
+          crowdedBy: result.crowdedBy,
         });
       }
     }

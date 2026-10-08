@@ -137,6 +137,8 @@ export type Deferral = {
   fromPlanDate: string;
   toPlanDate: string;
   dueAt: Date;
+  /** The event that took the evening, when events are why it moved. */
+  crowdedBy: string | null;
 };
 
 /**
