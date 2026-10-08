@@ -140,7 +140,7 @@ The 517 existing tests must stay green.
 - Decision-log entry: events block time, all-day don't, events don't count
   toward the daily target, chunks never split by events, and events count as a break.
 - Design-needed list appended to `docs/v2-and-remaining-screens-questions.md`.
-- Phone test script in this file once built. No merge to main.
+- Phone test script in this file once built. Merged to main 2026-10-07 (see decision log).
 
 ## Decisions taken without a reply (2026-10-07)
 

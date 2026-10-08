@@ -1592,3 +1592,12 @@ has Assignment and Event tabs and opens on whichever was used last. Plan:
   the streak.
 - `@react-native-community/datetimepicker` 9.1.0 installed for date and time
   (included in Expo Go per the SDK 57 docs).
+
+## 2026-10-07 — Events merged to main
+
+Shreyas asked to publish the events update to main. `main` was fast-forwarded
+to `feature/events` (840b346) and pushed. This also brought in everything
+`feature/events` was built on (RevenueCat, Apple/Google sign-in, local
+persistence, EAS Update setup). No new EAS Update was published: the normal
+Expo Go link (EAS branch `main`) shows events only after the next
+`npm run publish`.
