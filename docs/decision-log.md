@@ -1551,3 +1551,44 @@ and Expo Go loads it from the project link.
   the phone only after the next publish.
 - Expo Go on iOS only opens projects owned by the account signed in to Expo Go,
   so sign in to Expo Go as `shreyas_chunk`.
+
+## 2026-10-07 — Events: fixed-time blocks the planner works around
+
+Students add events (practice, dentist, club) from the + screen, which now
+has Assignment and Event tabs and opens on whichever was used last. Plan:
+`docs/events-plan.md`. Branch `feature/events`, not merged.
+
+- **Events block time.** A timed event is busy: no chunk and no break is ever
+  placed inside one, and overlapping events count as one block.
+- **All-day events don't block.** They are a banner at the top of the day;
+  homework that evening is planned as normal.
+- **Events don't count toward the daily target.** The day's load is still the
+  sum of its chunks. Event time comes out of the evening window instead, so
+  it moves "Done at", the catch-up buffer and the bedtime check.
+- **Chunks are never split by an event.** How assignments are cut is
+  unchanged. If the next chunk won't fit in the gap before an event, the first
+  later chunk that fits (and is next in its own task) takes the gap; otherwise
+  the gap is left and the chunk goes after the event.
+- **An event counts as the break.** A break that would run into an event isn't
+  placed; passing the event resets the break counters (the long-break one only
+  if the event is 15+ minutes). Chosen without a reply, as the recommended
+  default — say if a break should follow an event as well.
+- **A running chunk is never interrupted** by an event that starts during it.
+  What comes after re-plans around the event.
+- **Crowded evenings** use the existing deferral and urgent-triage paths. A
+  deferral now records `crowdedBy`, the longest event that evening, when the
+  same evening without events would have fit. Today's Path says so: "Practice
+  takes up most of tonight. I moved History to tomorrow, it's not due until
+  Friday." Deferrals had no on-screen copy before; other deferrals now read
+  "Tonight's full. I moved …".
+- **Stored as rules, not copies.** A series holds its repeat rule (none, every
+  N days, every N weeks on chosen weekdays), its end (never, on a date, after N
+  times — deleted occurrences still count) and per-date exceptions (deleted or
+  overridden). Times are wall-clock minutes, so DST never shifts them.
+- **Storage.** Events join the local snapshot (`events.series`,
+  `events.lastAddTab`), defaulting to empty for older snapshots. Work isn't in
+  Supabase yet, so no migration was added.
+- **Never work.** Events earn no logs, don't count as chunks, and don't touch
+  the streak.
+- `@react-native-community/datetimepicker` 9.1.0 installed for date and time
+  (included in Expo Go per the SDK 57 docs).

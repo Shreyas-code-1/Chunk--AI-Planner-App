@@ -1,11 +1,30 @@
 import { z } from 'zod';
 import { ONBOARDING_STEPS, useDraft } from '../onboarding/draft';
 import { useWork } from '../work/store';
+import { useEvents } from '../events/store';
 
 const date = z.iso.datetime().transform(value => new Date(value));
 const id = z.string().min(1);
 const dread = z.enum(['fine', 'meh', 'dreading']);
 const mode = z.enum(['problems', 'writing', 'reading', 'memorizing']);
+const dateKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const minutes = z.number().int().min(0).max(24 * 60);
+const override = z.object({ title: z.string().optional(), note: z.string().optional(),
+  startMinutes: minutes.optional(), endMinutes: minutes.optional(), allDay: z.boolean().optional() });
+const eventSeries = z.object({ id, title: z.string(), note: z.string(), date: dateKey,
+  startMinutes: minutes, endMinutes: minutes, allDay: z.boolean(),
+  repeat: z.discriminatedUnion('freq', [
+    z.object({ freq: z.literal('none') }),
+    z.object({ freq: z.literal('daily'), interval: z.number().int().min(1) }),
+    z.object({ freq: z.literal('weekly'), interval: z.number().int().min(1), weekdays: z.array(z.number().int().min(0).max(6)) }),
+  ]),
+  end: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('never') }),
+    z.object({ kind: z.literal('on'), date: dateKey }),
+    z.object({ kind: z.literal('after'), count: z.number().int().min(1) }),
+  ]),
+  exceptions: z.record(dateKey, z.union([z.object({ deleted: z.literal(true) }), z.object({ override })])),
+});
 export const snapshotSchema = z.object({
   version: z.literal(1),
   draft: z.object({
@@ -30,15 +49,22 @@ export const snapshotSchema = z.object({
     abandoned: z.array(z.object({ id, assignmentId: id, dread, firstChunk: z.boolean(), startedAt: date })),
     keptForLater: z.array(z.string()),
   }),
+  // Added with events; older snapshots have none.
+  events: z.object({
+    series: z.array(eventSeries),
+    lastAddTab: z.enum(['assignment', 'event']),
+  }).default({ series: [], lastAddTab: 'assignment' }),
 });
 
 // Explicit projection: never serialize active timers, generated chunks/plans, or store actions.
 export function encodeSnapshot(): string {
   const { completed, lastStep, goals, displayName, grade, birthYear, classes, chunkLength, bestTime, dailyMinutes, weekLoad, startStyle, struggle, answered } = useDraft.getState();
   const { assignments, completions, abandoned, keptForLater } = useWork.getState();
+  const { series, lastAddTab } = useEvents.getState();
   return JSON.stringify({ version: 1,
     draft: { completed, lastStep, goals, displayName, grade, birthYear, classes, chunkLength, bestTime, dailyMinutes, weekLoad, startStyle, struggle, answered },
     work: { assignments, completions, abandoned, keptForLater },
+    events: { series, lastAddTab },
   });
 }
 export function hydrateSnapshot(raw: string) {
@@ -46,4 +72,5 @@ export function hydrateSnapshot(raw: string) {
   const data = snapshotSchema.parse(JSON.parse(raw));
   useDraft.setState(data.draft);
   useWork.setState({ ...data.work, active: null });
+  useEvents.setState(data.events);
 }

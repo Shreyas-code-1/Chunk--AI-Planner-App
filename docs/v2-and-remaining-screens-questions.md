@@ -110,3 +110,16 @@ Each item below gives the provisional choice currently in the code.
 32. **Streak and history.** Streak / best streak are still the 0-or-1 stub,
     and completions are memory-only, so chunks, focus time and the chart reset
     on restart (logs persist). Both are batch 6.
+
+## Events — needs design (2026-10-07)
+33. **+ screen tabs.** Assignment | Event, drawn with the chip row.
+34. **Event form.** Built from Add Assignment's fields, chips and toggle. No
+    frame for the date/time picker (native iOS compact picker for now), the
+    repeat chips, "every N days/weeks", the weekday chips, or "ends after N".
+35. **Event block on Today's Path.** Tan card (`colors.locked`) with the start
+    time where the node goes. No icon.
+36. **All-day banner** above the summary card.
+37. **"Just this one / All events in the series".** Native iOS alert for now.
+38. **Delete event.** Uses the secondary button; the board has no destructive one.
+39. **"I moved History to tomorrow" line.** Plain text under the summary.
+40. **Event dot on the week strip.** A 5pt dot under the date.

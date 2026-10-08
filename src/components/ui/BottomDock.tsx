@@ -61,7 +61,7 @@ export function BottomDock({ active, onSelect, onAdd }: Props) {
       <View style={styles.slot}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Add an assignment"
+          accessibilityLabel="Add an assignment or event"
           onPress={onAdd}
           onPressIn={() => haptic('press')}
           style={[styles.add, shadows.hardEdge(4, colors.dockAddEdge)]}

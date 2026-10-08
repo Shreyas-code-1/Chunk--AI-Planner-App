@@ -7,6 +7,7 @@ import { useUsername } from '../profile/username';
 import { useAiConsent } from '../ai/consent';
 import { ONBOARDING_STEPS, type OnboardingStep, useDraft } from '../onboarding/draft';
 import { useWork } from '../work/store';
+import { useEvents } from '../events/store';
 import { encodeSnapshot, hydrateSnapshot } from './snapshot';
 
 export type LocalStorage = Pick<typeof AsyncStorage, 'getItem' | 'setItem'>;
@@ -43,10 +44,10 @@ export function createLocalData(storage: LocalStorage = AsyncStorage) {
           const raw = await storage.getItem(key);
           if (raw !== null) {
             try { hydrateSnapshot(raw); }
-            catch { useDraft.getState().reset(); useWork.getState().reset(); report('invalid-snapshot'); }
+            catch { useDraft.getState().reset(); useWork.getState().reset(); useEvents.getState().reset(); report('invalid-snapshot'); }
           }
           last = encodeSnapshot();
-          unsubscribe = [useDraft.subscribe(save), useWork.subscribe(save)];
+          unsubscribe = [useDraft.subscribe(save), useWork.subscribe(save), useEvents.subscribe(save)];
         } catch {
           // Never overwrite a snapshot we could not read. Startup can use safe defaults.
           report('read-failed');

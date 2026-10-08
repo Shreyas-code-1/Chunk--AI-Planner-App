@@ -1,4 +1,4 @@
-# Events — plan (awaiting approval)
+# Events — plan (built 2026-10-07, not merged)
 
 Fixed-time things (practice, dentist, club) added through +, shown on Today's
 Path, and treated by the scheduler as busy time. Branch `feature/events`.
@@ -141,3 +141,47 @@ The 517 existing tests must stay green.
   toward the daily target, chunks never split by events, and events count as a break.
 - Design-needed list appended to `docs/v2-and-remaining-screens-questions.md`.
 - Phone test script in this file once built. No merge to main.
+
+## Decisions taken without a reply (2026-10-07)
+
+Shreyas asked to see it in Expo Go, so the four open questions took the
+recommended answers: branch from `eas-update-expo-go`; native iOS compact
+date/time picker; an event counts as the break; no Supabase migration (work
+isn't synced yet). Any of these can be reversed.
+
+## Testing on the phone
+
+Published to the EAS Update branch **`events`** (not `main`), so the normal
+Chunk link is untouched. Open the update's link or QR from
+https://expo.dev/accounts/shreyas_chunk/projects/Chunk-/updates in Expo Go,
+signed in as `shreyas_chunk`. Or run `npx expo start` on the same Wi-Fi and
+scan the QR.
+
+1. **The + button.** Tap + → Assignment and Event tabs. Assignment is the old
+   screen. Pick Event, back out, tap + again: it opens on Event.
+2. **Validation.** Save with no name → "Give it a name so you recognise it
+   later." Set the end before the start → "End time needs to be after the
+   start time."
+3. **A repeating event.** "Soccer practice", today, 4:30–6:00, Repeat Weekly,
+   tick today's weekday and one other, Ends After 6 times. Save.
+   - Today's Path shows a tan card at 4:30 between chunks, with no play
+     button, and no chunk or break overlaps 4:30–6:00.
+   - The week strip has a dot on both weekdays.
+   - "Done at" is later than before.
+4. **Just this one.** Tap the practice card → "Just this one" → change it to
+   5:00–6:00 → Save. Only today moves. Tap again → "Just this one" → Delete
+   this one: today's card goes; next week's is still there.
+5. **All events.** Tap a practice → "All events in the series" → rename it →
+   every occurrence changes.
+6. **All day.** Add "Spirit week", All day on. It shows as a banner at the
+   top, and the chunks don't move.
+7. **A crowded night.** Add an assignment due in 4 or 5 days, 3 hours, and one
+   due tomorrow, 1 hour. Then add an event today from now until about an hour
+   before your bedtime (default bedtime is 10:30 PM). Today's Path shows a
+   line like "Practice takes up most of tonight. I moved … to tomorrow, it's
+   not due until …", and the work due tomorrow stays tonight.
+8. **Running chunk.** Start a chunk, then add an event starting in 10
+   minutes. The running chunk keeps its time; what comes after moves past the
+   event.
+9. **Restart.** Close Expo Go fully and reopen: events and exceptions are
+   still there.

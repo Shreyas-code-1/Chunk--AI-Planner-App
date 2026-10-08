@@ -32,7 +32,10 @@ import type {
   UrgentTriage,
   WeekdayFactors,
 } from '../../planner/types';
-import { DAY_CUTOFF_HOUR, planDateOf } from '../../lib/planDate';
+import { DAY_CUTOFF_HOUR, addDays, daysBetween, planDateOf } from '../../lib/planDate';
+import { expandEvents, type EventOccurrence } from '../../planner/events';
+import { deferralLine } from '../events/copy';
+import { useEvents } from '../events/store';
 import { BEST_TIMES, useDraft } from '../onboarding/draft';
 import type { AbandonedChunk } from '../../planner/learning';
 import { learn } from '../../planner/learning';
@@ -81,6 +84,14 @@ export type PlanView = {
   deferrals: Deferral[];
   urgentTriage: UrgentTriage | null;
   needsSubmitOrder: string[];
+  /** Timed events on today's plan day, in time order. Never chunks: no logs, no streak. */
+  eventsToday: EventOccurrence[];
+  /** All-day events today: a banner, never busy time. */
+  allDayToday: EventOccurrence[];
+  /** Plan days from a week ago onward that have any event, for the week strip. */
+  eventDates: Set<string>;
+  /** "Practice takes up most of tonight. I moved History to tomorrow…" */
+  deferralLines: string[];
 };
 
 /**
@@ -188,10 +199,21 @@ export function usePlan(): PlanView {
   const completions = useWork((state) => state.completions);
   const abandoned = useWork((state) => state.abandoned);
   const active = useWork((state) => state.active);
+  const series = useEvents((state) => state.series);
   const draft = useDraft();
   const now = useMinuteClock();
 
   const todayKey = planDateOf(now);
+
+  // Events are rules; expand them only over the days in view or in the plan:
+  // last week (for the strip) through the day after the latest deadline.
+  const events = useMemo(() => {
+    const lastDue = assignments.reduce(
+      (last, a) => (daysBetween(last, planDateOf(a.dueAt)) > 0 ? planDateOf(a.dueAt) : last),
+      addDays(todayKey, 14),
+    );
+    return expandEvents(series, addDays(todayKey, -7), addDays(lastDue, 1));
+  }, [series, assignments, todayKey]);
 
   // What the planner needs besides the clock. Changes only when the student
   // does something.
@@ -202,8 +224,9 @@ export function usePlan(): PlanView {
       history: historyFrom(completions, abandoned, assignments),
       completions,
       active,
+      events,
     }),
-    [assignments, completions, abandoned, active, draft],
+    [assignments, completions, abandoned, active, draft, events],
   );
 
   // The plan as it stood when the student last changed something. The
@@ -213,7 +236,15 @@ export function usePlan(): PlanView {
   if (baseline.inputs !== inputs) setBaseline({ inputs, plannedAt: now });
   const basePlan = useMemo(() => {
     const b = baseline.inputs;
-    return plan(b.assignments, b.prefs, b.history, baseline.plannedAt, b.completions, b.active);
+    return plan(
+      b.assignments,
+      b.prefs,
+      b.history,
+      baseline.plannedAt,
+      b.completions,
+      b.active,
+      b.events,
+    );
   }, [baseline]);
 
   return useMemo(() => {
@@ -225,6 +256,7 @@ export function usePlan(): PlanView {
       now,
       inputs.completions,
       inputs.active,
+      inputs.events,
     );
 
     // Finished chunks sit where they really happened, keyed by their own record.
@@ -300,6 +332,20 @@ export function usePlan(): PlanView {
       deferrals: result.deferrals,
       urgentTriage: result.urgentTriage,
       needsSubmitOrder: result.needsSubmitOrder,
+      eventsToday: inputs.events.filter((e) => !e.allDay && planDateOf(e.start) === todayKey),
+      allDayToday: inputs.events.filter((e) => e.allDay && e.occurrenceDate === todayKey),
+      eventDates: new Set(
+        inputs.events.map((e) => (e.allDay ? e.occurrenceDate : planDateOf(e.start))),
+      ),
+      deferralLines: result.deferrals
+        .filter((d) => d.fromPlanDate === todayKey)
+        .map((d) =>
+          deferralLine(
+            d,
+            assignments.find((a) => a.id === d.assignmentId)?.title ?? 'That',
+            todayKey,
+          ),
+        ),
     };
-  }, [basePlan, inputs, completions, active, todayKey, now]);
+  }, [basePlan, inputs, completions, active, todayKey, now, assignments]);
 }

@@ -26,6 +26,12 @@
  * card meta type on the page background.
  * TODO(design): the S-curve for an arbitrary number of chunks.
  * TODO(design): no empty state is drawn for a day with nothing in it.
+ *
+ * Events (docs/events-plan.md) sit in the same time order as tan cards with
+ * their start time where a node would be; all-day ones are a banner. They are
+ * never chunks: not counted, not startable, no logs, no streak.
+ * TODO(design): the "I moved History to tomorrow" line has no frame; it uses
+ * the gap-row type. The week strip's event dot is not on the board either.
  */
 
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -34,6 +40,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PathNode } from '../../components/ui';
+import { AllDayBanner, EventBlock, useOpenEvent } from '../../features/events/EventBlock';
 import { usePlan, type PlannedChunk } from '../../features/work/usePlan';
 import { timeLabel } from '../../lib/clock';
 import { planDateOf, fromDateKey, addDays } from '../../lib/planDate';
@@ -73,13 +80,19 @@ export default function Today() {
     finishAtToday,
     workEndToday,
     bufferToday,
+    eventsToday,
+    allDayToday,
+    eventDates,
+    deferralLines,
   } = usePlan();
+  const openEvent = useOpenEvent();
   const left = chunks.length - done;
 
-  // Chunks and breaks in clock order; breaks carry no node.
+  // Chunks, breaks and events in clock order; breaks carry no node.
   const rows = [
     ...chunks.map((chunk) => ({ at: chunk.scheduledStart.getTime(), chunk })),
     ...breaksToday.map((pause) => ({ at: pause.start.getTime(), pause })),
+    ...eventsToday.map((event) => ({ at: event.start.getTime(), event })),
   ].sort((a, b) => a.at - b.at);
 
   return (
@@ -111,10 +124,15 @@ export default function Today() {
                 <Text style={[styles.dayNumber, isToday && styles.dayNumberOn]}>
                   {fromDateKey(key).getDate()}
                 </Text>
+                {eventDates.has(key) ? (
+                  <View style={[styles.eventDot, isToday && styles.eventDotOn]} />
+                ) : null}
               </View>
             );
           })}
         </View>
+
+        <AllDayBanner events={allDayToday} onOpen={openEvent} />
 
         <View style={[styles.summary, shadows.hardEdge(5)]}>
           <Text style={styles.summaryLabel}>
@@ -129,15 +147,32 @@ export default function Today() {
           </Text>
         </View>
 
+        {deferralLines.map((line) => (
+          <Text key={line} style={styles.movedLine}>
+            {line}
+          </Text>
+        ))}
+
         {chunks.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyLine}>
               No chunks today. Add some work and Chunk will cut it into a path.
             </Text>
           </View>
-        ) : (
+        ) : null}
+        {rows.length > 0 ? (
           <View style={styles.path}>
             {rows.map((row) => {
+              if ('event' in row && row.event) {
+                const event = row.event;
+                return (
+                  <EventBlock
+                    key={`event-${event.seriesId}-${event.occurrenceDate}`}
+                    event={event}
+                    onPress={() => openEvent(event)}
+                  />
+                );
+              }
               if ('pause' in row && row.pause) {
                 return (
                   <Text key={`break-${row.at}`} style={styles.gapRow}>
@@ -202,7 +237,7 @@ export default function Today() {
               </Text>
             ) : null}
           </View>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -239,6 +274,21 @@ const styles = StyleSheet.create({
   dayInitialOn: { color: 'rgba(255,255,255,0.85)' },
   dayNumber: { marginTop: 2, fontFamily: fonts.body.black, fontSize: 14, color: colors.ink },
   dayNumberOn: { color: colors.white },
+  eventDot: {
+    marginTop: 3,
+    width: 5,
+    height: 5,
+    borderRadius: radii.pill,
+    backgroundColor: colors.mutedWarm,
+  },
+  eventDotOn: { backgroundColor: colors.white },
+  movedLine: {
+    marginTop: 10,
+    fontFamily: fonts.body.bold,
+    fontSize: 12,
+    lineHeight: 12 * 1.45,
+    color: colors.mutedWarm,
+  },
 
   summary: {
     marginTop: 12,
